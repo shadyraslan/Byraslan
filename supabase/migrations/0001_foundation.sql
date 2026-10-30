@@ -149,4 +149,8 @@ insert into public.permissions (id, grp, label) values
 insert into public.locations (id, name, type, parent, city, sort) values
   ('factory','المصنع','factory',null,'إسكندرية',1),
   ('main','المخزن الرئيسي','warehouse','factory','إسكندرية',2),
+  ('roushdy','رشدي','dark',null,'إسكندرية',10),
+  ('agamy','العجمي','dark',null,'إسكندرية',11),
+  ('masr-gedida','مصر الجديدة','dark',null,'القاهرة',12),
+  ('maadi','المعادي','dark',null,'القاهرة',13),
   ('donate','مخزن التبرعات','donation','factory','إسكندرية',90);

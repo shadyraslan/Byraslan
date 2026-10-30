@@ -1,0 +1,41 @@
+/** أيقونات الرئيسية والفروع. href = null يعني لسه بيتبني (بيوديك لصفحة "قريبًا") */
+export type App = { id: string; label: string; icon: string; color: string; href: string | null; perm?: string };
+
+export const MODULES: App[] = [
+  { id: "sales", label: "المبيعات", icon: "sales", color: "#16a34a", href: null, perm: "pos.sell" },
+  { id: "orders", label: "الطلبات والتطبيق", icon: "app", color: "#0ea5e9", href: null },
+  { id: "purchase", label: "المشتريات", icon: "purchase", color: "#7c3aed", href: null },
+  { id: "stock", label: "المخزون", icon: "stock", color: "#d97706", href: null, perm: "stock.view" },
+  { id: "factory", label: "المصنع والإنتاج", icon: "factory", color: "#dc2626", href: null, perm: "prod.orders" },
+  { id: "trips", label: "التوزيع والعربيات", icon: "truck", color: "#0891b2", href: null, perm: "trips.load" },
+  { id: "items", label: "الأصناف والأسعار", icon: "items", color: "#ca8a04", href: "/items" },
+  { id: "acc", label: "الحسابات", icon: "accounts", color: "#2563eb", href: null, perm: "acc.view" },
+  { id: "hr", label: "الموارد البشرية", icon: "hr", color: "#db2777", href: null, perm: "hr.view" },
+  { id: "reports", label: "التقارير", icon: "reports", color: "#4f46e5", href: null },
+  { id: "locations", label: "المواقع والفروع", icon: "pin", color: "#059669", href: "/locations" },
+  { id: "users", label: "المستخدمين والصلاحيات", icon: "shield", color: "#475569", href: "/users", perm: "users.manage" },
+  { id: "settings", label: "الإعدادات", icon: "settings", color: "#525252", href: null, perm: "settings.edit" },
+];
+
+/** أيقونات جوه كل فرع */
+export const BRANCH_APPS: App[] = [
+  { id: "pos", label: "الكاشير", icon: "pos", color: "#16a34a", href: null, perm: "pos.sell" },
+  { id: "orders", label: "طلبات التطبيق", icon: "orders", color: "#0ea5e9", href: null },
+  { id: "stock", label: "مخزون الفرع", icon: "stock", color: "#d97706", href: null, perm: "stock.view" },
+  { id: "receive", label: "استلام العربية", icon: "truck", color: "#0891b2", href: null },
+  { id: "transfer", label: "التحويلات", icon: "transfer", color: "#7c3aed", href: null, perm: "stock.edit" },
+  { id: "count", label: "الجرد", icon: "count", color: "#ca8a04", href: null, perm: "stock.adjust" },
+  { id: "waste", label: "الهالك", icon: "trash", color: "#dc2626", href: null, perm: "stock.waste" },
+  { id: "prices", label: "أسعار الفرع", icon: "tag", color: "#059669", href: null, perm: "prices.edit" },
+  { id: "partner", label: "الماركت الشريك", icon: "partner", color: "#0d9488", href: null },
+  { id: "staff", label: "موظفين الفرع", icon: "hr", color: "#db2777", href: null, perm: "hr.view" },
+  { id: "cash", label: "الخزنة والمصروفات", icon: "accounts", color: "#2563eb", href: null, perm: "acc.view" },
+  { id: "reports", label: "تقارير الفرع", icon: "reports", color: "#4f46e5", href: null },
+];
+
+export const LOC_ICON: Record<string, string> = {
+  factory: "factory", section: "box", warehouse: "stock", sub: "stock", dark: "store", shop: "store", partner: "partner", donation: "heart",
+};
+export const LOC_TYPE: Record<string, string> = {
+  factory: "مصنع", section: "قسم مصنع", warehouse: "مخزن", sub: "مخزن فرعي", dark: "دارك ستور", shop: "فرع بيع مباشر", partner: "مخزن شريك", donation: "تبرعات",
+};
