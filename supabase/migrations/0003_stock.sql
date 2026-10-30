@@ -45,6 +45,10 @@ returns text language plpgsql security invoker set search_path = public as $$
 declare r text := 'TR-' || to_char(now(), 'YYMMDDHH24MISS') || '-' || floor(random()*1000)::int;
 begin
   if p_qty <= 0 then raise exception 'الكمية لازم تبقى أكبر من صفر'; end if;
+  -- منتجات روستو بالعلب: ممنوع تتحوّل بكمية — لازم transfer_boxes
+  if exists (select 1 from items where id = p_item and arm = 'rostos') then
+    raise exception 'الصنف ده بيتحوّل بمسح العلب بس';
+  end if;
   insert into stock_moves (item_id, location_id, qty, kind, reason, ref) values
     (p_item, p_from, -p_qty, 'transfer', p_reason, r),
     (p_item, p_to,    p_qty, 'transfer', p_reason, r);
