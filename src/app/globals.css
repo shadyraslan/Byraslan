@@ -46,3 +46,4 @@ input,select{height:38px;border-radius:10px;border:1px solid var(--line);backgro
 .crumbs{font-size:12.5px;color:var(--muted);margin-bottom:8px}.crumbs a{text-decoration:none}.crumbs a:hover{text-decoration:underline}
 @media (max-width:760px){.tiles{grid-template-columns:repeat(3,1fr);gap:8px}.tile{min-height:112px;padding:12px 6px}.tile .ico{width:48px;height:48px;border-radius:14px}.tile b{font-size:12.5px}}
 @media (max-width:380px){.tiles{grid-template-columns:repeat(2,1fr)}}
+.scan{height:52px;font-size:17px;width:100%;border:2px solid var(--line)}.scan:focus{outline:3px solid color-mix(in srgb,var(--good) 45%,transparent);border-color:var(--good)}
