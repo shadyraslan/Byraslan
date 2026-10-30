@@ -47,3 +47,11 @@ input,select{height:38px;border-radius:10px;border:1px solid var(--line);backgro
 @media (max-width:760px){.tiles{grid-template-columns:repeat(3,1fr);gap:8px}.tile{min-height:112px;padding:12px 6px}.tile .ico{width:48px;height:48px;border-radius:14px}.tile b{font-size:12.5px}}
 @media (max-width:380px){.tiles{grid-template-columns:repeat(2,1fr)}}
 .scan{height:52px;font-size:17px;width:100%;border:2px solid var(--line)}.scan:focus{outline:3px solid color-mix(in srgb,var(--good) 45%,transparent);border-color:var(--good)}
+/* شكل موحّد من جوه: كروت ناعمة، جداول، أزرار وتبويبات */
+.card{border-radius:18px;box-shadow:0 1px 2px rgba(16,16,12,.04),0 6px 20px -12px rgba(16,16,12,.10)}
+.card h2{display:flex;align-items:center;gap:8px}.card h2::before{content:"";width:4px;height:16px;border-radius:4px;background:var(--y)}
+th{background:var(--sunk);position:sticky;top:0}tbody tr:hover td{background:color-mix(in srgb,var(--y) 7%,transparent)}
+.btn{height:40px;border-radius:12px;transition:transform .12s,box-shadow .15s}.btn:active{transform:scale(.97)}
+.btn.pri{background:linear-gradient(150deg,#ffe766,#f5c800 55%,#e2b000);border-color:#e9be00;color:#1a1400;box-shadow:0 8px 18px -10px rgba(226,176,0,.9),inset 0 1px 0 rgba(255,255,255,.5)}
+input,select{border-radius:12px;height:42px}input:focus,select:focus{outline:none;border-color:var(--y);box-shadow:0 0 0 4px color-mix(in srgb,var(--y) 22%,transparent)}
+.side a{display:flex;align-items:center;gap:10px}.side a.on{background:linear-gradient(150deg,#ffe766,#f5c800 55%,#e2b000);color:#1a1400}
