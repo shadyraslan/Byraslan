@@ -12,7 +12,7 @@ create table public.boxes (
   packed_by uuid default auth.uid(),
   packed_at timestamptz not null default now(),
   expires_at timestamptz,
-  location_id text not null references public.locations default 'factory',
+  location_id text not null default 'factory' references public.locations,
   status text not null default 'stock' check (status in ('stock','loaded','sold','waste','donated')),
   crate text                       -- الصندوق البلاستيك اللي اتحمّل فيه
 );

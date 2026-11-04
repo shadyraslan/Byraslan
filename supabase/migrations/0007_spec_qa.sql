@@ -26,9 +26,9 @@ begin
   if not has_perm('qa.approve') then raise exception 'اعتماد المواصفة محتاج صلاحية الجودة'; end if;
   select * into s from item_specs where item_id = p_item;
   if not found or coalesce(s.description, '') = '' then raise exception 'اكتب وصف الصنف الأول'; end if;
-  select coalesce(max(version), 0) + 1 into v from item_spec_versions where item_id = p_item;
+  select coalesce(max(sv.version), 0) + 1 into v from item_spec_versions sv where sv.item_id = p_item;
   insert into item_spec_versions (item_id, version, snapshot, what)
-    values (p_item, v, to_jsonb(s) || jsonb_build_object('alt_brands', (select coalesce(jsonb_agg(jsonb_build_object('brand', brand, 'note', note)), '[]') from item_alt_brands where item_id = p_item)), p_what);
+    values (p_item, v, to_jsonb(s) || jsonb_build_object('alt_brands', (select coalesce(jsonb_agg(jsonb_build_object('brand', a.brand, 'note', a.note)), '[]'::jsonb) from item_alt_brands a where a.item_id = p_item)), p_what);
   update item_specs set dirty = false where item_id = p_item;
   return v;
 end $$;

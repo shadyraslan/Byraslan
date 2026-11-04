@@ -44,4 +44,5 @@ end $$;
 alter table public.override_requests enable row level security;
 create policy ovr_read on public.override_requests for select to authenticated using (true);
 create policy ovr_ins on public.override_requests for insert to authenticated with check (requested_by = auth.uid());
+create policy ovr_upd on public.override_requests for update to authenticated using (can_override(kind, value));
 create trigger audit_overrides after insert or update on public.override_requests for each row execute function public.audit();

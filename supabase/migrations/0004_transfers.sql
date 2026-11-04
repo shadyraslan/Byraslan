@@ -7,7 +7,7 @@ alter table public.boxes add constraint boxes_status_check
 
 create table public.transfers (
   id bigint generated always as identity primary key,
-  no bigint generated always as identity (start 1001),
+  no bigint generated always as identity (start with 1001),
   from_loc text not null references public.locations,
   to_loc text not null references public.locations,
   status text not null default 'transit' check (status in ('transit','received')),
@@ -48,22 +48,22 @@ end $$;
 -- الاستلام: العلب اللي اتمسحت بتدخل المكان، والباقي بيتسجّل ناقص
 create or replace function public.receive_transfer(p_id bigint, p_scanned bigint[])
 returns int language plpgsql security invoker set search_path = public as $$
-declare tr transfers%rowtype; missing int;
+declare tr transfers%rowtype; n_missing int;
 begin
   select * into tr from transfers where id = p_id for update;
   if tr.status <> 'transit' then raise exception 'التحويل ده اتسلّم قبل كده'; end if;
-  if exists (select 1 from unnest(p_scanned) b where not exists (select 1 from transfer_boxes where transfer_id = p_id and box_sn = b)) then
+  if exists (select 1 from unnest(p_scanned) b where not exists (select 1 from transfer_boxes tb where tb.transfer_id = p_id and tb.box_sn = b)) then
     raise exception 'فيه علبة مش من التحويل ده';
   end if;
 
   update transfer_boxes set state = case when box_sn = any(p_scanned) then 'received' else 'missing' end where transfer_id = p_id;
   update boxes set status = 'stock', location_id = tr.to_loc where sn = any(p_scanned);
-  update boxes set status = 'missing' where sn in (select box_sn from transfer_boxes where transfer_id = p_id and state = 'missing');
+  update boxes set status = 'missing' where sn in (select tb.box_sn from transfer_boxes tb where tb.transfer_id = p_id and tb.state = 'missing');
   insert into stock_moves (item_id, location_id, qty, kind, ref, box_sn)
     select x.item_id, tr.to_loc, x.weight, 'transfer', 'T' || p_id, x.sn from boxes x where x.sn = any(p_scanned);
   update transfers set status = 'received', recv_by = auth.uid(), recv_at = now() where id = p_id;
-  select count(*) into missing from transfer_boxes where transfer_id = p_id and state = 'missing';
-  return missing;
+  select count(*) into n_missing from transfer_boxes tb where tb.transfer_id = p_id and tb.state = 'missing';
+  return n_missing;
 end $$;
 
 alter table public.transfers enable row level security;

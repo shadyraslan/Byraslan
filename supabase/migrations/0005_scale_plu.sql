@@ -11,15 +11,15 @@ on conflict (key) do nothing;
 
 -- يقرا باركود الميزان ويرجّع الصنف والوزن
 create or replace function public.parse_scale_label(p_code text)
-returns table (item_id bigint, item_name text, kind text, weight numeric)
+returns table (item_id bigint, item_name text, item_kind text, weight numeric)
 language plpgsql stable security invoker set search_path = public as $$
-declare s jsonb; pre text; pd int; wd int; dc int; plu text;
+declare s jsonb; pre text; pd int; wd int; dc int; v_plu text;
 begin
   select value into s from settings where key = 'scale_barcode';
   pre := s->>'prefix'; pd := (s->>'plu_digits')::int; wd := (s->>'weight_digits')::int; dc := (s->>'decimals')::int;
   if length(p_code) <> 13 or left(p_code, length(pre)) <> pre then raise exception 'ده مش ملصق ميزان'; end if;
-  plu := substr(p_code, length(pre) + 1, pd);
+  v_plu := substr(p_code, length(pre) + 1, pd);
   return query select i.id, i.name, i.kind, substr(p_code, length(pre) + pd + 1, wd)::numeric / power(10, dc)
-    from items i where i.scale_plu = plu;
-  if not found then raise exception 'كود الصنف % مش متسجّل', plu; end if;
+    from items i where i.scale_plu = v_plu;
+  if not found then raise exception 'كود الصنف % مش متسجّل', v_plu; end if;
 end $$;
