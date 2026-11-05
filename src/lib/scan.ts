@@ -6,6 +6,12 @@ export function boxSn(raw: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+/** كود الصندوق البلاستيك: "CR-001" أو "CR1" */
+export function crateId(raw: string): string | null {
+  const m = String(raw || "").trim().toUpperCase().match(/^CR-?(\d{1,4})$/);
+  return m ? "CR-" + m[1].padStart(3, "0") : null;
+}
+
 export type Result<T> = ({ ok: true } & T) | { ok: false; error: string };
 
 /** رسالة الخطأ اللي جاية من الداتابيز من غير الكلام الإنجليزي */

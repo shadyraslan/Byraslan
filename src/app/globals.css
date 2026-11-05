@@ -70,3 +70,7 @@ input,select{border-radius:12px;height:42px}input:focus,select:focus{outline:non
   .label svg{width:30mm;height:30mm}
   .lbsn{font-size:14pt;font-weight:800;direction:ltr}.lbname{font-weight:700}.lbbrand{font-size:6.5pt;color:#444}
 }
+.crates{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.crate{display:flex;gap:10px;align-items:center;background:#fff;color:#000;border:2px dashed #bbb;border-radius:12px;padding:10px}
+.crid{font-size:24px;font-weight:900;direction:ltr}
+@media print{.crates{display:grid!important;grid-template-columns:1fr 1fr}.crate{break-inside:avoid;border-color:#000}}
