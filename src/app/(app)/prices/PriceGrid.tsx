@@ -5,13 +5,13 @@ import { savePrice } from "./actions";
 type It = { id: number; name: string; unit: string };
 type Loc = { id: string; name: string };
 
-export default function PriceGrid({ items, locs, prices, canEdit }: { items: It[]; locs: Loc[]; prices: Record<string, number>; canEdit: boolean }) {
+export default function PriceGrid({ items, locs, prices, canEdit, channel }: { items: It[]; locs: Loc[]; prices: Record<string, number>; canEdit: boolean; channel: "direct" | "app" }) {
   const [st, setSt] = useState<Record<string, "ok" | "bad" | "">>({});
   const [q, setQ] = useState("");
   const save = async (it: number, loc: string, v: string) => {
     const k = `${it}|${loc}`;
     if (String(prices[k] ?? "") === v.trim()) return;
-    const r = await savePrice(it, loc, v);
+    const r = await savePrice(it, loc, v, channel);
     setSt((s) => ({ ...s, [k]: r.ok ? "ok" : "bad" }));
   };
   const L = items.filter((i) => !q || i.name.includes(q));
@@ -37,7 +37,7 @@ export default function PriceGrid({ items, locs, prices, canEdit }: { items: It[
           ))}
         </tbody>
       </table>
-      <div className="note">السعر بيتحفظ أول ما تخرج من الخانة، والإطار بيبقى أخضر لما يتحفظ. كل تغيير بيتسجّل في سجل الأسعار. الكاشير بياخد السعر من هنا، والشاشة مابتبعتش سعر.</div>
+      <div className="note">السعر بيتحفظ أول ما تخرج من الخانة، والإطار بيبقى أخضر لما يتحفظ. كل تغيير بيتسجّل في سجل الأسعار. {channel === "app" ? "صفحة الطلب أونلاين بتاخد السعر من هنا، والصنف اللي مالوش سعر مش بيظهر للعميل." : "الكاشير بياخد السعر من هنا"}، والشاشة مابتبعتش سعر.</div>
     </div>
   );
 }

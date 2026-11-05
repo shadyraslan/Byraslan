@@ -94,3 +94,16 @@ input,select{border-radius:12px;height:42px}input:focus,select:focus{outline:non
 .a4{page:a4}
 @page a4{size:A4;margin:12mm}
 @media print{.labels{display:block}.labels .label{break-after:page;border:0;border-radius:0}.a4 .card{box-shadow:none;border:1px solid #ccc;break-inside:avoid}.a4 textarea,.a4 input,.a4 select{border:0}}
+/* صفحة العميل */
+.shop{max-width:640px;margin:0 auto;min-height:100vh;background:var(--bg)}
+.shophead{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#111;color:#f5c800;position:sticky;top:0;z-index:5}.shophead img{height:34px}
+.shopbody{padding:16px;display:grid;gap:10px;padding-bottom:110px}
+.shopitem{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px}
+.qty{display:flex;align-items:center;gap:10px}.qty button{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--panel);font-size:20px}
+.cartbar{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);width:min(616px,calc(100% - 24px));display:flex;justify-content:space-between;align-items:center;gap:10px;background:#111;color:#fff;border-radius:16px;padding:12px 14px;box-shadow:0 10px 30px -10px rgba(0,0,0,.5)}
+.steps{display:grid;gap:6px}.steps div{display:flex;align-items:center;gap:10px;color:var(--muted)}.steps span{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--line);font-weight:800}
+.steps .on{color:inherit;font-weight:700}.steps .on span{background:var(--y);border-color:var(--y);color:#1a1400}
+.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;align-items:start}
+.board .col{background:color-mix(in srgb,var(--line) 35%,transparent);border-radius:16px;padding:10px;display:grid;gap:8px}
+.ocard{display:grid;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;text-decoration:none;color:inherit}
+.ocard.late{border-color:var(--bad);box-shadow:0 0 0 2px color-mix(in srgb,var(--bad) 30%,transparent)}

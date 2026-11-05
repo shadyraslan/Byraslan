@@ -3,7 +3,7 @@ export type App = { id: string; label: string; icon: string; color: string; href
 
 export const MODULES: App[] = [
   { id: "sales", label: "الكاشير", icon: "pos", color: "#16a34a", href: "/pos", perm: "pos.sell" },
-  { id: "orders", label: "الطلبات والتطبيق", icon: "app", color: "#0ea5e9", href: null },
+  { id: "orders", label: "طلبات الأونلاين", icon: "app", color: "#0ea5e9", href: "/orders", perm: "orders.handle" },
   { id: "purchase", label: "المشتريات والاستلام", icon: "purchase", color: "#7c3aed", href: "/purchasing" },
   { id: "specs", label: "كارت الصنف", icon: "items", color: "#9333ea", href: "/purchasing/specs" },
   { id: "overrides", label: "التجاوزات", icon: "shield", color: "#e11d48", href: "/overrides" },
@@ -22,13 +22,13 @@ export const MODULES: App[] = [
   { id: "reports", label: "المبيعات والورديات", icon: "reports", color: "#4f46e5", href: "/sales", perm: "acc.view" },
   { id: "locations", label: "المواقع والفروع", icon: "pin", color: "#059669", href: "/locations" },
   { id: "users", label: "المستخدمين والصلاحيات", icon: "shield", color: "#475569", href: "/users", perm: "users.manage" },
-  { id: "settings", label: "الإعدادات", icon: "settings", color: "#525252", href: null, perm: "settings.edit" },
+  { id: "settings", label: "الإعدادات", icon: "settings", color: "#525252", href: "/settings", perm: "settings.edit" },
 ];
 
 /** أيقونات جوه كل فرع */
 export const BRANCH_APPS: App[] = [
   { id: "pos", label: "الكاشير", icon: "pos", color: "#16a34a", href: "/pos", perm: "pos.sell" },
-  { id: "orders", label: "طلبات التطبيق", icon: "orders", color: "#0ea5e9", href: null },
+  { id: "orders", label: "طلبات الأونلاين", icon: "orders", color: "#0ea5e9", href: "/orders", perm: "orders.handle" },
   { id: "stock", label: "مخزون الفرع", icon: "stock", color: "#d97706", href: "/stock", perm: "stock.view" },
   { id: "receive", label: "استلام العربية", icon: "truck", color: "#0891b2", href: "/transfers" },
   { id: "transfer", label: "التحويلات", icon: "transfer", color: "#7c3aed", href: "/transfers", perm: "stock.edit" },
