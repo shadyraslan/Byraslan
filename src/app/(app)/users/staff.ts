@@ -19,7 +19,7 @@ export async function createStaff(_: unknown, fd: FormData): Promise<Result<{ na
   if (name.length < 2) return { ok: false, error: "اكتب اسم الموظف" };
   if (phone.length < 8) return { ok: false, error: "اكتب رقم موبايل صحيح" };
   if (pass.length < 6) return { ok: false, error: "الرقم السري لازم 6 أرقام أو حروف على الأقل" };
-  const { data, error } = await admin.auth.admin.createUser({ email: staffEmail(phone), password: pass, email_confirm: true, user_metadata: { name } });
+  const { data, error } = await admin.auth.admin.createUser({ email: staffEmail(phone), password: pass, email_confirm: true, user_metadata: { name }, app_metadata: { staff: true } });
   if (error || !data.user) return { ok: false, error: error?.message.includes("already") ? "الموبايل ده متسجّل قبل كده" : error?.message ?? "ماتعملش" };
   const id = data.user.id;
   const home = String(fd.get("home_loc") || "") || null;
