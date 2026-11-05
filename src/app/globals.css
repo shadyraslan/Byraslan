@@ -83,3 +83,5 @@ input,select{border-radius:12px;height:42px}input:focus,select:focus{outline:non
   .receipt table{font-size:9pt}.receipt td{border:0;padding:1mm 0}
   .rrow{display:flex;justify-content:space-between}
 }
+.jobs{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.job{display:grid;gap:10px}

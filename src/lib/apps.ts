@@ -6,6 +6,8 @@ export const MODULES: App[] = [
   { id: "orders", label: "الطلبات والتطبيق", icon: "app", color: "#0ea5e9", href: null },
   { id: "purchase", label: "المشتريات", icon: "purchase", color: "#7c3aed", href: null },
   { id: "stock", label: "المخزون", icon: "stock", color: "#d97706", href: "/stock", perm: "stock.view" },
+  { id: "production", label: "أوامر الإنتاج", icon: "orders", color: "#b91c1c", href: "/production", perm: "prod.orders" },
+  { id: "station", label: "تابلت الغرف", icon: "factory", color: "#ea580c", href: "/station", perm: "prod.orders" },
   { id: "factory", label: "محطة التغليف", icon: "factory", color: "#dc2626", href: "/pack", perm: "prod.pack" },
   { id: "boxes", label: "تتبّع العلبة", icon: "box", color: "#0891b2", href: "/boxes", perm: "stock.view" },
   { id: "transfers", label: "التحويلات بالمسح", icon: "transfer", color: "#7c3aed", href: "/transfers", perm: "stock.view" },
