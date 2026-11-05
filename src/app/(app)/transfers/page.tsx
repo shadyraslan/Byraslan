@@ -21,7 +21,7 @@ export default async function Transfers() {
         <table>
           <thead><tr><th>رقم</th><th>من ← إلى</th><th>العلب</th><th>الحالة</th><th>الوقت</th><th></th></tr></thead>
           <tbody>
-            {((tr ?? []) as T[]).map((t) => {
+            {((tr ?? []) as unknown as T[]).map((t) => {
               const miss = t.transfer_boxes.filter((b) => b.state === "missing").length;
               return (
                 <tr key={t.id}>

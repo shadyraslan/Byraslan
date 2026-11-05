@@ -16,7 +16,7 @@ export default async function TransferPage({ params }: { params: Promise<{ id: s
   if (!t) notFound();
   const { data: locs } = await sb.from("locations").select("id,name").in("id", [t.from_loc, t.to_loc]);
   const ln = (x: string) => (locs ?? []).find((l) => l.id === x)?.name ?? x;
-  const rows = ((t.transfer_boxes ?? []) as TB[]).map((r) => {
+  const rows = ((t.transfer_boxes ?? []) as unknown as TB[]).map((r) => {
     const b = one(r.boxes);
     const it = one(b?.items);
     return { sn: r.box_sn, state: r.state, item: it?.name ?? "", unit: it?.unit ?? "", weight: Number(b?.weight ?? 0) };

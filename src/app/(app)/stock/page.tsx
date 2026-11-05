@@ -14,7 +14,7 @@ export default async function Stock({ searchParams }: { searchParams: Promise<{ 
     sb.from("stock_by_location").select("*"),
     sb.from("locations").select("id,name,type").eq("active", true).neq("type", "section").order("sort"),
   ]);
-  const R = ((rows ?? []) as Row[]).filter((r) => Math.abs(Number(r.qty)) > 0.0005 || Number(r.boxes) > 0);
+  const R = ((rows ?? []) as unknown as Row[]).filter((r) => Math.abs(Number(r.qty)) > 0.0005 || Number(r.boxes) > 0);
   const L = (locs ?? []).filter((l) => !loc || l.id === loc);
   const items = [...new Map(R.map((r) => [r.item_id, r])).values()].sort((a, b) => a.item_name.localeCompare(b.item_name, "ar"));
   const cell = (item: number, l: string) => R.find((r) => r.item_id === item && r.location_id === l);

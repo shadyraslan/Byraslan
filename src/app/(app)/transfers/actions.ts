@@ -11,7 +11,7 @@ export async function checkBox(sn: number, from: string): Promise<Result<{ box: 
   const { data: b, error } = await sb.from("boxes").select("sn,weight,status,location_id,expires_at,items(name,unit)").eq("sn", sn).maybeSingle();
   if (error) return { ok: false, error: dbMsg(error.message) };
   if (!b) return { ok: false, error: `العلبة #${sn} مش متسجّلة` };
-  const it = (Array.isArray(b.items) ? b.items[0] : b.items) as { name: string; unit: string } | null;
+  const it = (Array.isArray(b.items) ? b.items[0] : b.items) as unknown as { name: string; unit: string } | null;
   const st: Record<string, string> = { transit: "في تحويل لسه في الطريق", sold: "اتباعت", waste: "اتسجّلت هالك", donated: "اتحوّلت للتبرعات", missing: "متسجّلة ناقصة في تحويل", loaded: "متحمّلة على عربية" };
   if (b.status !== "stock") return { ok: false, error: `العلبة #${sn} ${st[b.status] ?? b.status}` };
   if (b.location_id !== from) {
