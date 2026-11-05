@@ -14,6 +14,7 @@ async function save(fd: FormData) {
     { key: "online.late_minutes", value: Number(fd.get("late") || 45) },
     { key: "online.delivery_fee", value: fees },
     { key: "online.weight_note", value: String(fd.get("note") || "") },
+    { key: "app.test_mode", value: fd.get("test") === "on" },
   ];
   await sb.from("settings").upsert(rows.map((r) => ({ ...r, updated_at: new Date().toISOString() })));
   revalidatePath("/settings");
@@ -24,7 +25,7 @@ export default async function Settings() {
   if (!can(me, "settings.edit")) redirect("/dashboard");
   const sb = await supabaseServer();
   const [{ data: S }, { data: locs }] = await Promise.all([
-    sb.from("settings").select("key,value").like("key", "online.%"),
+    sb.from("settings").select("key,value"),
     sb.from("locations").select("id,name").in("type", ["dark", "shop"]).order("sort"),
   ]);
   const g = (k: string) => (S ?? []).find((s) => s.key === k)?.value;
@@ -42,6 +43,8 @@ export default async function Settings() {
         <div className="row">{(locs ?? []).map((l) => <label key={l.id} className="fld">توصيل {l.name}<input name={`fee:${l.id}`} defaultValue={fees[l.id as string] ?? ""} inputMode="numeric" dir="ltr" /></label>)}</div>
         <label className="fld" style={{ display: "grid" }}>ملاحظة الوزن للعميل<input name="note" defaultValue={String(g("online.weight_note") ?? "")} /></label>
         <div className="muted" style={{ fontSize: 13 }}>لينك صفحة الطلب للعملاء: <b dir="ltr">byraslan.vercel.app/order</b> — الأسعار من شاشة أسعار الفروع (عمود التطبيق)</div>
+        <h2 style={{ marginTop: 14 }}>تطبيق العميل</h2>
+        <label className="row" style={{ gap: 8, color: g("app.test_mode") === true ? "var(--bad)" : undefined }}><input type="checkbox" name="test" defaultChecked={g("app.test_mode") === true} style={{ width: 22, height: 22 }} /> وضع التجربة: الدخول بأي رقم من غير كود SMS — <b>لازم يتقفل قبل ما التطبيق ينزل للناس</b></label>
         <button className="btn pri" style={{ marginTop: 8 }}>حفظ</button>
       </form>
     </>

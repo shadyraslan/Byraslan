@@ -7,7 +7,7 @@ import { Btn, Err, Input, T } from "@/lib/ui";
 import { C } from "@/lib/theme";
 
 export default function Login() {
-  const { refreshMe } = useApp();
+  const { refreshMe, config } = useApp();
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
@@ -33,6 +33,21 @@ export default function Login() {
     router.back();
   };
 
+  // وضع التجربة: دخول بأي رقم من غير كود (بيتقفل من إعدادات السيستم قبل النزول للناس)
+  const skip = async () => {
+    setErr(null);
+    const d = phone.replace(/\D/g, "");
+    if (!/^0?1[0125]\d{8}$/.test(d)) return setErr("اكتب أي رقم موبايل مصري صحيح الأول");
+    setBusy(true);
+    const { error } = await sb.auth.signInAnonymously();
+    if (error) { setBusy(false); return setErr(errMsg(error)); }
+    const { error: e2 } = await sb.rpc("app_test_login", { p_phone: d });
+    setBusy(false);
+    if (e2) return setErr(errMsg(e2));
+    await refreshMe();
+    router.back();
+  };
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }} keyboardShouldPersistTaps="handled">
@@ -42,6 +57,7 @@ export default function Login() {
           <>
             <Input value={phone} onChangeText={setPhone} placeholder="01xxxxxxxxx" keyboardType="phone-pad" textContentType="telephoneNumber" autoFocus style={{ textAlign: "left", fontSize: 20 }} />
             <Btn title="ابعت الكود" onPress={send} busy={busy} />
+            {config?.test_mode && <Btn kind="sec" title="تخطّي دلوقتي (تجربة من غير كود)" onPress={skip} busy={busy} />}
           </>
         ) : (
           <>
