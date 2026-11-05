@@ -14,9 +14,11 @@ export default function Login() {
     e.preventDefault();
     setBusy(true);
     setErr("");
-    const { error } = await supabaseBrowser().auth.signInWithPassword({ email, password });
+    const id = email.trim();
+    const login = /^[+\d\s-]+$/.test(id) ? `${id.replace(/\D/g, "")}@staff.byraslan.app` : id;
+    const { error } = await supabaseBrowser().auth.signInWithPassword({ email: login, password });
     setBusy(false);
-    if (error) return setErr("الإيميل أو الباسورد غلط");
+    if (error) return setErr("الموبايل/الإيميل أو الرقم السري غلط");
     router.replace("/dashboard");
     router.refresh();
   }
@@ -27,8 +29,8 @@ export default function Login() {
         <div style={{ background: "#000", borderRadius: 14, display: "grid", placeItems: "center", padding: "14px 0 10px" }}>
           <img src="/logo.png" alt="By Raslan" style={{ width: 170, height: "auto" }} />
         </div>
-        <label className="fld">الإيميل<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required dir="ltr" /></label>
-        <label className="fld">الباسورد<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required dir="ltr" /></label>
+        <label className="fld">الموبايل أو الإيميل<input type="text" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} required dir="ltr" /></label>
+        <label className="fld">الرقم السري<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required dir="ltr" /></label>
         {err && <div className="err">{err}</div>}
         <button className="btn pri" disabled={busy}>{busy ? "..." : "دخول"}</button>
       </form>
