@@ -32,7 +32,7 @@ export default async function TransferPage({ params }: { params: Promise<{ id: s
           <thead><tr><th>رقم العلبة</th><th>الصنف</th><th>الوزن</th><th>الحالة</th></tr></thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.sn}><td className="num"><b>#{r.sn}</b></td><td>{r.item}</td><td className="num">{r.weight} {r.unit}</td><td style={r.state === "missing" ? { color: "var(--bad)", fontWeight: 700 } : {}}>{ST[r.state] ?? r.state}</td></tr>
+              <tr key={r.sn}><td className="num"><b>#{r.sn}</b></td><td>{r.item}</td><td className="num">{r.weight} {r.unit}</td><td style={r.state === "missing" ? { color: "var(--bad)", fontWeight: 700 } : {}}>{ST[r.state] ?? r.state}{r.state === "missing" && <> · <Link href={`/boxes?sn=${r.sn}`}>احسمها</Link></>}</td></tr>
             ))}
           </tbody>
         </table>
