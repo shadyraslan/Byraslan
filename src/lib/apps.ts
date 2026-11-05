@@ -4,7 +4,9 @@ export type App = { id: string; label: string; icon: string; color: string; href
 export const MODULES: App[] = [
   { id: "sales", label: "الكاشير", icon: "pos", color: "#16a34a", href: "/pos", perm: "pos.sell" },
   { id: "orders", label: "الطلبات والتطبيق", icon: "app", color: "#0ea5e9", href: null },
-  { id: "purchase", label: "المشتريات", icon: "purchase", color: "#7c3aed", href: null },
+  { id: "purchase", label: "المشتريات والاستلام", icon: "purchase", color: "#7c3aed", href: "/purchasing" },
+  { id: "specs", label: "كارت الصنف", icon: "items", color: "#9333ea", href: "/purchasing/specs" },
+  { id: "overrides", label: "التجاوزات", icon: "shield", color: "#e11d48", href: "/overrides" },
   { id: "stock", label: "المخزون", icon: "stock", color: "#d97706", href: "/stock", perm: "stock.view" },
   { id: "production", label: "أوامر الإنتاج", icon: "orders", color: "#b91c1c", href: "/production", perm: "prod.orders" },
   { id: "station", label: "تابلت الغرف", icon: "factory", color: "#ea580c", href: "/station", perm: "prod.orders" },

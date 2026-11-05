@@ -89,3 +89,8 @@ input,select{border-radius:12px;height:42px}input:focus,select:focus{outline:non
 .kpi{display:grid;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px;text-decoration:none;box-shadow:0 1px 2px rgba(16,16,12,.04),0 6px 20px -12px rgba(16,16,12,.10)}
 .kpi span{font-size:12.5px;color:var(--muted);font-weight:600}.kpi b{font-size:24px}.kpi small{font-size:12px;color:var(--muted)}
 .kpi.hl{background:linear-gradient(150deg,#1d1d1b,#0b0b0a);color:#fff;border-color:#000}.kpi.hl b{color:#f5c800}.kpi.hl span,.kpi.hl small{color:#a8a8a0}
+.labels{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.labels .label{display:flex;background:#fff;color:#000;border:1px dashed #bbb;border-radius:8px;padding:8px;gap:8px;align-items:center}
+.a4{page:a4}
+@page a4{size:A4;margin:12mm}
+@media print{.labels{display:block}.labels .label{break-after:page;border:0;border-radius:0}.a4 .card{box-shadow:none;border:1px solid #ccc;break-inside:avoid}.a4 textarea,.a4 input,.a4 select{border:0}}
