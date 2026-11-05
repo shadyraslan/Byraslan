@@ -74,3 +74,12 @@ input,select{border-radius:12px;height:42px}input:focus,select:focus{outline:non
 .crate{display:flex;gap:10px;align-items:center;background:#fff;color:#000;border:2px dashed #bbb;border-radius:12px;padding:10px}
 .crid{font-size:24px;font-weight:900;direction:ltr}
 @media print{.crates{display:grid!important;grid-template-columns:1fr 1fr}.crate{break-inside:avoid;border-color:#000}}
+.pos{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:14px;align-items:start}
+.paybox{position:sticky;top:12px;display:grid;gap:10px}
+@media (max-width:900px){.pos{grid-template-columns:1fr}.paybox{position:static}}
+.receipt{display:none}
+@media print{
+  .receipt{display:block!important;width:72mm;font-size:9pt;color:#000;padding:2mm}
+  .receipt table{font-size:9pt}.receipt td{border:0;padding:1mm 0}
+  .rrow{display:flex;justify-content:space-between}
+}

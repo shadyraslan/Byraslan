@@ -2,7 +2,7 @@
 export type App = { id: string; label: string; icon: string; color: string; href: string | null; perm?: string };
 
 export const MODULES: App[] = [
-  { id: "sales", label: "المبيعات", icon: "sales", color: "#16a34a", href: null, perm: "pos.sell" },
+  { id: "sales", label: "الكاشير", icon: "pos", color: "#16a34a", href: "/pos", perm: "pos.sell" },
   { id: "orders", label: "الطلبات والتطبيق", icon: "app", color: "#0ea5e9", href: null },
   { id: "purchase", label: "المشتريات", icon: "purchase", color: "#7c3aed", href: null },
   { id: "stock", label: "المخزون", icon: "stock", color: "#d97706", href: "/stock", perm: "stock.view" },
@@ -10,7 +10,8 @@ export const MODULES: App[] = [
   { id: "boxes", label: "تتبّع العلبة", icon: "box", color: "#0891b2", href: "/boxes", perm: "stock.view" },
   { id: "transfers", label: "التحويلات بالمسح", icon: "transfer", color: "#7c3aed", href: "/transfers", perm: "stock.view" },
   { id: "trips", label: "تحميل العربيات", icon: "truck", color: "#0891b2", href: "/trips", perm: "trips.load" },
-  { id: "items", label: "الأصناف والأسعار", icon: "items", color: "#ca8a04", href: "/items" },
+  { id: "items", label: "الأصناف", icon: "items", color: "#ca8a04", href: "/items" },
+  { id: "prices", label: "أسعار الفروع", icon: "tag", color: "#059669", href: "/prices", perm: "prices.edit" },
   { id: "acc", label: "الحسابات", icon: "accounts", color: "#2563eb", href: null, perm: "acc.view" },
   { id: "hr", label: "الموارد البشرية", icon: "hr", color: "#db2777", href: null, perm: "hr.view" },
   { id: "reports", label: "التقارير", icon: "reports", color: "#4f46e5", href: null },
@@ -21,14 +22,14 @@ export const MODULES: App[] = [
 
 /** أيقونات جوه كل فرع */
 export const BRANCH_APPS: App[] = [
-  { id: "pos", label: "الكاشير", icon: "pos", color: "#16a34a", href: null, perm: "pos.sell" },
+  { id: "pos", label: "الكاشير", icon: "pos", color: "#16a34a", href: "/pos", perm: "pos.sell" },
   { id: "orders", label: "طلبات التطبيق", icon: "orders", color: "#0ea5e9", href: null },
   { id: "stock", label: "مخزون الفرع", icon: "stock", color: "#d97706", href: "/stock", perm: "stock.view" },
   { id: "receive", label: "استلام العربية", icon: "truck", color: "#0891b2", href: "/transfers" },
   { id: "transfer", label: "التحويلات", icon: "transfer", color: "#7c3aed", href: "/transfers", perm: "stock.edit" },
   { id: "count", label: "الجرد", icon: "count", color: "#ca8a04", href: null, perm: "stock.adjust" },
   { id: "waste", label: "الهالك والتبرعات", icon: "trash", color: "#dc2626", href: "/stock/dispose", perm: "stock.waste" },
-  { id: "prices", label: "أسعار الفرع", icon: "tag", color: "#059669", href: null, perm: "prices.edit" },
+  { id: "prices", label: "أسعار الفرع", icon: "tag", color: "#059669", href: "/prices", perm: "prices.edit" },
   { id: "partner", label: "الماركت الشريك", icon: "partner", color: "#0d9488", href: null },
   { id: "staff", label: "موظفين الفرع", icon: "hr", color: "#db2777", href: null, perm: "hr.view" },
   { id: "cash", label: "الخزنة والمصروفات", icon: "accounts", color: "#2563eb", href: null, perm: "acc.view" },
