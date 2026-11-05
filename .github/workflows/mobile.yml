@@ -1,0 +1,44 @@
+name: Mobile app
+
+on:
+  push:
+    branches: [main]
+    paths: ["mobile/**", ".github/workflows/mobile.yml"]
+  workflow_dispatch:
+    inputs:
+      build:
+        description: "ابني نسخة (none / preview / production)"
+        default: "none"
+      submit:
+        description: "ارفعها على المتاجر بعد البناء (true/false)"
+        default: "false"
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: npx expo install --fix
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Expo doctor
+        run: npx expo-doctor || true
+      - name: Setup EAS
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build != 'none' }}
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Link EAS project
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build != 'none' }}
+        run: eas init --non-interactive --force
+      - name: Build
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build != 'none' }}
+        run: eas build --platform all --profile ${{ inputs.build }} --non-interactive --no-wait ${{ inputs.submit == 'true' && '--auto-submit' || '' }}
