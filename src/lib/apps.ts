@@ -16,7 +16,8 @@ export const MODULES: App[] = [
   { id: "trips", label: "تحميل العربيات", icon: "truck", color: "#0891b2", href: "/trips", perm: "trips.load" },
   { id: "items", label: "الأصناف", icon: "items", color: "#ca8a04", href: "/items" },
   { id: "prices", label: "أسعار الفروع", icon: "tag", color: "#059669", href: "/prices", perm: "prices.edit" },
-  { id: "acc", label: "الحسابات", icon: "accounts", color: "#2563eb", href: null, perm: "acc.view" },
+  { id: "acc", label: "الحسابات", icon: "accounts", color: "#2563eb", href: "/accounts", perm: "acc.view" },
+  { id: "expenses", label: "المصروفات", icon: "accounts", color: "#1d4ed8", href: "/accounts/expenses", perm: "acc.post" },
   { id: "hr", label: "الموارد البشرية", icon: "hr", color: "#db2777", href: null, perm: "hr.view" },
   { id: "reports", label: "المبيعات والورديات", icon: "reports", color: "#4f46e5", href: "/sales", perm: "acc.view" },
   { id: "locations", label: "المواقع والفروع", icon: "pin", color: "#059669", href: "/locations" },
@@ -36,7 +37,7 @@ export const BRANCH_APPS: App[] = [
   { id: "prices", label: "أسعار الفرع", icon: "tag", color: "#059669", href: "/prices", perm: "prices.edit" },
   { id: "partner", label: "الماركت الشريك", icon: "partner", color: "#0d9488", href: null },
   { id: "staff", label: "موظفين الفرع", icon: "hr", color: "#db2777", href: null, perm: "hr.view" },
-  { id: "cash", label: "الخزنة والمصروفات", icon: "accounts", color: "#2563eb", href: null, perm: "acc.view" },
+  { id: "cash", label: "مصروفات الفرع", icon: "accounts", color: "#2563eb", href: "/accounts/expenses", perm: "acc.post" },
   { id: "reports", label: "تقارير الفرع", icon: "reports", color: "#4f46e5", href: null },
 ];
 
