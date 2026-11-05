@@ -56,3 +56,17 @@ th{background:var(--sunk);position:sticky;top:0}tbody tr:hover td{background:col
 .btn.pri{background:linear-gradient(150deg,#ffe766,#f5c800 55%,#e2b000);border-color:#e9be00;color:#1a1400;box-shadow:0 8px 18px -10px rgba(226,176,0,.9),inset 0 1px 0 rgba(255,255,255,.5)}
 input,select{border-radius:12px;height:42px}input:focus,select:focus{outline:none;border-color:var(--y);box-shadow:0 0 0 4px color-mix(in srgb,var(--y) 22%,transparent)}
 .side a{display:flex;align-items:center;gap:10px}.side a.on{background:linear-gradient(150deg,#ffe766,#f5c800 55%,#e2b000);color:#1a1400}
+.okmsg{padding:10px 12px;border-radius:12px;font-weight:700;background:color-mix(in srgb,var(--good) 14%,transparent);color:var(--good)}
+.badmsg{padding:10px 12px;border-radius:12px;font-weight:700;background:color-mix(in srgb,var(--bad) 12%,transparent);color:var(--bad)}
+.num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.onlyprint{display:none}
+@media print{
+  @page{size:60mm 40mm;margin:0}
+  body{background:#fff!important}
+  .side,.noprint,.top{display:none!important}
+  .shell{display:block}.main{padding:0}
+  .onlyprint{display:flex!important}
+  .label{width:60mm;height:40mm;gap:2mm;align-items:center;padding:2mm;color:#000;font-size:8pt;line-height:1.25}
+  .label svg{width:30mm;height:30mm}
+  .lbsn{font-size:14pt;font-weight:800;direction:ltr}.lbname{font-weight:700}.lbbrand{font-size:6.5pt;color:#444}
+}

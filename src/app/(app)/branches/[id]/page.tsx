@@ -23,7 +23,7 @@ export default async function Branch({ params }: { params: Promise<{ id: string 
         <span className="pill">{LOC_TYPE[loc.type]}{loc.city ? " · " + loc.city : ""}</span>
       </div>
       <div className="tiles">
-        {apps.map((a) => <Tile key={a.id} href={a.href ?? `/soon?m=${a.id}&b=${loc.id}`} icon={a.icon} color={a.color} label={a.label} soon={!a.href} />)}
+        {apps.map((a) => <Tile key={a.id} href={a.href ? (a.id === "stock" ? `${a.href}?loc=${loc.id}` : a.href) : `/soon?m=${a.id}&b=${loc.id}`} icon={a.icon} color={a.color} label={a.label} soon={!a.href} />)}
       </div>
       {!!subs?.length && (
         <>
