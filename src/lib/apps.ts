@@ -16,7 +16,7 @@ export const MODULES: App[] = [
   { id: "prices", label: "أسعار الفروع", icon: "tag", color: "#059669", href: "/prices", perm: "prices.edit" },
   { id: "acc", label: "الحسابات", icon: "accounts", color: "#2563eb", href: null, perm: "acc.view" },
   { id: "hr", label: "الموارد البشرية", icon: "hr", color: "#db2777", href: null, perm: "hr.view" },
-  { id: "reports", label: "التقارير", icon: "reports", color: "#4f46e5", href: null },
+  { id: "reports", label: "المبيعات والورديات", icon: "reports", color: "#4f46e5", href: "/sales", perm: "acc.view" },
   { id: "locations", label: "المواقع والفروع", icon: "pin", color: "#059669", href: "/locations" },
   { id: "users", label: "المستخدمين والصلاحيات", icon: "shield", color: "#475569", href: "/users", perm: "users.manage" },
   { id: "settings", label: "الإعدادات", icon: "settings", color: "#525252", href: null, perm: "settings.edit" },

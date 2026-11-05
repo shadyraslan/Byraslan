@@ -2,11 +2,16 @@
 import { useState, useTransition } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import ScanInput from "@/components/ScanInput";
-import { packBox, type Packed } from "./actions";
+import { useRouter } from "next/navigation";
+import { packBox, packFinish, type Packed } from "./actions";
+
+export type Ready = { id: number; no: number; item_name: string; qty: number; boxes: number };
 
 const fmtDate = (s: string | null) => (s ? new Date(s).toLocaleDateString("en-GB") : "—");
 
-export default function PackStation() {
+export default function PackStation({ ready }: { ready: Ready[] }) {
+  const router = useRouter();
+  const [order, setOrder] = useState<number | null>(null);
   const [boxes, setBoxes] = useState<Packed[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [auto, setAuto] = useState(true);
@@ -20,7 +25,7 @@ export default function PackStation() {
 
   const onScan = (code: string) =>
     start(async () => {
-      const r = await packBox(code);
+      const r = await packBox(code, order);
       if (!r.ok) {
         setMsg({ ok: false, t: r.error });
         try { navigator.vibrate?.(200); } catch {}
@@ -35,6 +40,20 @@ export default function PackStation() {
     <>
       <div className="card noprint" style={{ border: "2px solid var(--y)" }}>
         <h2>امسح ملصق الميزان</h2>
+        <div className="row">
+          <label className="fld" style={{ flex: "1 1 260px" }}>بتغلّف لأنهي أمر إنتاج؟
+            <select value={order ?? ""} onChange={(e) => setOrder(e.target.value ? Number(e.target.value) : null)} style={{ height: 46 }}>
+              <option value="">— من غير أمر —</option>
+              {ready.map((o) => <option key={o.id} value={o.id}>#{o.no} · {o.item_name} · {o.qty} ({o.boxes} علبة لحد دلوقتي)</option>)}
+            </select>
+          </label>
+          {order && <button className="btn" disabled={pending} style={{ height: 46 }} onClick={() => start(async () => {
+            if (!confirm("خلّصت تغليف الأمر ده؟ الوزن الطالع هيبقى مجموع العلب")) return;
+            const r = await packFinish(order);
+            setMsg(r.ok ? { ok: true, t: `الأمر اتقفل — ${r.msg}` } : { ok: false, t: r.error });
+            if (r.ok) { setOrder(null); router.refresh(); }
+          })}>✓ خلّص تغليف الأمر</button>}
+        </div>
         <ScanInput onScan={onScan} placeholder="امسح ملصق الميزان — بيتسجّل لوحده" />
         <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
           <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
