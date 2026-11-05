@@ -24,12 +24,8 @@ export default function Login() {
   return (
     <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 16 }}>
       <form onSubmit={submit} className="card" style={{ width: "100%", maxWidth: 360, display: "grid", gap: 12 }}>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <b style={{ background: "#f5c800", color: "#0d0d0d", borderRadius: 10, width: 40, height: 40, display: "grid", placeItems: "center", fontSize: 20 }}>ر</b>
-          <div>
-            <div style={{ fontWeight: 800 }}>باي رسلان</div>
-            <div className="muted" style={{ fontSize: 12 }}>BY RASLAN · ERP</div>
-          </div>
+        <div style={{ background: "#000", borderRadius: 14, display: "grid", placeItems: "center", padding: "14px 0 10px" }}>
+          <img src="/logo.png" alt="By Raslan" style={{ width: 170, height: "auto" }} />
         </div>
         <label className="fld">الإيميل<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required dir="ltr" /></label>
         <label className="fld">الباسورد<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required dir="ltr" /></label>

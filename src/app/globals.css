@@ -6,7 +6,8 @@ a{color:inherit}
 .shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
 .side{background:#0d0d0d;color:#f2f0ea;padding:16px;display:flex;flex-direction:column;gap:4px}
 .side .brand{display:flex;gap:10px;align-items:center;margin-bottom:14px}
-.side .brand b{background:var(--y);color:#0d0d0d;border-radius:10px;width:36px;height:36px;display:grid;place-items:center;font-size:18px}
+.side .brand{background:#000;border-radius:14px;padding:8px 10px;justify-content:space-between}.side .brand img{width:120px;height:auto;display:block}
+@media (max-width:760px){.side .brand{padding:4px 8px}.side .brand img{width:72px}}
 .side a{padding:9px 12px;border-radius:10px;text-decoration:none;font-size:14px}
 .side a:hover{background:#222}
 .side .grp{font-size:11.5px;color:#8f8a80;margin:10px 4px 2px}

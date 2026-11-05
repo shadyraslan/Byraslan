@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="shell">
       <nav className="side">
-        <div className="brand"><b>ر</b><span><div style={{ fontWeight: 800 }}>باي رسلان</div><div style={{ fontSize: 11, color: "#f5c800" }}>BY RASLAN · ERP</div></span></div>
+        <div className="brand"><img src="/logo.png" alt="By Raslan" /><span style={{ fontSize: 10.5, letterSpacing: 2, color: "#f5c800" }}>ERP</span></div>
         {NAV.map(([g, links]) => (
           <div key={g || "home"} style={{ display: "contents" }}>
             {g && <div className="grp">{g}</div>}
