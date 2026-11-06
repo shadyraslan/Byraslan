@@ -23,7 +23,7 @@ export async function createStaff(_: unknown, fd: FormData): Promise<Result<{ na
   if (error || !data.user) return { ok: false, error: error?.message.includes("already") ? "الموبايل ده متسجّل قبل كده" : error?.message ?? "ماتعملش" };
   const id = data.user.id;
   const home = String(fd.get("home_loc") || "") || null;
-  await admin.from("profiles").update({ name, phone, login: phone, job: String(fd.get("job") || "") || null, home_loc: home }).eq("id", id);
+  await admin.from("profiles").update({ active: true, name, phone, login: phone, job: String(fd.get("job") || "") || null, home_loc: home }).eq("id", id);
   const role = ROLES.find((r) => r.id === fd.get("role"));
   if (role) await admin.from("grants").insert(role.perms.map((perm) => ({ user_id: id, perm, granted_by: me!.id })));
   revalidatePath("/users");

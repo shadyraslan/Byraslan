@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     if (error || !data.user) return NextResponse.json({ error: error?.message ?? "ماتعملش" }, { status: 500 });
     user = data.user;
     const { data: loc } = await admin.from("locations").select("id").eq("type", "dark").eq("active", true).order("sort").limit(1).maybeSingle();
-    await admin.from("profiles").update({ name: "موظف تجربة", job: "تجربة", is_test: true, home_loc: loc?.id ?? null }).eq("id", user.id);
+    await admin.from("profiles").update({ active: true, name: "موظف تجربة", job: "تجربة", is_test: true, home_loc: loc?.id ?? null }).eq("id", user.id);
     // عشان يجرّب كل حاجة في التطبيق: سواق + بيشوف رحلاته
     await admin.from("grants").insert([{ user_id: user.id, perm: "trips.load" }]);
   }
