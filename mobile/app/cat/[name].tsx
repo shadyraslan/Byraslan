@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { NavBar } from "@/lib/nav";
 import { useApp } from "@/lib/store";
 import { BlackHead, Chip, Grid, IconBtn, Input, T } from "@/lib/ui";
 import { C } from "@/lib/theme";
@@ -28,10 +29,11 @@ export default function Cat() {
         <Chip label="الكل" on={!onlyOffers} onPress={() => setOnlyOffers(false)} />
         <Chip label="عروض" yellow on={false} onPress={() => setOnlyOffers(true)} />
       </ScrollView>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 40 + ins.bottom }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 120 + ins.bottom }}>
         <T style={{ color: C.mid, marginBottom: 10, fontSize: 12.5 }}>{L.length} منتج</T>
         <Grid items={L} />
       </ScrollView>
+      <NavBar />
     </View>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { NavBar } from "@/lib/nav";
 import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "@/lib/store";
 import { BlackHead, T } from "@/lib/ui";
@@ -23,7 +24,7 @@ export default function Support() {
   return (
     <View style={{ flex: 1 }}>
       <BlackHead title="خدمة العملاء" />
-      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 40 + ins.bottom, gap: 12 }}>
+      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 120 + ins.bottom, gap: 12 }}>
         <View style={{ backgroundColor: C.black, borderRadius: 22, padding: 24, alignItems: "center", gap: 6 }}>
           <Text style={{ fontSize: 44 }}>🎧</Text>
           <T w="x" style={{ color: C.white, fontSize: 19, textAlign: "center" }}>كيف نقدر نساعدك؟</T>
@@ -40,6 +41,7 @@ export default function Support() {
           </Pressable>
         ))}
       </ScrollView>
+      <NavBar />
     </View>
   );
 }

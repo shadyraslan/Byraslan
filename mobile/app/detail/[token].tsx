@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { NavBar } from "@/lib/nav";
 import { Ionicons } from "@expo/vector-icons";
 import { lineTotal, orderTotal, useTrack } from "@/lib/track";
 import { useReorder } from "@/lib/reorder";
@@ -27,7 +28,7 @@ export default function Detail() {
   return (
     <View style={{ flex: 1 }}>
       <BlackHead title={`#${o.no}`} sub={`فرع ${o.branch}`} />
-      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 40 + ins.bottom, gap: 12 }}>
+      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 120 + ins.bottom, gap: 12 }}>
         <Card title="حالة الطلب">
           {o.status === "cancelled" ? <T w="b" style={{ color: C.red }}>الطلب اتلغى {o.cancel_reason ? `— ${o.cancel_reason}` : ""}</T> : (
             <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -64,6 +65,7 @@ export default function Detail() {
           <Act ic="🔁" bg="#EEF4FF" t="إعادة الطلب" s="اطلب نفس المنتجات تاني" onPress={() => again(o)} />
         </Card>
       </ScrollView>
+      <NavBar />
     </View>
   );
 }

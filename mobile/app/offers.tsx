@@ -1,5 +1,6 @@
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { NavBar } from "@/lib/nav";
 import { useApp } from "@/lib/store";
 import { BlackHead, Grid, T } from "@/lib/ui";
 import { C } from "@/lib/theme";
@@ -11,7 +12,7 @@ export default function Offers() {
   return (
     <View style={{ flex: 1 }}>
       <BlackHead title="العروض" sub={`${L.length} منتج عليه خصم`} />
-      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 40 + ins.bottom, gap: 14 }}>
+      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 120 + ins.bottom, gap: 14 }}>
         {config?.first_free && (
           <View style={{ backgroundColor: C.black, borderRadius: 18, padding: 16, flexDirection: "row", alignItems: "center", gap: 12 }}>
             <Text style={{ fontSize: 30 }}>⚡</Text>
@@ -24,6 +25,7 @@ export default function Offers() {
         </View>
         {L.length ? <Grid items={L} /> : <T style={{ color: C.mid }}>مفيش عروض على أصناف دلوقتي</T>}
       </ScrollView>
+      <NavBar />
     </View>
   );
 }

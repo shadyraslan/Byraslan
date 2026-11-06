@@ -1,6 +1,6 @@
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
-import { addFamily, addItem, updateItem } from "./actions";
+import { addFamily, addItem, updateFamily, updateItem } from "./actions";
 
 const KIND: Record<string, string> = { product: "منتج نهائي", semi: "نص مصنع", raw: "خامة", mix: "خلطة", pack: "تغليف" };
 
@@ -10,10 +10,10 @@ export default async function Items({ searchParams }: { searchParams: Promise<{ 
   const { q = "", arm = "" } = await searchParams;
   const me = await getMe();
   const sb = await supabaseServer();
-  let iq = sb.from("items").select("id,name,arm,unit,family_id,tags,active,kind,scale_plu,shelf_days").order("name").limit(300);
+  let iq = sb.from("items").select("id,name,arm,unit,family_id,tags,active,kind,scale_plu,shelf_days,icon").order("name").limit(300);
   if (arm) iq = iq.eq("arm", arm);
   if (q) iq = iq.or(`name.ilike.%${q}%,tags.cs.{${q.replace(/[{},#]/g, "")}}`);
-  const [{ data: fams }, { data: items }] = await Promise.all([sb.from("families").select("id,name,parent_id,arm,tag").order("name"), iq]);
+  const [{ data: fams }, { data: items }] = await Promise.all([sb.from("families").select("id,name,parent_id,arm,tag,icon,color,sort").order("sort").order("name"), iq]);
   const fName = (id: number | null) => {
     const f = (fams ?? []).find((x) => x.id === id);
     if (!f) return "—";
@@ -29,15 +29,42 @@ export default async function Items({ searchParams }: { searchParams: Promise<{ 
         <label className="fld">الذراع<select name="arm" defaultValue={arm}><option value="">الكل</option>{Object.entries(ARM).map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select></label>
         <button className="btn">اعرض</button>
       </form>
+      <div className="card" style={{ overflowX: "auto" }}>
+        <h2>العائلات في التطبيق</h2>
+        <div className="muted" style={{ fontSize: 13 }}>العائلة الرئيسية بتظهر قسم في التطبيق بالأيقونة واللون دول وبالترتيب ده. الصنف بيظهر للعميل بس لو ليه <a href="/prices?ch=app"><b>سعر أونلاين</b></a> في الفرع.</div>
+        <table>
+          <thead><tr><th>العائلة</th><th>الذراع</th><th>أيقونة · لون · ترتيب</th></tr></thead>
+          <tbody>
+            {(fams ?? []).map((f) => (
+              <tr key={f.id}>
+                <td colSpan={3} style={{ padding: 0 }}>
+                  {edit ? (
+                    <form action={updateFamily} className="row" style={{ gap: 6, padding: "6px 8px", flexWrap: "nowrap" }}>
+                      <input type="hidden" name="id" value={f.id} />
+                      <input name="name" defaultValue={f.name} style={{ width: 170, height: 34, fontWeight: f.parent_id ? 400 : 700 }} />
+                      <span className="muted" style={{ width: 90 }}>{ARM[f.arm] ?? f.arm}{f.parent_id ? " · فرعية" : ""}{f.tag === "demo" ? " · تجربة" : ""}</span>
+                      <input name="icon" defaultValue={f.icon ?? ""} style={{ width: 46, height: 34, textAlign: "center" }} />
+                      <input name="color" type="color" defaultValue={f.color ?? "#FFF5F0"} style={{ width: 46, height: 34, padding: 2 }} />
+                      <input name="sort" defaultValue={f.sort} dir="ltr" style={{ width: 56, height: 34 }} />
+                      <button className="btn" style={{ height: 34 }}>حفظ</button>
+                    </form>
+                  ) : <div style={{ padding: 8 }}>{f.icon} {f.name}</div>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <div className="card">
         <table>
-          <thead><tr><th>الصنف</th><th>الذراع</th><th>النوع</th><th>العائلة</th><th>هاشتاجز</th><th>كود الميزان / الصلاحية</th></tr></thead>
+          <thead><tr><th>الصنف</th><th>الذراع</th><th>النوع</th><th>العائلة</th><th>هاشتاجز</th><th>أيقونة · كود الميزان · الصلاحية</th></tr></thead>
           <tbody>
             {(items ?? []).map((i) => (
-              <tr key={i.id}><td><b>{i.name}</b> <span className="muted" style={{ fontSize: 12 }}>{i.unit}</span></td><td>{ARM[i.arm] ?? i.arm}</td><td>{KIND[i.kind] ?? i.kind}</td><td>{fName(i.family_id)}</td><td className="muted">{(i.tags ?? []).map((t: string) => "#" + t).join(" ")}</td>
+              <tr key={i.id}><td>{i.icon} <b>{i.name}</b>{(i.tags ?? []).includes("demo") && <span className="muted" style={{ fontSize: 11 }}> · تجربة</span>} <span className="muted" style={{ fontSize: 12 }}>{i.unit}</span></td><td>{ARM[i.arm] ?? i.arm}</td><td>{KIND[i.kind] ?? i.kind}</td><td>{fName(i.family_id)}</td><td className="muted">{(i.tags ?? []).map((t: string) => "#" + t).join(" ")}</td>
                 <td>{edit ? (
                   <form action={updateItem} className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
                     <input type="hidden" name="id" value={i.id} />
+                    <input name="icon" defaultValue={i.icon ?? ""} placeholder="🛒" title="أيقونة الصنف في التطبيق" style={{ width: 46, height: 34, textAlign: "center" }} />
                     <input name="scale_plu" defaultValue={i.scale_plu ?? ""} placeholder="PLU" inputMode="numeric" dir="ltr" style={{ width: 80, height: 34 }} />
                     <input name="shelf_days" defaultValue={i.shelf_days ?? ""} placeholder="أيام" inputMode="numeric" style={{ width: 60, height: 34 }} />
                     <button className="btn" style={{ height: 34 }}>حفظ</button>
@@ -61,6 +88,7 @@ export default async function Items({ searchParams }: { searchParams: Promise<{ 
               <label className="fld">العائلة<select name="family_id"><option value="">—</option>{(fams ?? []).map((f) => <option key={f.id} value={f.id}>{fName(f.id)}</option>)}</select></label>
               <label className="fld">هاشتاجز (بمسافة)<input name="tags" placeholder="ألبان فطار" /></label>
               <label className="fld">باركود<input name="barcode" dir="ltr" /></label>
+              <label className="fld">أيقونة التطبيق<input name="icon" placeholder="🍗" style={{ width: 70, textAlign: "center" }} /></label>
               <button className="btn pri">ضيف</button>
             </div>
           </form>
@@ -71,6 +99,8 @@ export default async function Items({ searchParams }: { searchParams: Promise<{ 
               <label className="fld">الذراع<select name="arm">{Object.entries(ARM).map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select></label>
               <label className="fld">تحت عائلة<select name="parent_id"><option value="">— رئيسية —</option>{(fams ?? []).filter((f) => !f.parent_id).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</select></label>
               <label className="fld">هاشتاج العائلة<input name="tag" /></label>
+              <label className="fld">أيقونة<input name="icon" placeholder="🥛" style={{ width: 70, textAlign: "center" }} /></label>
+              <label className="fld">لون الخلفية<input name="color" type="color" defaultValue="#FFF5F0" style={{ width: 60, padding: 2 }} /></label>
               <button className="btn pri">ضيف</button>
             </div>
           </form>

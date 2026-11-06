@@ -7,7 +7,7 @@ const intOf = (v: FormDataEntryValue | null) => { const n = parseInt(String(v ??
 
 export async function updateItem(fd: FormData) {
   const sb = await supabaseServer();
-  await sb.from("items").update({ scale_plu: pluOf(fd.get("scale_plu")), shelf_days: intOf(fd.get("shelf_days")) }).eq("id", Number(fd.get("id")));
+  await sb.from("items").update({ scale_plu: pluOf(fd.get("scale_plu")), shelf_days: intOf(fd.get("shelf_days")), icon: String(fd.get("icon") || "").trim() || null }).eq("id", Number(fd.get("id")));
   revalidatePath("/items");
 }
 
@@ -28,6 +28,7 @@ export async function addItem(fd: FormData) {
       scale_plu: pluOf(fd.get("scale_plu")),
       shelf_days: intOf(fd.get("shelf_days")),
       sold_by: String(fd.get("unit")) === "قطعة" ? "piece" : "weight",
+      icon: String(fd.get("icon") || "").trim() || null,
     })
     .select("id")
     .single();
@@ -44,6 +45,20 @@ export async function addFamily(fd: FormData) {
     arm: String(fd.get("arm")),
     parent_id: p ? Number(p) : null,
     tag: String(fd.get("tag") || "").replace(/^#/, "").trim() || null,
+    icon: String(fd.get("icon") || "").trim() || null,
+    color: String(fd.get("color") || "").trim() || null,
   });
+  revalidatePath("/items");
+}
+
+// شكل العائلة في التطبيق: الأيقونة واللون والترتيب
+export async function updateFamily(fd: FormData) {
+  const sb = await supabaseServer();
+  await sb.from("families").update({
+    name: String(fd.get("name") || "").trim(),
+    icon: String(fd.get("icon") || "").trim() || null,
+    color: String(fd.get("color") || "").trim() || null,
+    sort: Number(fd.get("sort") || 100),
+  }).eq("id", Number(fd.get("id")));
   revalidatePath("/items");
 }

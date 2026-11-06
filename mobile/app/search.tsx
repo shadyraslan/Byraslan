@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { NavBar } from "@/lib/nav";
 import { useApp } from "@/lib/store";
 import { BlackHead, Chip, Grid, Input, T } from "@/lib/ui";
 import { C } from "@/lib/theme";
@@ -21,7 +22,7 @@ export default function Search() {
       <BlackHead title="البحث">
         <Input dark value={q} onChangeText={setQ} placeholder="ابحث عن أي منتج..." autoFocus returnKeyType="search" style={{ minHeight: 44 }} />
       </BlackHead>
-      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 40 + ins.bottom, gap: 14 }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 120 + ins.bottom, gap: 14 }} keyboardShouldPersistTaps="handled">
         {!v && (
           <View style={{ gap: 10 }}>
             <T w="x">🔥 الأكثر بحثاً</T>
@@ -35,6 +36,7 @@ export default function Search() {
         )}
         {v && !L.length ? <T style={{ color: C.mid, textAlign: "center", marginTop: 30 }}>مفيش نتايج لـ "{q}"</T> : <Grid items={L} />}
       </ScrollView>
+      <NavBar />
     </View>
   );
 }
