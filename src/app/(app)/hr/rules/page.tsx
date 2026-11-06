@@ -4,7 +4,7 @@ import { getMe, can } from "@/lib/perms";
 import Tabs, { Flash } from "../Tabs";
 import { saveRules } from "../pay-actions";
 
-type Pay = { divisor: number; day_hours: number; grace_min: number; late_tiers: { from: number; to: number; days: number }[]; absence_days: number; ot_rate: number; ot_min: number; ins_pct: number; tax_exempt: number; tax_brackets: [number | null, number][]; tax_lose: [number, number][]; shortage_to_payroll: boolean; early_grace?: number; early_tiers?: { from: number; to: number; days: number }[]; holiday_extra_days?: number; rest_extra_days?: number };
+type Pay = { divisor: number; day_hours: number; grace_min: number; late_tiers: { from: number; to: number; days: number }[]; absence_days: number; ot_rate: number; ot_min: number; ins_pct: number; tax_exempt: number; tax_brackets: [number | null, number][]; tax_lose: [number, number][]; shortage_to_payroll: boolean; early_grace?: number; early_tiers?: { from: number; to: number; days: number }[]; holiday_extra_days?: number; rest_extra_days?: number; go_live?: string };
 
 export default async function Rules({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
   const sp = await searchParams;
@@ -14,7 +14,7 @@ export default async function Rules({ searchParams }: { searchParams: Promise<{ 
   const { data } = await sb.from("settings").select("key,value").in("key", ["hr.payroll", "hr.leave", "hr.custody", "hr.advance", "hr.shifts", "hr.permits", "hr.staff_credit"]);
   const g = (k: string) => (data ?? []).find((s) => s.key === k)?.value ?? {};
   const p = g("hr.payroll") as Pay; const lv = g("hr.leave") as Record<string, number>; const cu = g("hr.custody") as Record<string, number>; const ad = g("hr.advance") as Record<string, number>;
-  const sh = g("hr.shifts") as { cutoff?: string; notify?: boolean }; const pm = g("hr.permits") as Record<string, number>; const sc = g("hr.staff_credit") as { on?: boolean; limit_month?: number };
+  const sh = g("hr.shifts") as { cutoff?: string; notify?: boolean }; const pm = g("hr.permits") as Record<string, number>; const sc = g("hr.staff_credit") as { on?: boolean; limit_month?: number; discount_pct?: number };
   const F = ({ n, l, v, w = 90 }: { n: string; l: string; v: unknown; w?: number }) => <label className="fld">{l}<input name={n} defaultValue={String(v ?? "")} inputMode="decimal" dir="ltr" style={{ width: w }} /></label>;
   return (
     <>
@@ -25,6 +25,7 @@ export default async function Rules({ searchParams }: { searchParams: Promise<{ 
         <div className="card">
           <h2>الحضور والمرتب</h2>
           <div className="row">
+            <label className="fld">بداية الحساب على السيستم (فاضي = أول حضور لكل موظف)<input type="date" name="go_live" defaultValue={p.go_live ?? ""} /></label>
             <F n="divisor" l="اليوم = المرتب ÷" v={p.divisor} />
             <F n="day_hours" l="ساعات اليوم" v={p.day_hours} />
             <F n="grace" l="سماح التأخير (دقيقة)" v={p.grace_min} />
@@ -82,6 +83,7 @@ export default async function Rules({ searchParams }: { searchParams: Promise<{ 
             <F n="max_permits" l="أقصى أذون مدفوعة في الشهر (0 = مفتوح)" v={pm.max_paid_month ?? 0} />
             <label className="row" style={{ gap: 6 }}><input type="checkbox" name="credit_on" defaultChecked={sc.on !== false} style={{ width: 20, height: 20 }} /> البيع للموظفين بالآجل</label>
             <F n="credit_limit" l="حد الآجل لكل موظف في الشهر (ج)" v={sc.limit_month ?? 2000} />
+            <F n="credit_disc" l="خصم الموظفين على المشتريات %" v={sc.discount_pct ?? 0} />
           </div>
         </div>
         <button className="btn pri" style={{ marginBottom: 24 }}>احفظ اللايحة</button>

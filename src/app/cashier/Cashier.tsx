@@ -43,14 +43,14 @@ export default function Cashier() {
   // على حساب موظف (بيتخصم من مرتبه)
   const [stPhone, setStPhone] = useState("");
   const [stAmt, setStAmt] = useState("");
-  const [stInfo, setStInfo] = useState<{ id: string; name: string; available: number } | null>(null);
+  const [stInfo, setStInfo] = useState<{ id: string; name: string; available: number; discount_pct: number } | null>(null);
   const [stErr, setStErr] = useState<string | null>(null);
   const findStaff = async () => {
     setStInfo(null); setStErr(null);
     if (stPhone.replace(/\D/g, "").length < 10) return;
     const { data, error } = await sb.rpc("staff_credit_check", { p_phone: stPhone });
     if (error) return setStErr(errText(error));
-    setStInfo(data as { id: string; name: string; available: number });
+    setStInfo(data as { id: string; name: string; available: number; discount_pct: number });
   };
   const [rec, setRec] = useState<Done | null>(null);
   const [view, setView] = useState<"sell" | "orders" | "list" | "close">("sell");
@@ -229,7 +229,8 @@ export default function Cashier() {
 
   // ---------- الدفع ----------
   const sub = lines.reduce((a, l) => a + r2(l.qty * l.unit_price), 0);
-  const d = Math.min(Number(disc) || 0, sub);
+  const stDisc = stInfo ? r2(sub * (Number(stInfo.discount_pct) || 0) / 100) : 0;
+  const d = Math.min((Number(disc) || 0) + stDisc, sub);
   const total = Math.max(r2(sub - d), 0);
   const st = stInfo ? Number(stAmt) || 0 : 0;
   const paid = (Number(cash) || 0) + (Number(card) || 0) + st;
@@ -246,7 +247,7 @@ export default function Cashier() {
     const s: Sale = { client_id: uuid(), shift: shift.client_id, at: new Date().toISOString(), local_no: "", lines, discount: d, cash: c, card: k, offline: false };
     setWorking(true);
     const { data, error } = await sb.rpc("pos_sync", { p_loc: shift.loc, p_shifts: [{ client_id: shift.client_id, opening_cash: shift.opening_cash, opened_at: shift.opened_at }],
-      p_sales: [{ ...s, staff: st, staff_id: st > 0 ? stInfo?.id : null, lines: lines.map(({ item_id, box_sn, qty, unit_price }) => ({ item_id, box_sn, qty, unit_price })) }] });
+      p_sales: [{ ...s, staff: st, staff_id: stInfo?.id ?? null, lines: lines.map(({ item_id, box_sn, qty, unit_price }) => ({ item_id, box_sn, qty, unit_price })) }] });
     setWorking(false);
     if (error) return bad(`الفاتورة ماتسجلتش: ${errText(error)}`);
     const r = (data as { sales: { no: number; conflicts?: string[] }[] }).sales[0];
@@ -377,7 +378,8 @@ export default function Cashier() {
                 <input value={stPhone} onChange={(e) => { setStPhone(e.target.value); setStInfo(null); }} onBlur={findStaff} placeholder="موبايل الموظف" inputMode="tel" dir="ltr" style={{ flex: 1 }} />
                 <input value={stAmt} onChange={(e) => setStAmt(e.target.value)} placeholder="المبلغ" inputMode="decimal" dir="ltr" style={{ width: 90 }} />
               </div>
-              {stInfo && <div className="muted">{stInfo.name} — المتاح {f2(stInfo.available)} ج · بيتخصم من مرتبه</div>}
+              {stInfo && <div className="muted">{stInfo.name} — المتاح آجل {f2(stInfo.available)} ج{stDisc > 0 ? ` · خصم موظفين ${stInfo.discount_pct}% = ${f2(stDisc)} ج` : ""}</div>}
+              <div className="muted" style={{ fontSize: 12 }}>اكتب موبايل الموظف حتى لو دافع كاش عشان ياخد خصم الموظفين — والمبلغ بس لو على حسابه.</div>
               {stErr && <div className="badmsg">{stErr}</div>}
             </details>
             {paid > total && <div className="okmsg">الباقي للعميل: {f2(paid - total)} ج</div>}

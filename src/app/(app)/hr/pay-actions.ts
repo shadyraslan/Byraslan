@@ -98,13 +98,13 @@ export async function saveRules(fd: FormData) {
       divisor: N(fd, "divisor") || 30, day_hours: N(fd, "day_hours") || 8, grace_min: N(fd, "grace"), late_tiers: tiers(S(fd, "tiers")),
       absence_days: N(fd, "absence"), ot_rate: N(fd, "ot_rate") || 1, ot_min: N(fd, "ot_min"), ins_pct: N(fd, "ins_pct"),
       tax_exempt: N(fd, "tax_exempt"), tax_brackets: brackets(S(fd, "brackets")), tax_lose: lose(S(fd, "lose")), shortage_to_payroll: fd.get("short") === "on",
-      early_grace: N(fd, "early_grace"), early_tiers: tiers(S(fd, "early_tiers")), holiday_extra_days: N(fd, "hol_extra"), rest_extra_days: N(fd, "rest_extra") } },
+      go_live: S(fd, "go_live") || null, early_grace: N(fd, "early_grace"), early_tiers: tiers(S(fd, "early_tiers")), holiday_extra_days: N(fd, "hol_extra"), rest_extra_days: N(fd, "rest_extra") } },
     { key: "hr.leave", updated_at: now, value: { annual: N(fd, "annual"), first_year: N(fd, "first_year"), casual: N(fd, "casual"), sick_pay_pct: N(fd, "sick") } },
     { key: "hr.custody", updated_at: now, value: { spend_limit: N(fd, "spend_limit") } },
     { key: "hr.advance", updated_at: now, value: { max_salaries: N(fd, "max_salaries") || 1, max_installments: N(fd, "max_inst") || 1 } },
     { key: "hr.shifts", updated_at: now, value: { cutoff: S(fd, "cutoff") || "20:00", notify: fd.get("notify") === "on" } },
     { key: "hr.permits", updated_at: now, value: { max_paid_month: N(fd, "max_permits") } },
-    { key: "hr.staff_credit", updated_at: now, value: { on: fd.get("credit_on") === "on", limit_month: N(fd, "credit_limit") } },
+    { key: "hr.staff_credit", updated_at: now, value: { on: fd.get("credit_on") === "on", limit_month: N(fd, "credit_limit"), discount_pct: Math.min(Math.max(N(fd, "credit_disc"), 0), 100) } },
   ]);
   await done("/hr/rules", error, "اتحفظت — بتطبّق من أول حساب مرتبات جاي");
 }
