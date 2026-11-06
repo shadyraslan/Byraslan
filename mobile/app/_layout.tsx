@@ -18,8 +18,9 @@ export default function Root() {
   useEffect(() => { if (loaded) SplashScreen.hideAsync().catch(() => {}); }, [loaded]);
   useEffect(() => {
     const s = Notifications.addNotificationResponseReceivedListener((r) => {
-      const d = r.notification.request.content.data as { token?: string; notice?: number } | undefined;
-      if (d?.token) router.push(`/order/${d.token}`);
+      const d = r.notification.request.content.data as { token?: string; notice?: number; ticket?: string } | undefined;
+      if (d?.ticket) router.push(`/chat/${d.ticket}`);
+      else if (d?.token) router.push(`/order/${d.token}`);
       else if (d?.notice) router.push("/notices");
     });
     return () => s.remove();

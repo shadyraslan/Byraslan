@@ -5,6 +5,7 @@ export type Track = {
   no: number; status: string; branch: string; est_total: number; total: number | null; fee: number; discount: number;
   created_at: string; accepted_at: string | null; ready_at: string | null; out_at: string | null; delivered_at: string | null;
   driver: string | null; address: string | null; pay: string; cancel_reason: string | null;
+  booking?: boolean; scheduled_for?: string | null; slot?: string | null; deposit?: number; deposit_paid?: boolean; can_edit?: boolean;
   lines: { item_id: number; name: string; unit: string; qty: number; prepared: number; price: number; icon: string | null }[];
 };
 export function useTrack(token: string, every = 15000) {

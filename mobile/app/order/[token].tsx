@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { Linking, RefreshControl, ScrollView, Text, View } from "react-native";
+import { webUrl } from "@/lib/cs";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { hhmm, orderTotal, useTrack } from "@/lib/track";
@@ -31,6 +32,14 @@ export default function Track() {
           {o.status === "cancelled" ? <T style={{ color: C.red }}>{o.cancel_reason}</T>
             : o.status !== "delivered" ? <T style={{ color: C.mid }}>الوصول المتوقع خلال <T w="x">{o.status === "out" ? "15-20" : "35-45"} دقيقة</T></T> : null}
         </View>
+        {o.booking && o.scheduled_for && o.status !== "cancelled" && (
+          <Card title="📅 حجز">
+            <T w="x">{new Date(o.scheduled_for).toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long" })} — الساعة {o.slot}</T>
+            {!!o.deposit && <T style={{ color: o.deposit_paid ? C.green : C.mid }}>{o.deposit_paid ? `✅ العربون ${o.deposit} ج اتدفع` : `العربون المطلوب ${o.deposit} ج`}</T>}
+            {o.can_edit ? <Btn outline title="✏️ عدّل الحجز (الميعاد، الأصناف، العنوان، الإلغاء)" onPress={() => Linking.openURL(`${webUrl}/t/${token}`)} />
+              : <T style={{ color: C.mid, fontSize: 12 }}>التعديل خلص وقته — كلّم خدمة العملاء لو محتاج حاجة</T>}
+          </Card>
+        )}
         {o.status !== "cancelled" && (
           <Card>
             {STEPS.map((s, i) => {
@@ -65,6 +74,7 @@ export default function Track() {
           <T style={{ color: C.mid, fontSize: 12.5 }} numberOfLines={2}>{o.lines.map((l) => `${l.icon ?? ""} ${l.name}`).join(" · ")}</T>
         </Card>
         <Btn outline title="مشكلة في الطلب؟" onPress={() => router.push(`/complaint/${token}`)} />
+        <Btn outline title="💬 كلّم خدمة العملاء عن الطلب ده" onPress={() => router.push({ pathname: "/chat/new", params: { topic: "issue", order: token } })} />
       </ScrollView>
     </View>
   );

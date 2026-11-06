@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import Refresh from "./Refresh";
+import BookingBox from "./BookingBox";
 
 const STEPS: [string, string][] = [["new", "وصلنا طلبك"], ["accepted", "اتقبل"], ["preparing", "بيتحضّر"], ["ready", "جاهز"], ["out", "مع الطيار"], ["delivered", "اتسلّم"]];
-type T = { no: number; status: string; branch: string; est_total: number; total: number | null; fee: number; cancel_reason: string | null; lines: { name: string; unit: string; qty: number; prepared: number; price: number }[] };
+type T = { no: number; status: string; branch: string; est_total: number; total: number | null; fee: number; cancel_reason: string | null; booking?: boolean; scheduled_for?: string; slot?: string; can_edit?: boolean; deposit?: number; deposit_paid?: boolean; district_id?: number | null; lines: { name: string; unit: string; qty: number; prepared: number; price: number }[] };
 
 export default async function Track({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -23,13 +24,16 @@ export default async function Track({ params }: { params: Promise<{ token: strin
         {o.status === "cancelled" ? <div className="badmsg">الطلب اتلغى {o.cancel_reason ? `— ${o.cancel_reason}` : ""}</div> : (
           <div className="steps">{STEPS.map(([k, l], i) => <div key={k} className={i <= idx ? "on" : ""}><span>{i + 1}</span>{l}</div>)}</div>
         )}
+        {o.booking && o.status !== "cancelled" && o.scheduled_for && (
+          <BookingBox token={token} district={o.district_id ?? null} when={o.scheduled_for} slot={o.slot ?? ""} canEdit={!!o.can_edit} deposit={Number(o.deposit ?? 0)} depositPaid={!!o.deposit_paid} />
+        )}
         <div className="card">
           <div className="muted">فرع {o.branch}</div>
           {o.lines.map((l, i) => <div key={i} className="row" style={{ justifyContent: "space-between" }}><span>{l.name} <span className="num">{l.prepared > 0 ? l.prepared : l.qty} {l.unit}</span></span><b className="num">{Math.round(lineTotal(l))}</b></div>)}
           <div className="row" style={{ justifyContent: "space-between" }}><span>التوصيل</span><b className="num">{o.fee}</b></div>
           <div className="row" style={{ justifyContent: "space-between", fontSize: 18 }}><span>{final ? "الإجمالي" : "الإجمالي (تقريبي لحد الوزن)"}</span><b className="num">{Math.round(final ? Number(o.total) : sub + Number(o.fee))} ج</b></div>
         </div>
-        <div className="muted" style={{ fontSize: 13 }}>احفظ اللينك ده عشان تتابع طلبك</div>
+        <div className="row" style={{ justifyContent: "space-between" }}><span className="muted" style={{ fontSize: 13 }}>احفظ اللينك ده عشان تتابع طلبك</span><a className="btn" href={`/help?o=${token}`}>💬 مشكلة في الطلب؟</a></div>
       </div>
     </div>
   );

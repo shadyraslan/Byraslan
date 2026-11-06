@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -7,7 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useApp } from "@/lib/store";
 import { useQuote } from "@/lib/quote";
 import { errMsg, sb } from "@/lib/supabase";
-import { BlackHead, BottomBar, Btn, Card, Err, Input, Ln, Radio, T } from "@/lib/ui";
+import { BlackHead, BottomBar, Btn, Card, Chip, Err, Input, Ln, Radio, T } from "@/lib/ui";
 import { C, money } from "@/lib/theme";
 
 const PAY: [string, string, string][] = [["cash", "💵", "كاش عند الاستلام"], ["card", "💳", "بطاقة بنكية عند الاستلام"], ["instapay", "📱", "محفظة إلكترونية / إنستاباي"]];
@@ -23,6 +23,14 @@ export default function Checkout() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const q = useQuote(code ?? "");
+  // اطلب دلوقتي ولا احجز لميعاد
+  const [mode, setMode] = useState<"now" | "book">("now");
+  const [bdate, setBdate] = useState("");
+  const [bslot, setBslot] = useState("");
+  const [slots, setSlots] = useState<{ slot: string; ok: boolean; full: boolean }[] | null>(null);
+  const days = useMemo(() => Array.from({ length: 14 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() + i); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }), []);
+  useEffect(() => { if (mode === "book" && bdate && district?.id) { setSlots(null); sb.rpc("booking_slots", { p_district: district.id, p_date: bdate }).then(({ data }) => setSlots((data ?? []) as { slot: string; ok: boolean; full: boolean }[])); } }, [mode, bdate, district?.id]);
+  const dn = (s: string) => new Date(`${s}T12:00:00`).toLocaleDateString("ar-EG", { weekday: "short", day: "numeric", month: "short" });
   const lines = (menu ?? []).filter((m) => cart[m.item_id]);
   const addr = profile.addresses.find((a) => a.district_id === district?.id && a.is_default) ?? profile.addresses.find((a) => a.district_id === district?.id);
 
@@ -46,6 +54,7 @@ export default function Checkout() {
       saveAddress({ label: a.label, district_id: a.district_id, address: a.address, is_default: true });
     }
     if (!a) return router.push("/address");
+    if (mode === "book" && (!bdate || !bslot)) return setErr("اختار يوم وميعاد الحجز");
     setBusy(true);
     const { data, error } = await sb.rpc("app_order", {
       p_district: a.district_id, p_phone: d, p_name: nm, p_address: a.address, p_note: note, p_pay: pay,
@@ -54,6 +63,10 @@ export default function Checkout() {
     setBusy(false);
     if (error) return setErr(errMsg(error));
     const r = data as { no: number; token: string; total: number };
+    if (mode === "book") {
+      const { error: be } = await sb.rpc("booking_attach", { p_token: r.token, p_date: bdate, p_slot: bslot });
+      if (be) setErr(`الطلب اتسجّل بس الحجز ماتمش: ${errMsg(be)} — كلّم خدمة العملاء`);
+    }
     saveProfile({ name: nm, phone: d });
     addToken(r.token);
     clearCart();
@@ -78,6 +91,20 @@ export default function Checkout() {
           <Input value={name} onChangeText={setName} placeholder="الاسم" />
           <Input value={phone} onChangeText={setPhone} placeholder="رقم الموبايل 01xxxxxxxxx" keyboardType="phone-pad" style={{ textAlign: "left" }} />
         </Card>
+        <Card title="ميعاد التوصيل" icon="📅">
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Chip label="🚚 دلوقتي" on={mode === "now"} onPress={() => setMode("now")} />
+            <Chip label="📅 احجز لميعاد" on={mode === "book"} onPress={() => setMode("book")} />
+          </View>
+          {mode === "book" && (
+            <>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>{days.map((d) => <Chip key={d} label={dn(d)} on={bdate === d} onPress={() => { setBdate(d); setBslot(""); }} />)}</ScrollView>
+              {bdate && !slots && <T style={{ color: C.mid }}>بيحمّل…</T>}
+              {slots && <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{slots.filter((x) => x.ok).map((x) => <Chip key={x.slot} label={x.slot} on={bslot === x.slot} onPress={() => setBslot(x.slot)} yellow />)}</View>}
+              {slots && !slots.some((x) => x.ok) && <T style={{ color: C.mid, fontSize: 12 }}>مفيش مواعيد متاحة اليوم ده</T>}
+            </>
+          )}
+        </Card>
         <Card title="طريقة الدفع" icon="💳">
           {PAY.map(([k, ic, l]) => <Radio key={k} icon={ic} on={pay === k} onPress={() => setPay(k)}><T w="x" style={{ fontSize: 13.5 }}>{l}</T></Radio>)}
         </Card>
@@ -96,7 +123,7 @@ export default function Checkout() {
         <Err t={err} />
       </ScrollView>
       <BottomBar>
-        <Btn y title={`تأكيد الطلب — ${money(q?.total ?? 0)}`} onPress={place} busy={busy} disabled={!lines.length || config?.open === false} style={{ flex: 1 }} />
+        <Btn y title={`${mode === "book" ? "تأكيد الحجز" : "تأكيد الطلب"} — ${money(q?.total ?? 0)}`} onPress={place} busy={busy} disabled={!lines.length || config?.open === false} style={{ flex: 1 }} />
       </BottomBar>
     </View>
   );

@@ -6,7 +6,7 @@ import ScanInput from "@/components/ScanInput";
 /* طلبات الأونلاين جوه الكاشير: بتتحدّث كل 10 ثواني، والطلب الجديد بيرن لحد ما حد يفتحه */
 
 export type OOrder = {
-  id: number; no: number; status: string; created_at: string; pay: string; address: string | null; note: string | null; fee: number; discount: number; est: number; driver: string | null;
+  id: number; no: number; status: string; created_at: string; pay: string; address: string | null; note: string | null; fee: number; discount: number; est: number; driver: string | null; booking?: boolean; scheduled_for?: string | null; slot?: string | null; deposit?: number; deposit_paid?: boolean;
   customer: string; phone: string; lines: { line: number; name: string; unit: string; qty: number; prepared: number; price: number }[]; boxes: number[];
 };
 const ST: Record<string, string> = { new: "جديد", accepted: "اتقبل", preparing: "بيتحضّر", ready: "جاهز", out: "مع الطيار" };
@@ -62,6 +62,7 @@ export default function OrdersPanel({ sb, orders, ack, reload, online }: { sb: S
           <button key={x.id} onClick={() => { setCur(x.id); ack(x.id); setMsg(null); }} className="card" style={{ textAlign: "right", cursor: "pointer", border: x.id === cur ? "2px solid var(--y)" : x.status === "new" ? "2px solid var(--bad)" : undefined, display: "grid", gap: 2 }}>
             <div className="row" style={{ justifyContent: "space-between" }}><b className="num">#{x.no}</b><span style={{ color: x.status === "new" ? "var(--bad)" : undefined, fontWeight: 700 }}>{ST[x.status]} · <span className="num">{mins(x.created_at)} د</span></span></div>
             <div>{x.customer} <span className="muted">· {x.lines.length} صنف · {PAY[x.pay]}</span></div>
+            {x.booking && x.scheduled_for && <div style={{ color: "#7A6200", fontWeight: 700 }}>📅 حجز الساعة {x.slot} — {new Date(x.scheduled_for).toLocaleDateString("ar-EG", { weekday: "short", day: "numeric", month: "short", timeZone: "Africa/Cairo" })}</div>}
           </button>
         ))}
         {!orders.length && <div className="card muted">مفيش طلبات أونلاين مفتوحة</div>}
@@ -80,7 +81,7 @@ export default function OrdersPanel({ sb, orders, ack, reload, online }: { sb: S
               <tbody>{o.lines.map((l) => <tr key={l.line}><td><b>{l.name}</b></td><td className="num">{l.qty} {l.unit}</td><td className="num" style={{ color: l.prepared <= 0 ? "var(--bad)" : "var(--good)", fontWeight: 700 }}>{l.prepared}</td><td className="num">{Math.round((l.prepared || l.qty) * l.price)}</td></tr>)}</tbody>
             </table>
             {!!o.boxes.length && <div className="row" style={{ gap: 6 }}>{o.boxes.map((sn) => <button key={sn} className="btn" style={{ height: 28, fontSize: 12 }} onClick={() => run(sb.rpc("order_unscan", { p_id: o.id, p_sn: sn }), `شلت العلبة #${sn}`)}>#{sn} ✕</button>)}</div>}
-            <div className="muted">التوصيل {o.fee} {o.discount > 0 ? `· خصم ${o.discount}` : ""} · الدفع {PAY[o.pay]}</div>
+            <div className="muted">التوصيل {o.fee} {o.discount > 0 ? `· خصم ${o.discount}` : ""} · الدفع {PAY[o.pay]}{o.booking ? ` · حجز الساعة ${o.slot}${o.deposit ? ` · عربون ${o.deposit} ج ${o.deposit_paid ? "✓ مدفوع" : "(مش مدفوع)"}` : ""}` : ""}</div>
             <div className="row">
               {o.status === "new" && <button className="btn pri" onClick={() => run(sb.rpc("order_status", { p_id: o.id, p_status: "accepted" }), "اتقبل — امسح العلب")}>اقبل الطلب</button>}
               {["accepted", "preparing"].includes(o.status) && <button className="btn pri" onClick={() => run(sb.rpc("order_status", { p_id: o.id, p_status: "ready" }), "جاهز")}>جاهز للتوصيل</button>}
