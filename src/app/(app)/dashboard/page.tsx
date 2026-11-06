@@ -4,6 +4,7 @@ import { getMe, can } from "@/lib/perms";
 import { LOC_ICON, LOC_TYPE } from "@/lib/apps";
 import { NAV } from "@/lib/nav";
 import Tile from "@/components/Tile";
+import Bars from "@/components/Bars";
 import { cairoDayStart, money } from "@/lib/time";
 
 /** الرئيسية: اللي محتاج منك دلوقتي، الفروع، وكل الأقسام بنفس ترتيب القايمة الجانبية */
@@ -30,6 +31,8 @@ export default async function Home() {
   const seeSales = can(me, "acc.view") || can(me, "pos.shift");
   const branches = (locs ?? []).filter((l) => ["dark", "shop"].includes(l.type));
   const sites = (locs ?? []).filter((l) => ["factory", "warehouse", "donation"].includes(l.type));
+  const st = seeSales ? ((await sb.rpc("section_stats", { p_section: "branches" })).data as { series?: { d: string; v: number }[] } | null) : null;
+  const salesSeries = (st?.series ?? []).map((x) => ({ label: new Date(`${x.d}T12:00:00`).toLocaleDateString("ar-EG", { day: "numeric", month: "numeric" }), v: Number(x.v) }));
   const groups = NAV.map((g) => ({ ...g, links: g.links.filter((l) => !l.perms || l.perms.some((p) => can(me, p))) })).filter((g) => g.links.length);
   const K = ({ href, label, n, warn, sub }: { href: string; label: string; n: number | null | string; warn?: boolean; sub?: string }) =>
     n == null ? null : <Link href={href} className={`kpi${warn && Number(n) > 0 ? " hl" : ""}`}><span>{label}</span><b className="num">{n}</b>{sub && <small>{sub}</small>}</Link>;
@@ -57,14 +60,16 @@ export default async function Home() {
       )}
 
       <h2 className="sec">الأقسام</h2>
-      <div className="grid2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
-        {groups.map((g) => (
-          <div key={g.title} className="card" style={{ display: "grid", gap: 2, alignContent: "start" }}>
-            <b style={{ fontSize: 15.5, marginBottom: 4 }}>{g.icon} {g.title}</b>
-            {g.links.map((l) => <Link key={l.href} href={l.href} style={{ padding: "7px 6px", borderRadius: 8, textDecoration: "none", color: "inherit" }}>{l.icon} {l.label}</Link>)}
-          </div>
-        ))}
+      <div className="tiles">
+        {groups.map((g) => <Tile key={g.id} href={`/sec/${g.id}`} icon={g.icon} color={g.color} label={g.title} sub={`${g.links.length} شاشة`} />)}
       </div>
+
+      {seeSales && !!salesSeries.length && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <h2 style={{ marginTop: 0 }}>مبيعات الفروع في آخر 14 يوم</h2>
+          <Bars data={salesSeries} unit=" ج" />
+        </div>
+      )}
     </>
   );
 }

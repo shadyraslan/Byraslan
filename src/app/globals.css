@@ -133,3 +133,16 @@ input,select{border-radius:12px;height:42px}input:focus,select:focus{outline:non
   .main{padding:14px}
 }
 @media print{.mbar,.scrim{display:none!important}}
+.side .ghead{display:flex;align-items:center;gap:4px;padding:0;background:none}
+.side .ghead .gl{flex:1;font-weight:700;color:#d8d3c8;padding:9px 10px;margin:0}
+.side .ghead.cur .gl{color:#f5c800}
+.side .ghead .chev{width:30px;height:30px;border-radius:8px;border:0;background:#1a1a1a;color:#999;font-size:16px;cursor:pointer}
+.side a.sub{margin-inline-start:14px;font-size:13.5px;padding:7px 10px;color:#cfcac0}
+.side a svg{flex:none;opacity:.9}
+.mbar .mtitle{display:flex;align-items:center;gap:6px}
+.sec-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.sec-head .ico{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;color:#fff;background:linear-gradient(150deg,color-mix(in srgb,var(--c) 62%,#fff),var(--c) 48%,color-mix(in srgb,var(--c) 78%,#000));box-shadow:0 10px 20px -8px color-mix(in srgb,var(--c) 75%,transparent)}
+.sec-head h1{margin:0;font-size:22px}
+.chart{width:100%;height:auto;display:block}
+.chart .bar{transition:opacity .15s}.chart .bar:hover{opacity:.75}
+.chart text{font-size:11px;fill:var(--muted)}
