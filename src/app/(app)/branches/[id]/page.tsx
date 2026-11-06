@@ -14,7 +14,7 @@ export default async function Branch({ params }: { params: Promise<{ id: string 
   if (!loc) notFound();
   const { data: subs } = await sb.from("locations").select("id,name,type").eq("parent", id).eq("active", true).order("sort");
   const isShop = ["dark", "shop"].includes(loc.type);
-  const apps = BRANCH_APPS.filter((a) => (!a.perm || can(me, a.perm)) && (isShop || !["pos", "orders", "partner", "receive"].includes(a.id)));
+  const apps = BRANCH_APPS.filter((a) => !!a.href && (!a.perm || can(me, a.perm)) && (isShop || !["pos", "orders", "partner", "receive"].includes(a.id)));
   return (
     <>
       <div className="crumbs"><Link href="/dashboard">الرئيسية</Link> ‹ <span>{loc.name}</span></div>

@@ -1,36 +1,17 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getMe } from "@/lib/perms";
+import { getMe, can } from "@/lib/perms";
+import { NAV } from "@/lib/nav";
+import SideNav from "./SideNav";
 import { signOut } from "./actions";
-
-const NAV: [string, [string, string][]][] = [
-  ["", [["/dashboard", "الرئيسية"]]],
-  ["خدمة العملاء", [["/cs", "التذاكر والشات"], ["/cs/new", "طلب أو حجز واتساب / تليفون"], ["/bookings", "الحجوزات والتقارير"]]],
-  ["البيع", [["/orders", "طلبات الأونلاين"], ["/complaints", "شكاوى التطبيق"], ["/cashier", "الكاشير"], ["/pos", "الكاشير (أونلاين بس)"], ["/sales", "المبيعات والورديات"], ["/prices", "أسعار الفروع"]]],
-  ["المصنع والمخزون", [["/production", "أوامر الإنتاج"], ["/station", "تابلت الغرف"], ["/pack", "محطة التغليف"], ["/trips", "تحميل العربيات"], ["/stock", "المخزون"], ["/transfers", "التحويلات"], ["/stock/dispose", "هالك وتبرعات"], ["/boxes", "تتبّع العلبة"]]],
-  ["المشتريات", [["/purchasing", "أوامر التوريد والاستلام"], ["/purchasing/specs", "كارت الصنف"], ["/purchasing/suppliers", "الموردين"], ["/overrides", "التجاوزات"]]],
-  ["الحسابات", [["/accounts", "الملخص اليومي"], ["/accounts/expenses", "المصروفات"], ["/accounts/suppliers", "حسابات الموردين"]]],
-  ["الأصناف", [["/items", "الأصناف والعائلات"]]],
-  ["الموظفين", [["/hr", "الحضور"], ["/hr/hours", "الساعات والأيام"], ["/hr/shifts", "الورديات والأذون"], ["/hr/leaves", "الإجازات والسلف"], ["/hr/days", "أيام الإجازة"], ["/hr/appraisals", "تقييم الأداء"], ["/hr/payroll", "المرتبات"], ["/hr/custody", "العهد"], ["/hr/requests", "الاعتراضات والأوراق"], ["/hr/messages", "رسايل الموظفين"], ["/hr/rules", "اللايحة والأرصدة"]]],
-  ["الإعداد", [["/locations", "المواقع"], ["/users", "المستخدمين والصلاحيات"], ["/zones", "مناطق التوصيل"], ["/notify", "الإشعارات والرسايل"], ["/settings", "الإعدادات"]]],
-];
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const me = await getMe();
   if (!me) redirect("/login");
+  // كل واحد بيشوف الشاشات اللي معاه صلاحيتها بس
+  const groups = NAV.map((g) => ({ ...g, links: g.links.filter((l) => !l.perms || l.perms.some((p) => can(me, p))) })).filter((g) => g.links.length);
   return (
     <div className="shell">
-      <nav className="side">
-        <div className="brand"><img src="/logo.png" alt="By Raslan" /><span style={{ fontSize: 10.5, letterSpacing: 2, color: "#f5c800" }}>ERP</span></div>
-        {NAV.map(([g, links]) => (
-          <div key={g || "home"} style={{ display: "contents" }}>
-            {g && <div className="grp">{g}</div>}
-            {links.map(([href, label]) => <Link key={href} href={href}>{label}</Link>)}
-          </div>
-        ))}
-        <div style={{ flex: 1 }} />
-        <form action={signOut}><button className="btn" style={{ width: "100%" }}>خروج — {me.name}</button></form>
-      </nav>
+      <SideNav groups={groups} name={me.name} signOut={signOut} />
       <main className="main">{children}</main>
     </div>
   );

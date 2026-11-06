@@ -4,7 +4,9 @@ const T: [string, string][] = [
   ["/hr/messages", "رسايل الموظفين"], ["/hr/policy", "نص اللايحة"], ["/hr/rules", "اللايحة والأرصدة"], ["/users", "الموظفين والصلاحيات"], ["/locations", "أماكن الحضور"],
 ];
 export default function Tabs({ cur }: { cur: string }) {
-  return <div className="row" style={{ marginBottom: 12 }}>{T.map(([h, l]) => <Link key={h} href={h} className={h === cur ? "btn pri" : "btn"} style={{ display: "inline-grid", placeItems: "center" }}>{l}</Link>)}</div>;
+  // القايمة الجانبية بقت فيها شاشات القسم — مفيش صف أزرار فوق
+  void cur; void T; void Link;
+  return null;
 }
 /** رسالة النجاح أو الغلط اللي راجعة من الأكشن */
 export function Flash({ sp }: { sp: { ok?: string; err?: string } }) {
