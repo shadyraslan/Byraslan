@@ -1,6 +1,7 @@
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import { addLocation, saveGeo, toggleLocation } from "./actions";
+import GeoHere from "./GeoHere";
 
 const LTYPE: Record<string, string> = {
   factory: "مصنع", section: "قسم مصنع", warehouse: "مخزن", sub: "مخزن فرعي", dark: "دارك ستور",
@@ -29,7 +30,8 @@ export default async function Locations() {
                 <td>{edit ? (
                   <form action={saveGeo} className="row" style={{ gap: 4, flexWrap: "nowrap" }}>
                     <input type="hidden" name="id" value={l.id} />
-                    <input name="geo" defaultValue={l.lat != null ? `${l.lat}, ${l.lng}` : ""} placeholder="31.2346, 29.9590" dir="ltr" style={{ width: 170, height: 32 }} title="من جوجل مابس: كليك يمين على المكان وانسخ الأرقام" />
+                    <input name="geo" defaultValue={l.lat != null ? `${l.lat}, ${l.lng}` : ""} placeholder="31.2346, 29.9590" dir="ltr" style={{ width: 170, height: 32 }} title="من جوجل مابس: كليك يمين على المكان وانسخ الأرقام، أو الصق لينك جوجل مابس الطويل" />
+                    <GeoHere />
                     <input name="radius" defaultValue={l.radius_m ?? 150} dir="ltr" style={{ width: 60, height: 32 }} />
                     <button className="btn" style={{ height: 32 }}>حفظ</button>
                   </form>) : <span className="num">{l.lat != null ? `${l.lat}, ${l.lng} · ${l.radius_m}م` : "—"}</span>}</td>

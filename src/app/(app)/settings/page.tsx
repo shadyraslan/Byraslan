@@ -14,6 +14,12 @@ async function save(fd: FormData) {
     { key: "app.test_mode", value: fd.get("test") === "on" },
     { key: "pos.refresh_minutes", value: Math.max(Number(fd.get("posmin") || 1), 0.25) },
     { key: "online.offline_reroute_minutes", value: Math.max(Number(fd.get("reroute") || 0), 0) },
+    { key: "scale_barcode", value: {
+      prefix: String(fd.get("sc_prefix") || "20").trim(), plu_digits: Number(fd.get("sc_plu") || 5), weight_digits: Number(fd.get("sc_w") || 5),
+      decimals: Number(fd.get("sc_dec") || 3), type: String(fd.get("sc_type") || "weight"), double_read_sec: 1 } },
+    { key: "app.support", value: {
+      whatsapp: String(fd.get("wa") || "").trim(), phone: String(fd.get("phone") || "").trim(), hours: String(fd.get("hours") || "").trim(),
+      faq: String(fd.get("faq") || "").split(/\n/).map((l) => l.split("|").map((x) => x.trim())).filter((x) => x[0] && x[1]).map((x) => [x[0], x.slice(1).join(" | ")]) } },
   ];
   await sb.from("settings").upsert(rows.map((r) => ({ ...r, updated_at: new Date().toISOString() })));
   revalidatePath("/settings");
@@ -45,6 +51,32 @@ export default async function Settings() {
         <label className="fld">الكاشير يحدّث الأسعار والعلب كل (دقيقة)<input name="posmin" defaultValue={String(g("pos.refresh_minutes") ?? 1)} inputMode="decimal" dir="ltr" style={{ width: 100 }} /></label>
         <div className="muted" style={{ fontSize: 13 }}>ولو اتمسح كود مش موجود على الجهاز والنت شغال، بيسأل السيستم على طول.</div>
         <label className="fld">لو نت كاشير الفرع قطع أكتر من (دقيقة) طلبات الأونلاين الجديدة تروح للفرع الاحتياطي — 0 = مايتحوّلش<input name="reroute" defaultValue={String(g("online.offline_reroute_minutes") ?? 5)} inputMode="numeric" dir="ltr" style={{ width: 100 }} /></label>
+        <h2 style={{ marginTop: 14 }}>باركود الميزان</h2>
+        {(() => { const sc = (g("scale_barcode") ?? {}) as { prefix?: string; plu_digits?: number; weight_digits?: number; decimals?: number; type?: string }; return (
+          <>
+            <div className="row">
+              <label className="fld">بيبدأ بـ<input name="sc_prefix" defaultValue={sc.prefix ?? "20"} dir="ltr" style={{ width: 70 }} /></label>
+              <label className="fld">أرقام كود الصنف<input name="sc_plu" defaultValue={sc.plu_digits ?? 5} dir="ltr" style={{ width: 70 }} /></label>
+              <label className="fld">الملصق فيه<select name="sc_type" defaultValue={sc.type ?? "weight"}><option value="weight">الوزن</option><option value="price">السعر</option></select></label>
+              <label className="fld">أرقام الوزن/السعر<input name="sc_w" defaultValue={sc.weight_digits ?? 5} dir="ltr" style={{ width: 70 }} /></label>
+              <label className="fld">منهم عشري<input name="sc_dec" defaultValue={sc.decimals ?? 3} dir="ltr" style={{ width: 70 }} /></label>
+            </div>
+            <div className="muted" style={{ fontSize: 13 }}>مثال بالإعدادات دي: <b dir="ltr">{sc.prefix ?? "20"}{"0".repeat(Math.max((sc.plu_digits ?? 5) - 3, 0))}123{"0".repeat(Math.max((sc.weight_digits ?? 5) - 4, 0))}1250X</b> = صنف كود 123 و{(sc.type ?? "weight") === "price" ? "سعر" : "وزن"} {1250 / 10 ** (sc.decimals ?? 3)}. كود الصنف على الميزان بيتكتب في الصنف (كود الميزان).</div>
+          </>
+        ); })()}
+        <h2 style={{ marginTop: 14 }}>خدمة العملاء (بتظهر في التطبيق)</h2>
+        {(() => { const sp = (g("app.support") ?? {}) as { whatsapp?: string; phone?: string; hours?: string; faq?: [string, string][] }; return (
+          <>
+            <div className="row">
+              <label className="fld">واتساب<input name="wa" defaultValue={sp.whatsapp ?? ""} placeholder="201000000000" dir="ltr" /></label>
+              <label className="fld">تليفون<input name="phone" defaultValue={sp.phone ?? ""} placeholder="19xxx" dir="ltr" /></label>
+              <label className="fld">المواعيد<input name="hours" defaultValue={sp.hours ?? ""} placeholder="كل يوم 9ص – 11م" /></label>
+            </div>
+            <label className="fld" style={{ display: "grid" }}>الأسئلة المتكررة — كل سطر: السؤال | الإجابة
+              <textarea name="faq" rows={5} defaultValue={(sp.faq ?? []).map((x) => `${x[0]} | ${x[1]}`).join("\n")} />
+            </label>
+          </>
+        ); })()}
         <h2 style={{ marginTop: 14 }}>تطبيق العميل</h2>
         <label className="row" style={{ gap: 8, color: g("app.test_mode") === true ? "var(--bad)" : undefined }}><input type="checkbox" name="test" defaultChecked={g("app.test_mode") === true} style={{ width: 22, height: 22 }} /> وضع التجربة: الدخول بأي رقم من غير كود SMS — <b>لازم يتقفل قبل ما التطبيق ينزل للناس</b></label>
         <button className="btn pri" style={{ marginTop: 8 }}>حفظ</button>

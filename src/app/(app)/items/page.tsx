@@ -23,7 +23,7 @@ export default async function Items({ searchParams }: { searchParams: Promise<{ 
   const edit = can(me, "items.edit");
   return (
     <>
-      <div className="top"><h1>الأصناف والعائلات</h1></div>
+      <div className="top"><h1>الأصناف والعائلات</h1><a className="btn pri" href="/items/import" style={{ display: "inline-grid", placeItems: "center" }}>⬆⬇ إكسل: نزّل / ارفع الأصناف والأسعار</a></div>
       <form className="card row">
         <label className="fld">بحث (اسم أو #هاشتاج)<input name="q" defaultValue={q} /></label>
         <label className="fld">الذراع<select name="arm" defaultValue={arm}><option value="">الكل</option>{Object.entries(ARM).map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select></label>

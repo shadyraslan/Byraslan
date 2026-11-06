@@ -189,3 +189,10 @@ export async function saveAppraisalRules(fd: FormData) {
   const { error } = await sb.from("settings").upsert({ key: "hr.appraisal", value: { cap: N(fd, "cap") || 120, grades }, updated_at: new Date().toISOString() });
   await done(`/hr/appraisals?m=${S(fd, "m")}`, error, "اتحفظت التقديرات");
 }
+
+// ===== نص اللايحة =====
+export async function publishPolicy(fd: FormData) {
+  const sb = await supabaseServer();
+  const { data, error } = await sb.rpc("policy_publish", { p_text: S(fd, "text") });
+  await done("/hr/policy", error, `اتنشرت النسخة ${data ?? ""} — كل موظف لازم يوافق عليها من التطبيق`);
+}

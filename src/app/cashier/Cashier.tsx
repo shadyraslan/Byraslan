@@ -183,7 +183,9 @@ export default function Cashier() {
       const w = Number(v.substr(sc.prefix.length + sc.plu_digits, sc.weight_digits)) / 10 ** sc.decimals;
       const it = snap.items.find((i) => (i.plu ?? "").padStart(sc.plu_digits, "0") === plu);
       if (!it) return `كود الميزان ${plu} مش متسجّل أو مالوش سعر في الفرع`;
-      return { item_id: it.id, name: it.name, unit: it.unit, box_sn: null, qty: w, unit_price: it.price };
+      // الميزان ممكن يطبع السعر بدل الوزن: الوزن = السعر ÷ سعر الكيلو
+      const qty = (sc as { type?: string }).type === "price" ? Math.round((w / it.price) * 1000) / 1000 : w;
+      return { item_id: it.id, name: it.name, unit: it.unit, box_sn: null, qty, unit_price: it.price };
     }
     const bc = snap.barcodes.find((b) => b.code === code);
     if (!bc && /^R?\d{3,9}(\|.*)?$/.test(v)) {
