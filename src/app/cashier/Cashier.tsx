@@ -10,7 +10,7 @@ import * as kv from "@/lib/idb";
    - الوردية نفسها بتتفتح وتتقفل من غير نت، وبتتسجّل في السيستم أول ما النت يرجع. */
 
 type Item = { id: number; name: string; unit: string; sold_by: string; arm: string; kind: string; plu: string | null; price: number };
-type Snap = { loc: string; name: string; at: string; can_discount: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number }[] };
+type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number }[] };
 type Line = { item_id: number; name: string; unit: string; box_sn: number | null; qty: number; unit_price: number };
 type Sale = { client_id: string; shift: string; at: string; local_no: string; lines: Line[]; discount: number; cash: number; card: number; offline: boolean };
 type Done = Sale & { no?: number; conflicts?: string[]; total: number; change: number };
@@ -81,6 +81,7 @@ export default function Cashier() {
   useEffect(() => { if (!openLoc && (me?.home || locs[0])) setOpenLoc(me?.home ?? locs[0].id); }, [me, locs, openLoc]);
 
   // ---------- نسخة الفرع ----------
+  const refreshMin = useRef(1);
   const refreshSnap = useCallback(async (loc: string) => {
     if (!navigator.onLine) return;
     const { data, error } = await sb.rpc("pos_snapshot", { p_loc: loc });
@@ -88,14 +89,20 @@ export default function Cashier() {
     const s = data as Snap;
     s.items = s.items.map((i) => ({ ...i, price: Number(i.price) }));
     s.boxes = s.boxes.map((b) => ({ ...b, weight: Number(b.weight) }));
+    refreshMin.current = Math.max(Number(s.refresh_min) || 1, 0.25);
     setSnap(s); await kv.set("snap:" + loc, s);
   }, [sb]);
+  // التحديث كل كام دقيقة = إعداد من السيستم (pos.refresh_minutes)، ولحظة ما النت يرجع
+  const loc = shift?.loc;
   useEffect(() => {
-    if (!shift) return;
-    refreshSnap(shift.loc);
-    const t = setInterval(() => refreshSnap(shift.loc), 5 * 60 * 1000);
-    return () => clearInterval(t);
-  }, [shift, refreshSnap]);
+    if (!loc) return;
+    let t: ReturnType<typeof setTimeout>;
+    const loop = async () => { await refreshSnap(loc); t = setTimeout(loop, refreshMin.current * 60 * 1000); };
+    loop();
+    const on = () => refreshSnap(loc);
+    window.addEventListener("online", on);
+    return () => { clearTimeout(t); window.removeEventListener("online", on); };
+  }, [loc, refreshSnap]);
 
   // ---------- الرفع ----------
   const sync = useCallback(async () => {
@@ -168,18 +175,28 @@ export default function Cashier() {
     if (it.arm === "rostos" && it.kind === "product") return `${it.name} بيتباع بالعلبة — امسح QR العلبة`;
     return { item_id: it.id, name: it.name, unit: it.unit, box_sn: null, qty: 1, unit_price: it.price };
   };
-  const onScan = (code: string) => {
+  const onScan = async (code: string) => {
     if (shift?.closing) return bad("الوردية بتتقفل — مفيش بيع");
-    const l = lookup(code);
+    let l = lookup(code);
+    // مش لاقيه على الجهاز والنت موجود؟ (علبة لسه واصلة أو صنف لسه متضاف) — نسأل السيستم على طول ونحدّث النسخة
+    if (typeof l === "string" && navigator.onLine && shift && !l.includes("اتباعت قبل كده") && !l.includes("بيتباع بالعلبة")) {
+      const { data } = await sb.rpc("pos_lookup", { p_loc: shift.loc, p_code: code });
+      const r = (Array.isArray(data) ? data[0] : data) as { item_id: number; item_name: string; unit: string; box_sn: number | null; qty: number; unit_price: number } | undefined;
+      if (r && !(r.box_sn && (soldLocal.has(r.box_sn) || lines.some((x) => x.box_sn === r.box_sn)))) {
+        l = { item_id: r.item_id, name: r.item_name, unit: r.unit, box_sn: r.box_sn, qty: Number(r.qty), unit_price: Number(r.unit_price) };
+        refreshSnap(shift.loc);
+      }
+    }
     if (typeof l === "string") return bad(l);
+    const line = l;
     setLines((L) => {
-      if (!l.box_sn && Number.isInteger(l.qty)) {
-        const i = L.findIndex((x) => !x.box_sn && x.item_id === l.item_id && Number.isInteger(x.qty));
+      if (!line.box_sn && Number.isInteger(line.qty)) {
+        const i = L.findIndex((x) => !x.box_sn && x.item_id === line.item_id && Number.isInteger(x.qty));
         if (i >= 0) return L.map((x, j) => (j === i ? { ...x, qty: x.qty + 1 } : x));
       }
-      return [...L, l];
+      return [...L, line];
     });
-    setMsg({ ok: true, t: `✓ ${l.name}${l.box_sn ? ` #${l.box_sn}` : ""} — ${l.qty} ${l.unit} × ${f2(l.unit_price)}` });
+    setMsg({ ok: true, t: `✓ ${line.name}${line.box_sn ? ` #${line.box_sn}` : ""} — ${line.qty} ${line.unit} × ${f2(line.unit_price)}` });
   };
 
   // ---------- الدفع ----------
