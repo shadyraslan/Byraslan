@@ -5,7 +5,7 @@ import Tabs, { Flash } from "../../Tabs";
 import { savePay } from "../../pay-actions";
 
 const DAYS = ["الحد", "الاتنين", "التلات", "الأربع", "الخميس", "الجمعة", "السبت"];
-type P = { user_id: string; pay_type: string; base: number; allowances: number; insurance_wage: number; shift_start: string; rest_day: number; hire_date: string; custody_max: number | null };
+type P = { user_id: string; pay_type: string; base: number; allowances: number; insurance_wage: number; shift_start: string; rest_day: number; hire_date: string; custody_max: number | null; manager_id: string | null };
 
 export default async function PaySetup({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
   const sp = await searchParams;
@@ -23,10 +23,10 @@ export default async function PaySetup({ searchParams }: { searchParams: Promise
       <div className="top"><h1>بيانات القبض</h1></div>
       <Tabs cur="/hr/payroll" />
       <Flash sp={sp} />
-      <div className="card muted">المرتب بيتحسب من البيانات دي + الحضور + اللايحة. اليومية: اكتب سعر اليوم مكان المرتب. ميعاد بداية الوردية هو اللي التأخير بيتحسب منه.</div>
+      <div className="card muted">المرتب بيتحسب من البيانات دي + الحضور + اللايحة. اليومية: اكتب سعر اليوم مكان المرتب. ميعاد بداية الوردية الثابت بيتحسب منه التأخير لو المدير ماحددش وردية لليوم. المدير المباشر هو اللي بيعمل الورديات والأذون والتقييم لموظفينه.</div>
       <div className="card" style={{ overflowX: "auto" }}>
         <table>
-          <thead><tr><th>الموظف</th><th>النظام</th><th>المرتب / اليومية</th><th>البدلات</th><th>أجر التأمينات</th><th>بداية الوردية</th><th>الراحة</th><th>التعيين</th><th>أقصى عهدة</th><th></th></tr></thead>
+          <thead><tr><th>الموظف</th><th>النظام</th><th>المرتب / اليومية</th><th>البدلات</th><th>أجر التأمينات</th><th>بداية الوردية</th><th>الراحة</th><th>التعيين</th><th>أقصى عهدة</th><th>المدير المباشر</th><th></th></tr></thead>
           <tbody>{(people ?? []).filter((p) => !p.is_test).map((p) => {
             const x = PM.get(p.id);
             const fid = `f-${p.id}`;
@@ -41,6 +41,7 @@ export default async function PaySetup({ searchParams }: { searchParams: Promise
                 <td><select form={fid} name="rest" defaultValue={x?.rest_day ?? 5}>{DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}</select></td>
                 <td><input form={fid} name="hire" type="date" defaultValue={x?.hire_date ?? today} /></td>
                 <td><input form={fid} name="cmax" defaultValue={x?.custody_max ?? ""} placeholder="مفتوح" inputMode="decimal" dir="ltr" style={{ width: 80 }} /></td>
+                <td><select form={fid} name="mgr" defaultValue={x?.manager_id ?? ""}><option value="">—</option>{(people ?? []).filter((q) => q.id !== p.id && !q.is_test).map((q) => <option key={q.id} value={q.id}>{q.name}</option>)}</select></td>
                 <td><button form={fid} className="btn pri" style={{ height: 34 }}>حفظ</button></td>
               </tr>
             );

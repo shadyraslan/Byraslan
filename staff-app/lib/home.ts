@@ -6,7 +6,8 @@ export type Home = {
   name: string; job: string | null; home: string | null; home_name: string | null;
   policy: { ver: number; text: string } | null; policy_ok: boolean; selfie: boolean;
   state: "in" | "out"; last: { kind: string; at: string; status: string; loc: string | null } | null;
-  today: { kind: string; at: string; status: string; flags: string[] }[]; unread: number; is_driver: boolean;
+  today: { kind: string; at: string; status: string; flags: string[] }[]; unread: number; is_driver: boolean; is_manager?: boolean;
+  shift_today?: { off: boolean; start: string | null; end: string | null } | null; shift_tomorrow?: { off: boolean; start: string | null; end: string | null } | null;
 };
 export function useHome() {
   const [h, setH] = useState<Home | null>(null);

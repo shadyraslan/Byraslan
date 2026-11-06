@@ -8,7 +8,7 @@ import { sb } from "@/lib/supabase";
 import { registerPush } from "@/lib/push";
 import { Welcome } from "@/lib/welcome";
 import { Badge, Btn, Card, Err, T } from "@/lib/ui";
-import { C, hhmm } from "@/lib/theme";
+import { C, hhmm, shiftLine } from "@/lib/theme";
 
 const ST: Record<string, ["ok" | "wait" | "bad", string]> = { ok: ["ok", "متسجّل"], pending: ["wait", "مستني موافقة"], rejected: ["bad", "مرفوض"] };
 
@@ -55,6 +55,7 @@ export default function Home() {
             <T b style={{ color: isIn ? C.white : C.black, fontSize: 18, marginTop: 6, textAlign: "center" }}>{isIn ? "انصراف" : "حضور"}</T>
           </Pressable>
           {h.last?.status === "pending" && <Badge kind="wait" t="آخر تسجيل مستني موافقة المدير" />}
+          {(h.shift_today || h.shift_tomorrow) && <T style={{ color: C.mid, fontSize: 13, textAlign: "center" }}>{[h.shift_today && `النهارده: ${shiftLine(h.shift_today)}`, h.shift_tomorrow && `بكره: ${shiftLine(h.shift_tomorrow)}`].filter(Boolean).join("  ·  ")}</T>}
         </Card>
         {!!h.today.length && (
           <Card>
@@ -69,9 +70,12 @@ export default function Home() {
         )}
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
           <Tile ic="wallet-outline" t="مرتبي" s="الكشف والأرصدة" onPress={() => router.push("/salary")} />
+          <Tile ic="time-outline" t="ساعاتي" s="اشتغلت كام وفاضل كام" onPress={() => router.push("/hours")} />
           <Tile ic="calendar-outline" t="إجازة أو سلفة" s="اطلب وتابع الرد" onPress={() => router.push("/leaves")} />
           <Tile ic="cash-outline" t="عهدتي" s="صرفت · سلّمت" onPress={() => router.push("/custody")} />
           <Tile ic="document-attach-outline" t="أوراقي" s="شهادة مرتب وغيرها" onPress={() => router.push("/docs")} />
+          <Tile ic="star-outline" t="تقييمي" s="تقييم الأداء" onPress={() => router.push("/appraisal")} />
+          {h.is_manager && <Tile ic="people-outline" t="فريقي" s="ساعاتهم والأذون" onPress={() => router.push("/team")} />}
           <Tile ic="chatbubbles-outline" t="رسايل الإدارة" s={h.unread ? `${h.unread} جديدة` : "مفيش جديد"} badge={h.unread} onPress={() => router.push("/messages")} />
           {h.is_driver && <Tile ic="car-outline" t="رحلاتي" s="التحميل والفروع" onPress={() => router.push("/trips")} />}
           <Tile ic="document-text-outline" t="اللايحة" s="لايحة الشغل" onPress={() => router.push({ pathname: "/policy", params: { view: "1" } })} />

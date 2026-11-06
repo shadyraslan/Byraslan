@@ -40,6 +40,18 @@ export default function Cashier() {
   const [disc, setDisc] = useState("");
   const [cash, setCash] = useState("");
   const [card, setCard] = useState("");
+  // على حساب موظف (بيتخصم من مرتبه)
+  const [stPhone, setStPhone] = useState("");
+  const [stAmt, setStAmt] = useState("");
+  const [stInfo, setStInfo] = useState<{ id: string; name: string; available: number } | null>(null);
+  const [stErr, setStErr] = useState<string | null>(null);
+  const findStaff = async () => {
+    setStInfo(null); setStErr(null);
+    if (stPhone.replace(/\D/g, "").length < 10) return;
+    const { data, error } = await sb.rpc("staff_credit_check", { p_phone: stPhone });
+    if (error) return setStErr(errText(error));
+    setStInfo(data as { id: string; name: string; available: number });
+  };
   const [rec, setRec] = useState<Done | null>(null);
   const [view, setView] = useState<"sell" | "orders" | "list" | "close">("sell");
   const [counted, setCounted] = useState("");
@@ -219,24 +231,28 @@ export default function Cashier() {
   const sub = lines.reduce((a, l) => a + r2(l.qty * l.unit_price), 0);
   const d = Math.min(Number(disc) || 0, sub);
   const total = Math.max(r2(sub - d), 0);
-  const paid = (Number(cash) || 0) + (Number(card) || 0);
+  const st = stInfo ? Number(stAmt) || 0 : 0;
+  const paid = (Number(cash) || 0) + (Number(card) || 0) + st;
   const pay = async () => {
     if (!shift || !lines.length) return bad("الفاتورة فاضية");
     if (!navigator.onLine) return bad(OFF);
     const k = Number(card) || 0;
-    const c = cash ? Number(cash) || 0 : Math.max(total - k, 0);
-    if (c + k < total) return bad(`المدفوع أقل من الإجمالي (${f2(total)} ج)`);
+    if (stAmt && !stInfo) return bad("دوّر على الموظف برقم موبايله الأول");
+    if (st > total - k) return bad("المبلغ على حساب الموظف أكبر من الباقي من الفاتورة");
+    if (stInfo && st > stInfo.available) return bad(`المتاح للموظف ${f2(stInfo.available)} ج بس`);
+    const c = cash ? Number(cash) || 0 : Math.max(total - k - st, 0);
+    if (c + k + st < total) return bad(`المدفوع أقل من الإجمالي (${f2(total)} ج)`);
     if (k > total) return bad("الفيزا أكتر من الإجمالي");
     const s: Sale = { client_id: uuid(), shift: shift.client_id, at: new Date().toISOString(), local_no: "", lines, discount: d, cash: c, card: k, offline: false };
     setWorking(true);
     const { data, error } = await sb.rpc("pos_sync", { p_loc: shift.loc, p_shifts: [{ client_id: shift.client_id, opening_cash: shift.opening_cash, opened_at: shift.opened_at }],
-      p_sales: [{ ...s, lines: lines.map(({ item_id, box_sn, qty, unit_price }) => ({ item_id, box_sn, qty, unit_price })) }] });
+      p_sales: [{ ...s, staff: st, staff_id: st > 0 ? stInfo?.id : null, lines: lines.map(({ item_id, box_sn, qty, unit_price }) => ({ item_id, box_sn, qty, unit_price })) }] });
     setWorking(false);
     if (error) return bad(`الفاتورة ماتسجلتش: ${errText(error)}`);
     const r = (data as { sales: { no: number; conflicts?: string[] }[] }).sales[0];
-    const dn: Done = { ...s, no: r?.no, conflicts: r?.conflicts ?? [], total: totalOf(s), change: r2(c + k - totalOf(s)) };
+    const dn: Done = { ...s, no: r?.no, conflicts: r?.conflicts ?? [], total: totalOf(s), change: r2(Math.max(c + k + st - totalOf(s), 0)) };
     const all = [dn, ...((await kv.get<Done[]>("done")) ?? [])].slice(0, 300); await kv.set("done", all); setDone(all);
-    setRec(dn); setLines([]); setDisc(""); setCash(""); setCard(""); setMsg(null);
+    setRec(dn); setLines([]); setDisc(""); setCash(""); setCard(""); setStPhone(""); setStAmt(""); setStInfo(null); setMsg(null);
     setTimeout(() => window.print(), 80);
   };
 
@@ -355,6 +371,15 @@ export default function Cashier() {
             <label className="fld">كاش<input value={cash} onChange={(e) => setCash(e.target.value)} inputMode="decimal" dir="ltr" placeholder={f2(total)} /></label>
             <div className="row" style={{ gap: 6 }}>{[total, 50, 100, 200, 500].filter((v, i) => i === 0 || v > total).slice(0, 4).map((v, i) => <button key={i} className="btn" onClick={() => setCash(String(Math.ceil(v)))} style={{ height: 34 }}>{i === 0 ? "مظبوط" : v}</button>)}</div>
             <label className="fld">فيزا<input value={card} onChange={(e) => setCard(e.target.value)} inputMode="decimal" dir="ltr" /></label>
+            <details>
+              <summary style={{ cursor: "pointer" }}>على حساب موظف {stInfo ? `— ${stInfo.name}` : ""}</summary>
+              <div className="row" style={{ gap: 6, marginTop: 6 }}>
+                <input value={stPhone} onChange={(e) => { setStPhone(e.target.value); setStInfo(null); }} onBlur={findStaff} placeholder="موبايل الموظف" inputMode="tel" dir="ltr" style={{ flex: 1 }} />
+                <input value={stAmt} onChange={(e) => setStAmt(e.target.value)} placeholder="المبلغ" inputMode="decimal" dir="ltr" style={{ width: 90 }} />
+              </div>
+              {stInfo && <div className="muted">{stInfo.name} — المتاح {f2(stInfo.available)} ج · بيتخصم من مرتبه</div>}
+              {stErr && <div className="badmsg">{stErr}</div>}
+            </details>
             {paid > total && <div className="okmsg">الباقي للعميل: {f2(paid - total)} ج</div>}
             <button className="btn pri" onClick={pay} disabled={!lines.length || !online || working} style={{ height: 56, fontSize: 18 }}>{working ? "بيسجّل…" : `ادفع ${f2(total)} ج`}</button>
           </div>

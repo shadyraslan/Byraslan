@@ -8,7 +8,7 @@ import { Badge, Card, Err, Head, T } from "@/lib/ui";
 import { C, money } from "@/lib/theme";
 
 type Slip = { id: number; month: string; name: string; gross: number; deductions: number; net: number; received: boolean; disputes: number };
-type Bal = { annual_total: number; casual_total: number; used: Record<string, number>; advances: { id: number; amount: number; installments: number; paid: number; next: string | null; monthly: number }[]; custody: number };
+type Bal = { annual_total: number; casual_total: number; used: Record<string, number>; advances: { id: number; amount: number; installments: number; paid: number; next: string | null; monthly: number }[]; custody: number; purchases?: { total: number; limit: number; list: { no: number; at: string; amount: number }[] } };
 
 /** مرتبي: كل الشهور + أرصدة الإجازات والسلف */
 export default function Salary() {
@@ -44,6 +44,12 @@ export default function Salary() {
                 <T style={{ color: C.mid, fontSize: 13 }}>القسط {money(a.monthly)}{a.next ? ` · الجاي مع مرتب ${a.next.slice(0, 7)}` : ""}</T>
               </View>
             ))}
+            {!!bal.purchases && Number(bal.purchases.total) > 0 && (
+              <View style={{ backgroundColor: C.off, borderRadius: 12, padding: 10 }}>
+                <T b>مشتريات آجل: {money(bal.purchases.total)} <T style={{ color: C.mid, fontSize: 12.5 }}>(الحد {money(bal.purchases.limit)})</T></T>
+                <T style={{ color: C.mid, fontSize: 12.5 }}>هتتخصم من المرتب الجاي · {bal.purchases.list.map((x) => `#${x.no} ${money(x.amount)}`).join(" · ")}</T>
+              </View>
+            )}
             {Number(bal.custody) !== 0 && <T style={{ color: C.mid }} onPress={() => router.push("/custody")}>العهدة اللي معاك: <T b>{money(bal.custody)}</T> ←</T>}
           </Card>
         )}

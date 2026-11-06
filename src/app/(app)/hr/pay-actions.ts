@@ -52,7 +52,7 @@ export async function savePay(fd: FormData) {
   const { error } = await sb.from("employee_pay").upsert({
     user_id: S(fd, "user"), pay_type: S(fd, "pay_type") || "monthly", base: N(fd, "base"), allowances: N(fd, "allowances"), insurance_wage: N(fd, "ins"),
     shift_start: S(fd, "shift") || "09:00", rest_day: N(fd, "rest"), hire_date: S(fd, "hire") || new Date().toISOString().slice(0, 10),
-    custody_max: S(fd, "cmax") ? N(fd, "cmax") : null, updated_at: new Date().toISOString(),
+    custody_max: S(fd, "cmax") ? N(fd, "cmax") : null, manager_id: S(fd, "mgr") || null, updated_at: new Date().toISOString(),
   });
   await done("/hr/payroll/setup", error, "اتحفظ");
 }
@@ -97,10 +97,95 @@ export async function saveRules(fd: FormData) {
     { key: "hr.payroll", updated_at: now, value: {
       divisor: N(fd, "divisor") || 30, day_hours: N(fd, "day_hours") || 8, grace_min: N(fd, "grace"), late_tiers: tiers(S(fd, "tiers")),
       absence_days: N(fd, "absence"), ot_rate: N(fd, "ot_rate") || 1, ot_min: N(fd, "ot_min"), ins_pct: N(fd, "ins_pct"),
-      tax_exempt: N(fd, "tax_exempt"), tax_brackets: brackets(S(fd, "brackets")), tax_lose: lose(S(fd, "lose")), shortage_to_payroll: fd.get("short") === "on" } },
+      tax_exempt: N(fd, "tax_exempt"), tax_brackets: brackets(S(fd, "brackets")), tax_lose: lose(S(fd, "lose")), shortage_to_payroll: fd.get("short") === "on",
+      early_grace: N(fd, "early_grace"), early_tiers: tiers(S(fd, "early_tiers")), holiday_extra_days: N(fd, "hol_extra"), rest_extra_days: N(fd, "rest_extra") } },
     { key: "hr.leave", updated_at: now, value: { annual: N(fd, "annual"), first_year: N(fd, "first_year"), casual: N(fd, "casual"), sick_pay_pct: N(fd, "sick") } },
     { key: "hr.custody", updated_at: now, value: { spend_limit: N(fd, "spend_limit") } },
     { key: "hr.advance", updated_at: now, value: { max_salaries: N(fd, "max_salaries") || 1, max_installments: N(fd, "max_inst") || 1 } },
+    { key: "hr.shifts", updated_at: now, value: { cutoff: S(fd, "cutoff") || "20:00", notify: fd.get("notify") === "on" } },
+    { key: "hr.permits", updated_at: now, value: { max_paid_month: N(fd, "max_permits") } },
+    { key: "hr.staff_credit", updated_at: now, value: { on: fd.get("credit_on") === "on", limit_month: N(fd, "credit_limit") } },
   ]);
   await done("/hr/rules", error, "اتحفظت — بتطبّق من أول حساب مرتبات جاي");
+}
+
+// ===== الورديات والأذون =====
+export async function saveShifts(fd: FormData) {
+  const sb = await supabaseServer();
+  const rows: { user: string; day: string; start?: string; end?: string; off?: boolean }[] = [];
+  for (const [k, v] of fd.entries()) {
+    const m = k.match(/^s:([0-9a-f-]{36}):(\d{4}-\d{2}-\d{2})$/);
+    if (!m) continue;
+    const t = String(v).trim();
+    if (!t) continue;
+    if (/^(راحة|r|off|-)$/i.test(t)) rows.push({ user: m[1], day: m[2], off: true });
+    else {
+      // الوردية بميعاد البداية بس — النهاية = البداية + ساعات اليوم
+      const x = t.match(/^(\d{1,2})(?::(\d{2}))?\s*(ص|م|am|pm)?$/i);
+      if (!x) await done(`/hr/shifts?w=${S(fd, "w")}`, { message: `"${t}" مش مفهومة — اكتب ميعاد البداية زي 9 أو 9:30 أو 14 أو راحة` }, "");
+      let h = Number(x![1]); const ap = (x![3] ?? "").toLowerCase();
+      if ((ap === "م" || ap === "pm") && h < 12) h += 12;
+      if ((ap === "ص" || ap === "am") && h === 12) h = 0;
+      if (h > 23) await done(`/hr/shifts?w=${S(fd, "w")}`, { message: `"${t}" ساعة غلط` }, "");
+      rows.push({ user: m[1], day: m[2], start: `${String(h).padStart(2, "0")}:${x![2] ?? "00"}`, end: "" });
+    }
+  }
+  const { data, error } = await sb.rpc("shift_set", { p_rows: rows });
+  await done(`/hr/shifts?w=${S(fd, "w")}`, error, `اتحفظ (${data ?? 0} تغيير) — الإشعارات بتتبعت لوحدها قبل كل يوم`);
+}
+export async function grantPermit(fd: FormData) {
+  const sb = await supabaseServer();
+  const { error } = await sb.rpc("permit_grant", { p_user: S(fd, "user"), p_day: S(fd, "day"), p_kind: S(fd, "kind"), p_time: S(fd, "time") || null, p_paid: fd.get("paid") === "on", p_reason: S(fd, "reason") });
+  await done(`/hr/shifts?w=${S(fd, "w")}`, error, "اتسجّل الإذن ووصل للموظف");
+}
+export async function decidePermit(fd: FormData) {
+  const sb = await supabaseServer();
+  const { error } = await sb.rpc("permit_decide", { p_id: N(fd, "id"), p_ok: S(fd, "ok") === "1", p_paid: fd.get("paid") === "on" });
+  await done(`/hr/shifts?w=${S(fd, "w")}`, error, "اتسجّل");
+}
+
+// ===== أيام الشركة والإجازات الرسمية =====
+export async function addDay(fd: FormData) {
+  const sb = await supabaseServer();
+  const scope = S(fd, "scope") || "all";
+  const from = S(fd, "day"), to = S(fd, "to") || from;
+  const days: string[] = [];
+  for (let d = new Date(`${from}T12:00:00Z`); d <= new Date(`${to}T12:00:00Z`) && days.length < 31; d.setUTCDate(d.getUTCDate() + 1)) days.push(d.toISOString().slice(0, 10));
+  const { error } = await sb.from("company_days").insert(days.map((day) => ({
+    day, kind: S(fd, "kind"), name: S(fd, "name") || "إجازة", scope,
+    locs: scope === "loc" ? fd.getAll("locs").map(String) : [], users: scope === "users" ? fd.getAll("users").map(String) : [], for_day: S(fd, "kind") === "substitute" ? S(fd, "for_day") || null : null,
+  })));
+  await done("/hr/days", error, "اتسجّلت — بتدخل في المرتبات والأرصدة لوحدها");
+}
+export async function cancelDay(fd: FormData) {
+  const sb = await supabaseServer();
+  const { error } = await sb.from("company_days").update({ cancelled: true }).eq("id", N(fd, "id"));
+  await done("/hr/days", error, "اتلغت");
+}
+
+// ===== تقييم الأداء =====
+export async function saveTemplate(fd: FormData) {
+  const sb = await supabaseServer();
+  const items = S(fd, "items").split(/\n/).map((l) => l.split("|").map((x) => x.trim())).filter((p) => p[0])
+    .map(([name, weight, target, unit, lower]) => ({ name, weight: Number(weight) || 1, target: Number(target) || 0, unit: unit || "", lower: /أقل|lower|-/.test(lower ?? "") }));
+  const { error } = await sb.from("kpi_templates").upsert({ job: S(fd, "job"), items, updated_at: new Date().toISOString() });
+  await done(`/hr/appraisals?m=${S(fd, "m")}`, error, "اتحفظت مؤشرات الوظيفة");
+}
+export async function saveAppraisal(fd: FormData) {
+  const sb = await supabaseServer();
+  const n = N(fd, "n");
+  const items = Array.from({ length: n }, (_, i) => ({ name: S(fd, `name${i}`), weight: N(fd, `w${i}`) || 1, target: N(fd, `t${i}`), unit: S(fd, `u${i}`), lower: S(fd, `l${i}`) === "1", actual: S(fd, `a${i}`) === "" ? null : N(fd, `a${i}`), note: S(fd, `note${i}`) })).filter((i) => i.name);
+  const { error } = await sb.rpc("appraisal_save", { p_user: S(fd, "user"), p_month: `${S(fd, "m")}-01`, p_items: items, p_comment: S(fd, "comment"), p_submit: S(fd, "submit") === "1" });
+  await done(`/hr/appraisals?m=${S(fd, "m")}`, error, S(fd, "submit") === "1" ? "اتبعت للاعتماد" : "اتحفظ مسودة");
+}
+export async function decideAppraisal(fd: FormData) {
+  const sb = await supabaseServer();
+  const { error } = await sb.rpc("appraisal_decide", { p_id: N(fd, "id"), p_ok: S(fd, "ok") === "1", p_note: S(fd, "note") });
+  await done(`/hr/appraisals?m=${S(fd, "m")}`, error, S(fd, "ok") === "1" ? "اتعتمد — المكافأة نزلت في المرتب ووصل إشعار للموظف" : "رجع للمدير");
+}
+export async function saveAppraisalRules(fd: FormData) {
+  const sb = await supabaseServer();
+  const grades = S(fd, "grades").split(/\n/).map((l) => l.match(/^\s*([\d.]+)\s*=\s*([^=]+?)\s*=\s*([\d.]+)\s*$/)).filter(Boolean).map((m) => ({ min: +m![1], name: m![2], bonus_pct: +m![3] })).sort((a, b) => b.min - a.min);
+  const { error } = await sb.from("settings").upsert({ key: "hr.appraisal", value: { cap: N(fd, "cap") || 120, grades }, updated_at: new Date().toISOString() });
+  await done(`/hr/appraisals?m=${S(fd, "m")}`, error, "اتحفظت التقديرات");
 }
