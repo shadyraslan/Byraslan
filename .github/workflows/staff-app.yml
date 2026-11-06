@@ -1,0 +1,24 @@
+name: Staff app
+
+on:
+  push:
+    branches: [main]
+    paths: ["staff-app/**", ".github/workflows/staff-app.yml"]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: staff-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: npx expo install --fix
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - run: npx expo-doctor || true

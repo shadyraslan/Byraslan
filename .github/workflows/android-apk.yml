@@ -2,6 +2,10 @@ name: Android test APK
 
 on:
   workflow_dispatch:
+    inputs:
+      app:
+        description: "التطبيق (mobile = العملاء، staff-app = الموظفين)"
+        default: mobile
 
 permissions:
   contents: write
@@ -12,7 +16,7 @@ jobs:
     timeout-minutes: 60
     defaults:
       run:
-        working-directory: mobile
+        working-directory: ${{ inputs.app || 'mobile' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,16 +30,17 @@ jobs:
       - run: npx expo install --fix
       - run: npx expo prebuild --platform android --no-install
       - name: Build APK
-        working-directory: mobile/android
+        working-directory: ${{ inputs.app || 'mobile' }}/android
         run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
       - uses: actions/upload-artifact@v4
         with:
           name: byraslan-apk
-          path: mobile/android/app/build/outputs/apk/release/app-release.apk
+          path: ${{ inputs.app || 'mobile' }}/android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
       - name: Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cp android/app/build/outputs/apk/release/app-release.apk byraslan-test.apk
-          gh release create "apk-${{ github.run_id }}" byraslan-test.apk -R ${{ github.repository }} --title "باي رسلان — نسخة تجربة أندرويد" --notes "نسخة تجربة" --prerelease
+          N=${{ inputs.app == 'staff-app' && 'byraslan-staff' || 'byraslan-test' }}
+          cp android/app/build/outputs/apk/release/app-release.apk $N.apk
+          gh release create "apk-${{ github.run_id }}" $N.apk -R ${{ github.repository }} --title "${{ inputs.app == 'staff-app' && 'باي رسلان الموظفين' || 'باي رسلان' }} — نسخة تجربة أندرويد" --notes "نسخة تجربة" --prerelease
