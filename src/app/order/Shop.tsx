@@ -152,7 +152,7 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
   return (
     <div className="shopbody">
       {edit && <div className="okmsg">✏️ بتعدّل حجز رقم {edit.no} — غيّر الأصناف وكمّل</div>}
-      <div className="row" style={{ justifyContent: "space-between" }}><b>التوصيل لـ {dd?.name} <span className="muted" style={{ fontWeight: 400 }}>· فرع {br.name}</span></b>{!edit && <button className="btn" onClick={() => setDist(null)}>غيّر المنطقة</button>}</div>
+      <div className="row" style={{ justifyContent: "space-between" }}><b>التوصيل لـ {dd?.name} <span className="muted" style={{ fontWeight: 400 }}>· فرع {br.name}</span></b>{!edit && !staff && <button className="btn" onClick={() => setDist(null)}>غيّر المنطقة</button>}</div>
       {!menu && <div className="muted">بيحمّل…</div>}
       {menu && !menu.length && <div className="muted">مفيش أصناف متاحة دلوقتي</div>}
       {fams.map((fm) => (

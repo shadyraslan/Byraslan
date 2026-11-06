@@ -26,11 +26,11 @@ export default async function CsCustomers({ searchParams }: { searchParams: Prom
         <label className="fld" style={{ flex: 1, minWidth: 200 }}>دوّر بالموبايل أو الاسم<input name="q" defaultValue={sp.q ?? ""} /></label>
         <button className="btn pri">دوّر</button>
       </form>
-      <details className="card">
+      <details className="card" open={!!sp.q && !R.length && sp.q.replace(/\D/g, "").length >= 10}>
         <summary><b>+ عميل جديد / تعديل بيانات عميل</b></summary>
         <form action={saveCustomer} style={{ display: "grid", gap: 8, marginTop: 8 }}>
           <div className="row">
-            <label className="fld">الموبايل<input name="phone" required dir="ltr" inputMode="tel" /></label>
+            <label className="fld">الموبايل<input name="phone" required dir="ltr" inputMode="tel" defaultValue={sp.q && sp.q.replace(/\D/g, "").length >= 10 ? sp.q : ""} /></label>
             <label className="fld">الاسم<input name="name" required /></label>
           </div>
           <div className="row">
@@ -57,7 +57,7 @@ export default async function CsCustomers({ searchParams }: { searchParams: Prom
             </div>
           </div>
         ))}
-        {!R.length && <div className="card muted">مفيش عملاء بالبحث ده</div>}
+        {!R.length && <div className="card muted">مفيش عميل بالبحث ده — سجّله من "عميل جديد" فوق.</div>}
       </div>
     </>
   );

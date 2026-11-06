@@ -34,5 +34,9 @@ export async function saveCustomer(fd: FormData) {
   });
   revalidatePath("/cs/customers");
   const { redirect } = await import("next/navigation");
-  redirect(error ? `/cs/customers?err=${encodeURIComponent(error.message.replace(/^.*?ERROR:\s*/, ""))}` : `/cs/customers?ok=1&q=${encodeURIComponent(String(fd.get("phone") || ""))}`);
+  const ph = encodeURIComponent(String(fd.get("phone") || ""));
+  const msg = error ? encodeURIComponent(error.message.replace(/^.*?ERROR:\s*/, "")) : "";
+  // من شاشة الطلب: بيرجع يكمّل الطلب للعميل ده على طول
+  if (fd.get("back") === "new") redirect(error ? `/cs/new?phone=${ph}&ch=${fd.get("ch") ?? "whatsapp"}&err=${msg}` : `/cs/new?phone=${ph}&ch=${fd.get("ch") ?? "whatsapp"}`);
+  redirect(error ? `/cs/customers?err=${msg}&q=${ph}` : `/cs/customers?ok=1&q=${ph}`);
 }

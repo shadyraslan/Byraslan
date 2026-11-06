@@ -3,12 +3,13 @@ import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import Shop, { type Init } from "@/app/order/Shop";
+import { saveCustomer } from "../actions";
 
 type Cust = { found: boolean; name: string | null; addresses: { address: string; district_id: number | null; district: string | null }[];
   orders: { no: number; status: string; at: string; total: number; district_id: number | null; address: string | null; lines: { item_id: number; name: string; qty: number }[] | null }[] };
 
 /** طلب واتساب / تليفون: رقم العميل ← كارته وعناوينه وطلباته ← نفس شاشة الطلب، أو لينك سلة جاهزة */
-export default async function CsNew({ searchParams }: { searchParams: Promise<{ phone?: string; ch?: string; re?: string; a?: string }> }) {
+export default async function CsNew({ searchParams }: { searchParams: Promise<{ phone?: string; ch?: string; re?: string; a?: string; err?: string; addr?: string }> }) {
   const sp = await searchParams;
   const me = await getMe();
   if (!can(me, "cs.agent") && !can(me, "orders.handle")) redirect("/dashboard");
@@ -32,6 +33,9 @@ export default async function CsNew({ searchParams }: { searchParams: Promise<{ 
     info: { name: c?.name ?? "", phone, address: last?.address ?? addr?.address ?? "" },
   } : undefined;
   const q = (x: Record<string, string>) => `/cs/new?${new URLSearchParams({ phone, ch, ...x })}`;
+  // العميل لازم يبقى متسجّل بعنوان الأول — بعدها الطلب بيبدأ على طول من غير اختيار منطقة
+  const needInfo = phone.length >= 10 && c && (!c.found || !c.addresses.length || sp.addr === "1");
+  const { data: dists } = needInfo ? await sb.from("districts").select("id,name,city").eq("active", true).order("city").order("name") : { data: null };
   return (
     <>
       <div className="top"><h1>طلب واتساب / تليفون</h1><Link className="btn" href="/cs" style={{ display: "inline-grid", placeItems: "center" }}>→ خدمة العملاء</Link></div>
@@ -40,9 +44,26 @@ export default async function CsNew({ searchParams }: { searchParams: Promise<{ 
         <label className="fld">جه منين<select name="ch" defaultValue={ch}><option value="whatsapp">واتساب</option><option value="phone">تليفون</option></select></label>
         <button className="btn pri">دوّر</button>
       </form>
-      {c && (
+      {sp.err && <div className="badmsg">{sp.err}</div>}
+      {needInfo && (
+        <form action={saveCustomer} className="card" style={{ display: "grid", gap: 8 }}>
+          <b>{c?.found ? `عنوان جديد لـ ${c.name ?? "العميل"}` : "عميل جديد — سجّل بياناته الأول"}</b>
+          <input type="hidden" name="back" value="new" /><input type="hidden" name="ch" value={ch} /><input type="hidden" name="phone" value={phone} />
+          <div className="row">
+            <label className="fld" style={{ flex: 1 }}>الاسم<input name="name" defaultValue={c?.name ?? ""} required autoFocus /></label>
+            <label className="fld" style={{ flex: 1 }}>المنطقة<select name="district" required defaultValue=""><option value="" disabled>اختار المنطقة</option>{(dists ?? []).map((d) => <option key={d.id} value={d.id}>{d.city} — {d.name}</option>)}</select></label>
+          </div>
+          <label className="fld">العنوان بالتفصيل<input name="address" required placeholder="الشارع، العمارة، الدور، الشقة، علامة مميزة" /></label>
+          <div className="row">
+            <label className="fld">اسم العنوان<input name="label" placeholder="البيت / الشغل" /></label>
+            <label className="fld" style={{ flex: 1 }}>ملاحظات عن العميل<input name="notes" /></label>
+          </div>
+          <button className="btn pri" style={{ justifySelf: "start" }}>احفظ وكمّل الطلب</button>
+        </form>
+      )}
+      {c && c.found && !!c.addresses.length && (
         <div className="card">
-          <b>{c.found ? c.name || "عميل" : "عميل جديد — هيتسجّل مع الطلب"}</b>
+          <b>{c.name || "عميل"}</b> <Link href={q({ addr: "1" })} className="muted" style={{ fontSize: 13 }}>+ عنوان جديد</Link>
           {!!c.addresses.length && <div className="row" style={{ gap: 6, marginTop: 6 }}>{c.addresses.map((a, i) => <Link key={i} className={String(i) === (sp.a ?? "0") && !last ? "btn pri" : "btn"} href={q({ a: String(i) })}>📍 {a.district ?? ""} — {a.address.slice(0, 30)}</Link>)}</div>}
           {!!c.orders.length && (
             <div style={{ marginTop: 8 }}>
@@ -57,7 +78,7 @@ export default async function CsNew({ searchParams }: { searchParams: Promise<{ 
           )}
         </div>
       )}
-      {phone.length >= 10 && (
+      {phone.length >= 10 && !needInfo && init?.district && (
         <div className="shop" style={{ minHeight: 0 }} key={`${phone}-${sp.re ?? ""}-${sp.a ?? ""}`}>
           <Shop districts={D} open={cfg.open !== false} minOrder={Number(cfg.min_order ?? 0)} channel={ch} note={cfg.note ?? ""} init={init} staff={{ channel: ch }} booking={{ on: bcfg.on !== false, days: Number(bcfg.days_ahead ?? 14) }} />
         </div>
