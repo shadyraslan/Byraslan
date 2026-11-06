@@ -20,7 +20,7 @@ export default function Cats() {
       <BlackHead back={false}>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <IconBtn name="menu" onPress={() => router.push("/account")} />
-          <IconBtn name="notifications-outline" dot onPress={() => router.push("/orders")} />
+          <IconBtn name="notifications-outline" onPress={() => router.push("/notices")} />
         </View>
         <LocBar />
         <Input dark value={q} onChangeText={setQ} placeholder="ابحث في الأقسام..." style={{ minHeight: 42 }} />

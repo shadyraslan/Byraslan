@@ -1,10 +1,12 @@
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useHome } from "@/lib/home";
 import { sb } from "@/lib/supabase";
+import { registerPush } from "@/lib/push";
+import { Welcome } from "@/lib/welcome";
 import { Badge, Btn, Card, Err, T } from "@/lib/ui";
 import { C, hhmm } from "@/lib/theme";
 
@@ -14,6 +16,7 @@ export default function Home() {
   const ins = useSafeAreaInsets();
   const { h, err, load } = useHome();
   const [refreshing, setRefreshing] = useState(false);
+  useEffect(() => { registerPush(); }, []);
   if (err) return <View style={{ flex: 1, padding: 24, paddingTop: ins.top + 40, gap: 12 }}><Err t={err} /><Btn title="خروج" onPress={() => sb.auth.signOut()} /></View>;
   if (!h) return <View style={{ flex: 1, backgroundColor: C.black }} />;
   if (!h.policy_ok && h.policy) { router.replace("/policy"); return null; }
@@ -26,6 +29,8 @@ export default function Home() {
     </Pressable>
   );
   return (
+    <>
+    <Welcome />
     <ScrollView contentContainerStyle={{ paddingBottom: 40 + ins.bottom }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}>
       <View style={{ backgroundColor: C.black, paddingTop: ins.top + 16, paddingHorizontal: 20, paddingBottom: 70, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -34,7 +39,11 @@ export default function Home() {
             <T b style={{ color: C.white, fontSize: 22 }}>{h.name}</T>
             <T style={{ color: C.y, fontSize: 13 }}>{[h.job, h.home_name].filter(Boolean).join(" · ")}</T>
           </View>
-          <Pressable onPress={() => sb.auth.signOut()} style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,.1)", alignItems: "center", justifyContent: "center" }}><Ionicons name="log-out-outline" size={20} color={C.white} /></Pressable>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Pressable onPress={() => router.push({ pathname: "/policy", params: { view: "1" } })} style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,.1)", alignItems: "center", justifyContent: "center" }}><Ionicons name="document-text-outline" size={20} color={C.y} /></Pressable>
+            <Pressable onPress={() => router.push("/messages")} style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,.1)", alignItems: "center", justifyContent: "center" }}><Ionicons name="notifications-outline" size={20} color={C.white} />{!!h.unread && <View style={{ position: "absolute", top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: C.y }} />}</Pressable>
+            <Pressable onPress={() => sb.auth.signOut()} style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,.1)", alignItems: "center", justifyContent: "center" }}><Ionicons name="log-out-outline" size={20} color={C.white} /></Pressable>
+          </View>
         </View>
       </View>
       <View style={{ marginTop: -50, paddingHorizontal: 18, gap: 14 }}>
@@ -66,5 +75,6 @@ export default function Home() {
         </View>
       </View>
     </ScrollView>
+    </>
   );
 }

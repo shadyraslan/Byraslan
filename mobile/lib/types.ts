@@ -3,6 +3,7 @@ export type Banner = { title: string; subtitle: string | null; badge: string | n
 export type Config = {
   brands: Record<string, string>; note: string | null; test_mode: boolean; open: boolean; min_order: number; first_free: boolean;
   support: { whatsapp?: string; phone?: string; faq?: [string, string][] }; banners: Banner[]; districts: District[];
+  welcome: { on: boolean; ver: number; title: string; body: string } | null;
 };
 export type MenuItem = { item_id: number; name: string; unit: string; sold_by: string; price: number; old_price: number | null; pct: number; family: string | null; brand: string; available: number; photo: string | null; icon: string | null; color: string | null };
 export type Address = { id: string; label: string; district_id: number; address: string; is_default: boolean };
@@ -10,3 +11,4 @@ export type Profile = { name: string; phone: string; addresses: Address[] };
 export type OrderLine = { item_id: number; name: string; qty: number; unit: string; icon: string | null; prepared?: number; price?: number };
 export type MyOrder = { no: number; token: string; status: string; created_at: string; branch: string; district_id: number | null; total: number; lines: OrderLine[] };
 export type Quote = { sub: number; fee: number; discount: number; total: number; code_ok: boolean; code_msg: string | null; first_free: boolean; min_order: number; error?: string };
+export type Notice = { id: number; title: string; body: string; at: string };

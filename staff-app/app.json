@@ -54,6 +54,12 @@
         {
           "cameraPermission": "عشان تصوّر سيلفي وانت بتسجّل حضورك"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#F5C800"
+        }
       ]
     ],
     "experiments": {

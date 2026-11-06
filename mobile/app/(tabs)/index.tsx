@@ -1,6 +1,9 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Dimensions, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { sb } from "@/lib/supabase";
+import { Welcome } from "@/lib/welcome";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "@/lib/store";
@@ -29,7 +32,16 @@ function HCard({ m }: { m: MenuItem }) {
 
 export default function Home() {
   const ins = useSafeAreaInsets();
-  const { config, district, menu, loadMenu, cart } = useApp();
+  const { config, district, menu, loadMenu, cart, profile } = useApp();
+  // نقطة حمرا على الجرس لو فيه إشعار جديد
+  const [unread, setUnread] = useState(false);
+  useFocusEffect(useCallback(() => {
+    sb.rpc("app_inbox", { p_phone: profile.phone || null, p_district: district?.id ?? null }).then(async ({ data }) => {
+      const top = ((data ?? []) as { id: number }[])[0]?.id ?? 0;
+      const seen = Number((await AsyncStorage.getItem("noticeSeen").catch(() => null)) ?? 0);
+      setUnread(top > seen);
+    });
+  }, [profile.phone, district?.id]));
   const [fam, setFam] = useState<string | null>(null);
   const [slide, setSlide] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -43,11 +55,12 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1 }}>
+      <Welcome />
       <BlackHead back={false}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View style={{ flexDirection: "row", gap: 8 }}>
             <IconBtn name="menu" onPress={() => router.push("/account")} />
-            <IconBtn name="notifications-outline" dot onPress={() => router.push("/orders")} />
+            <IconBtn name="notifications-outline" dot={unread} onPress={() => router.push("/notices")} />
           </View>
           <Pressable onPress={() => router.push("/cart")} style={{ backgroundColor: C.y, borderRadius: 20, paddingVertical: 6, paddingHorizontal: 12, flexDirection: "row", gap: 6, alignItems: "center" }}>
             <Ionicons name="cart" size={15} color={C.black} />

@@ -28,6 +28,20 @@ jobs:
           java-version: 17
       - run: npm install --no-audit --no-fund
       - run: npx expo install --fix
+      # الإشعارات: لو EXPO_TOKEN متحط في أسرار GitHub بيربط التطبيق بمشروع Expo (projectId)،
+      # ولو GOOGLE_SERVICES_JSON (ملف Firebase) متحط بيتضاف عشان إشعارات الأندرويد
+      - name: Link Expo project (push)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        if: ${{ env.EXPO_TOKEN != '' }}
+        run: npx -y eas-cli@latest init --non-interactive --force
+      - name: Firebase file (push)
+        env:
+          GSJ: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        if: ${{ env.GSJ != '' }}
+        run: |
+          printf '%s' "$GSJ" > google-services.json
+          node -e "const f='app.json';const a=require('./'+f);a.expo.android.googleServicesFile='./google-services.json';require('fs').writeFileSync(f,JSON.stringify(a,null,2))"
       - run: npx expo prebuild --platform android --no-install
       - name: Build APK
         working-directory: ${{ inputs.app || 'mobile' }}/android

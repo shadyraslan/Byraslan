@@ -4,6 +4,7 @@ import { Stack, router, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import type { Session } from "@supabase/supabase-js";
+import * as Notifications from "expo-notifications";
 import { sb } from "@/lib/supabase";
 import { C } from "@/lib/theme";
 
@@ -17,6 +18,10 @@ export default function Root() {
     sb.auth.getSession().then(({ data }) => setSession(data.session));
     const { data } = sb.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => data.subscription.unsubscribe();
+  }, []);
+  useEffect(() => {
+    const s = Notifications.addNotificationResponseReceivedListener(() => router.push("/messages"));
+    return () => s.remove();
   }, []);
   useEffect(() => {
     if (session === undefined) return;

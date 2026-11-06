@@ -1,0 +1,9 @@
+-- ============ 0032 الإشعارات ورسايل الترحيب للتطبيقين (اتطبّقت بنفس المحتوى) ============
+-- notify.send: صلاحية الإرسال. app.welcome / hr.welcome: رسالة الترحيب (on, ver, title, body) — بتظهر مرة لكل نسخة.
+-- app_notices: صندوق رسايل تطبيق العملاء (all / district / branch / phone) — app_inbox(phone, district) للعميل.
+-- push_devices: أجهزة الإشعارات (customer برقمه ومنطقته، staff بحسابه) — register_push().
+-- push_to(tokens, title, body, data): بيبعت لـ Expo على دفعات 100 (pg_net).
+-- notify_send(app, target, district, loc, phone, user, title, body, ack): من شاشة /notify.
+-- تريجر staff_message_push: أي رسالة موظفين بتبعت إشعار لأجهزتهم.
+-- notify_order_status: إشعار حالة الطلب بقى يوصل كمان لأجهزة رقم العميل.
+-- app_config بقت فيها welcome، و staff_welcome() للموظفين.

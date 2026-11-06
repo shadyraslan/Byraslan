@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { sb } from "./supabase";
 import type { Address, Config, District, MenuItem, Profile } from "./types";
+import { registerPush } from "./push";
 
 // التطبيق شغال كزائر: البيانات والعناوين وأرقام الطلبات محفوظة على الموبايل، والطلب بيتبعت بالحي والاسم والموبايل
 type Cart = Record<number, number>;
@@ -65,6 +66,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const removeAddress = (id: string) => setProfile((o) => { const n = { ...o, addresses: o.addresses.filter((x) => x.id !== id) }; put("profile", n); return n; });
 
   const district = config?.districts.find((d) => d.id === distId) ?? null;
+  // الإشعارات: الجهاز بيتسجّل برقم العميل ومنطقته (لو التطبيق مبني بحساب Expo)
+  useEffect(() => { if (ready) registerPush(profile.phone, distId); }, [ready, profile.phone, distId]);
   const branch = district?.branch ?? null;
   const loadMenu = useCallback(async () => {
     if (!branch) { setMenu(null); return; }
