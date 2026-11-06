@@ -3,6 +3,7 @@ import { Pressable, ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useApp } from "@/lib/store";
 import { useQuote } from "@/lib/quote";
 import { errMsg, sb } from "@/lib/supabase";
@@ -14,7 +15,7 @@ const PAY: [string, string, string][] = [["cash", "💵", "كاش عند الا�
 export default function Checkout() {
   const ins = useSafeAreaInsets();
   const { code } = useLocalSearchParams<{ code?: string }>();
-  const { profile, saveProfile, district, menu, cart, clearCart, addToken, config } = useApp();
+  const { profile, saveProfile, saveAddress, district, menu, cart, clearCart, addToken, config } = useApp();
   const [pay, setPay] = useState("cash");
   const [note, setNote] = useState("");
   const [name, setName] = useState(profile.name);
@@ -27,19 +28,33 @@ export default function Checkout() {
 
   const place = async () => {
     setErr(null);
-    const d = phone.replace(/\D/g, "");
-    if (name.trim().length < 2) return setErr("اكتب اسمك");
+    let d = phone.replace(/\D/g, "");
+    let nm = name.trim();
+    // وضع التجربة: الاسم والرقم مش إجباريين — بنعمل رقم تجربة ثابت للموبايل ده
+    if (config?.test_mode) {
+      if (nm.length < 2) nm = "عميل تجربة";
+      if (!/^0?1[0125]\d{8}$/.test(d)) {
+        d = (await AsyncStorage.getItem("testPhone").catch(() => null)) ?? `0100${Math.floor(1000000 + Math.random() * 8999999)}`;
+        AsyncStorage.setItem("testPhone", d).catch(() => {});
+      }
+    }
+    if (nm.length < 2) return setErr("اكتب اسمك");
     if (!/^0?1[0125]\d{8}$/.test(d)) return setErr("اكتب رقم موبايل مصري صحيح");
-    if (!addr) return router.push("/address");
+    let a = addr;
+    if (!a && config?.test_mode && district?.branch) {
+      a = { id: "test", label: "البيت", district_id: district.id, address: "عنوان تجربة", is_default: true };
+      saveAddress({ label: a.label, district_id: a.district_id, address: a.address, is_default: true });
+    }
+    if (!a) return router.push("/address");
     setBusy(true);
     const { data, error } = await sb.rpc("app_order", {
-      p_district: addr.district_id, p_phone: d, p_name: name.trim(), p_address: addr.address, p_note: note, p_pay: pay,
+      p_district: a.district_id, p_phone: d, p_name: nm, p_address: a.address, p_note: note, p_pay: pay,
       p_lines: lines.map((m) => ({ item_id: m.item_id, qty: cart[m.item_id] })), p_code: code || null,
     });
     setBusy(false);
     if (error) return setErr(errMsg(error));
     const r = data as { no: number; token: string; total: number };
-    saveProfile({ name: name.trim(), phone: d });
+    saveProfile({ name: nm, phone: d });
     addToken(r.token);
     clearCart();
     router.replace({ pathname: "/done/[token]", params: { token: r.token, no: String(r.no), total: String(r.total) } });
@@ -59,7 +74,7 @@ export default function Checkout() {
             <Pressable onPress={() => router.push("/address")} style={{ borderWidth: 1.5, borderStyle: "dashed", borderColor: C.border, borderRadius: 14, padding: 14, alignItems: "center" }}><T w="x">+ ضيف عنوانك في {district?.name ?? "منطقتك"}</T></Pressable>
           )}
         </Card>
-        <Card title="بياناتك" icon="👤">
+        <Card title="بياناتك" icon="👤" right={config?.test_mode ? <T style={{ color: C.mid, fontSize: 11 }}>تجربة: مش إجباري</T> : undefined}>
           <Input value={name} onChangeText={setName} placeholder="الاسم" />
           <Input value={phone} onChangeText={setPhone} placeholder="رقم الموبايل 01xxxxxxxxx" keyboardType="phone-pad" style={{ textAlign: "left" }} />
         </Card>
