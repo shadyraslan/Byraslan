@@ -5,10 +5,9 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import * as kv from "@/lib/idb";
 import OrdersPanel, { useOrders } from "./Orders";
 
-/* ===== الكاشير من غير نت =====
-   - نسخة من أصناف وأسعار وعلب الفرع محفوظة على الجهاز وبتتحدّث كل 5 دقايق لما النت موجود.
-   - كل فاتورة بتتحفظ على الجهاز الأول وبتتطبع، وبعدين بتترفع (pos_sync) لما النت يكون موجود.
-   - الوردية نفسها بتتفتح وتتقفل من غير نت، وبتتسجّل في السيستم أول ما النت يرجع. */
+/* ===== الكاشير (تطبيق بيتثبّت على كمبيوتر الفرع) =====
+   قرار شادي: من غير نت البيع بيقف خالص. كل فاتورة بتتسجّل في السيستم الأول، وبعدها بس بتتطبع.
+   المسح بيسأل السيستم على طول (pos_lookup)، وملصق الميزان بيتقري من نسخة الفرع اللي بتتحدّث كل دقيقة. */
 
 type Item = { id: number; name: string; unit: string; sold_by: string; arm: string; kind: string; plu: string | null; price: number };
 type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number }[] };
@@ -138,14 +137,24 @@ export default function Cashier() {
   }, [sb]);
   useEffect(() => { if (online) sync(); const t = setInterval(sync, 20000); return () => clearInterval(t); }, [online, sync]);
 
-  // ---------- فتح الوردية ----------
+  const OFF = "النت قاطع — البيع واقف لحد ما النت يرجع";
+  const [working, setWorking] = useState(false);
+  const errText = (e: { message?: string } | null) => (e?.message ?? "حصلت مشكلة").replace(/^.*?ERROR:\s*/, "");
+
+  // ---------- فتح الوردية (لازم نت) ----------
+  const [openErr, setOpenErr] = useState<string | null>(null);
   const openShift = async () => {
     const loc = openLoc || me?.home || locs[0]?.id;
     if (!loc) return;
+    if (!navigator.onLine) return setOpenErr(OFF);
     const sh: Shift = { client_id: uuid(), loc, loc_name: locs.find((l) => l.id === loc)?.name ?? loc, opening_cash: Number(openCash) || 0, opened_at: new Date().toISOString() };
-    await kv.set("shift", sh); await kv.set("done", []); setShift(sh); setDone([]);
-    const s = await kv.get<Snap>("snap:" + loc); if (s) setSnap(s);
-    await refreshSnap(loc); sync();
+    setWorking(true);
+    const { data, error } = await sb.rpc("pos_sync", { p_loc: loc, p_shifts: [{ client_id: sh.client_id, opening_cash: sh.opening_cash, opened_at: sh.opened_at }], p_sales: [] });
+    setWorking(false);
+    if (error) return setOpenErr(errText(error));
+    sh.server_id = (data as { shifts: { id: number }[] }).shifts[0]?.id;
+    await kv.set("shift", sh); await kv.set("done", []); setShift(sh); setDone([]); setOpenErr(null);
+    await refreshSnap(loc);
   };
 
   // ---------- البحث في نسخة الفرع ----------
@@ -182,15 +191,17 @@ export default function Cashier() {
   };
   const onScan = async (code: string) => {
     if (shift?.closing) return bad("الوردية بتتقفل — مفيش بيع");
-    let l = lookup(code);
-    // مش لاقيه على الجهاز والنت موجود؟ (علبة لسه واصلة أو صنف لسه متضاف) — نسأل السيستم على طول ونحدّث النسخة
-    if (typeof l === "string" && navigator.onLine && shift && !l.includes("اتباعت قبل كده") && !l.includes("بيتباع بالعلبة")) {
-      const { data } = await sb.rpc("pos_lookup", { p_loc: shift.loc, p_code: code });
+    if (!navigator.onLine) return bad(OFF);
+    if (!shift) return;
+    let l: Line | string;
+    const sc = snap?.scale;
+    if (sc && /^\d{13}$/.test(code.trim()) && code.trim().startsWith(sc.prefix)) l = lookup(code); // ملصق الميزان
+    else {
+      const { data, error } = await sb.rpc("pos_lookup", { p_loc: shift.loc, p_code: code });
       const r = (Array.isArray(data) ? data[0] : data) as { item_id: number; item_name: string; unit: string; box_sn: number | null; qty: number; unit_price: number } | undefined;
-      if (r && !(r.box_sn && (soldLocal.has(r.box_sn) || lines.some((x) => x.box_sn === r.box_sn)))) {
-        l = { item_id: r.item_id, name: r.item_name, unit: r.unit, box_sn: r.box_sn, qty: Number(r.qty), unit_price: Number(r.unit_price) };
-        refreshSnap(shift.loc);
-      }
+      if (error || !r) l = error ? errText(error) : "الكود ده مش متسجّل";
+      else if (r.box_sn && lines.some((x) => x.box_sn === r.box_sn)) l = `العلبة #${r.box_sn} في الفاتورة قبل كده`;
+      else l = { item_id: r.item_id, name: r.item_name, unit: r.unit, box_sn: r.box_sn, qty: Number(r.qty), unit_price: Number(r.unit_price) };
     }
     if (typeof l === "string") return bad(l);
     const line = l;
@@ -211,27 +222,39 @@ export default function Cashier() {
   const paid = (Number(cash) || 0) + (Number(card) || 0);
   const pay = async () => {
     if (!shift || !lines.length) return bad("الفاتورة فاضية");
+    if (!navigator.onLine) return bad(OFF);
     const k = Number(card) || 0;
     const c = cash ? Number(cash) || 0 : Math.max(total - k, 0);
     if (c + k < total) return bad(`المدفوع أقل من الإجمالي (${f2(total)} ج)`);
     if (k > total) return bad("الفيزا أكتر من الإجمالي");
-    const seq = ((await kv.get<number>("seq")) ?? 0) + 1; await kv.set("seq", seq);
-    const dev = ((await kv.get<string>("dev")) ?? (await (async () => { const x = Math.random().toString(36).slice(2, 5).toUpperCase(); await kv.set("dev", x); return x; })()));
-    const s: Sale = { client_id: uuid(), shift: shift.client_id, at: new Date().toISOString(), local_no: `${dev}-${seq}`, lines, discount: d, cash: c, card: k, offline: !navigator.onLine };
-    const ob = [...((await kv.get<Sale[]>("outbox")) ?? []), s]; await kv.set("outbox", ob); setOutbox(ob);
-    const dn: Done = { ...s, total: totalOf(s), change: r2(c + k - totalOf(s)) };
+    const s: Sale = { client_id: uuid(), shift: shift.client_id, at: new Date().toISOString(), local_no: "", lines, discount: d, cash: c, card: k, offline: false };
+    setWorking(true);
+    const { data, error } = await sb.rpc("pos_sync", { p_loc: shift.loc, p_shifts: [{ client_id: shift.client_id, opening_cash: shift.opening_cash, opened_at: shift.opened_at }],
+      p_sales: [{ ...s, lines: lines.map(({ item_id, box_sn, qty, unit_price }) => ({ item_id, box_sn, qty, unit_price })) }] });
+    setWorking(false);
+    if (error) return bad(`الفاتورة ماتسجلتش: ${errText(error)}`);
+    const r = (data as { sales: { no: number; conflicts?: string[] }[] }).sales[0];
+    const dn: Done = { ...s, no: r?.no, conflicts: r?.conflicts ?? [], total: totalOf(s), change: r2(c + k - totalOf(s)) };
     const all = [dn, ...((await kv.get<Done[]>("done")) ?? [])].slice(0, 300); await kv.set("done", all); setDone(all);
     setRec(dn); setLines([]); setDisc(""); setCash(""); setCard(""); setMsg(null);
-    setTimeout(() => { window.print(); sync(); }, 80);
+    setTimeout(() => window.print(), 80);
   };
 
   // ---------- قفل الوردية ----------
   const expected = shift ? r2(shift.opening_cash + done.reduce((a, s) => a + s.cash - s.change, 0)) : 0;
+  const [closeErr, setCloseErr] = useState<string | null>(null);
   const closeShift = async () => {
     if (!shift) return;
+    if (!navigator.onLine) return setCloseErr(OFF);
     const sh = { ...shift, closing: { counted: Number(counted) || 0, closed_at: new Date().toISOString() } };
-    await kv.set("shift", sh); setShift(sh); setCounted("");
-    sync();
+    setWorking(true);
+    const { error } = await sb.rpc("pos_sync", { p_loc: sh.loc, p_shifts: [{ client_id: sh.client_id, opening_cash: sh.opening_cash, opened_at: sh.opened_at, counted: sh.closing.counted, closed_at: sh.closing.closed_at }], p_sales: [] });
+    setWorking(false);
+    if (error) return setCloseErr(errText(error));
+    const diff = r2(sh.closing.counted - expected);
+    setCloseErr(null); setCounted("");
+    await kv.del("shift"); await kv.set("done", []); setShift(null); setDone([]); setView("sell");
+    setMsg({ ok: diff === 0, t: diff === 0 ? "الوردية اتقفلت — الدرج مظبوط" : `الوردية اتقفلت — ${diff > 0 ? "زيادة" : "عجز"} ${f2(Math.abs(diff))} ج` });
   };
 
   // ---------- الشاشات ----------
@@ -240,8 +263,8 @@ export default function Cashier() {
       <img src="/logo.png" alt="" style={{ height: 26 }} />
       <b style={{ color: "#f5c800" }}>الكاشير</b>
       {shift && <span>{shift.loc_name} · {me?.name} · وردية من {hhmm(shift.opened_at)}</span>}
-      <span style={{ marginInlineStart: "auto", padding: "3px 12px", borderRadius: 99, fontWeight: 700, fontSize: 13, background: online ? "#16a34a" : "#dc2626" }}>{online ? "متصل" : "من غير نت — شغال عادي"}</span>
-      <span style={{ fontSize: 13, color: outbox.length ? "#f5c800" : "#aaa" }}>{syncing ? "بيرفع…" : outbox.length ? `${outbox.length} فاتورة مستنية ترتفع` : "كله مترفع ✓"}</span>
+      <span style={{ marginInlineStart: "auto", padding: "3px 12px", borderRadius: 99, fontWeight: 700, fontSize: 13, background: online ? "#16a34a" : "#dc2626" }}>{online ? "متصل" : "النت قاطع — البيع واقف"}</span>
+      {!!outbox.length && <span style={{ fontSize: 13, color: "#f5c800" }}>{syncing ? "بيرفع…" : `${outbox.length} فاتورة قديمة مستنية ترتفع`}</span>}
       {snap && <span style={{ fontSize: 12, color: "#888" }}>الأسعار والعلب: {hhmm(snap.at)}</span>}
       {install && <button className="btn" style={{ height: 32 }} onClick={() => { install.prompt(); setInstall(null); }}>ثبّت على الجهاز</button>}
     </div>
@@ -257,8 +280,10 @@ export default function Cashier() {
         <div className="card" style={{ display: "grid", gap: 12 }}>
           <label className="fld">الفرع<select value={openLoc} onChange={(e) => setOpenLoc(e.target.value)}>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
           <label className="fld">الكاش في الدرج أول الوردية<input value={openCash} onChange={(e) => setOpenCash(e.target.value)} inputMode="decimal" dir="ltr" /></label>
-          <button className="btn pri" style={{ height: 52, fontSize: 17 }} onClick={openShift} disabled={!locs.length}>افتح الوردية</button>
-          {!online && <div className="muted">من غير نت: الوردية هتتسجّل في السيستم أول ما النت يرجع.</div>}
+          <button className="btn pri" style={{ height: 52, fontSize: 17 }} onClick={openShift} disabled={!locs.length || !online || working}>{working ? "…" : "افتح الوردية"}</button>
+          {!online && <div className="badmsg">{OFF}</div>}
+          {openErr && <div className="badmsg">{openErr}</div>}
+          {msg && <div className={msg.ok ? "okmsg" : "badmsg"}>{msg.t}</div>}
         </div>
       </div>
     </>
@@ -292,6 +317,11 @@ export default function Cashier() {
       )}
       {view === "orders" && <OrdersPanel sb={sb} orders={ord.orders} ack={ord.ack} reload={ord.load} online={online} />}
 
+      {view === "sell" && !online && (
+        <div className="noprint" style={{ margin: "0 16px 10px", padding: 18, borderRadius: 12, background: "var(--bad)", color: "#fff", fontSize: 19, fontWeight: 800, textAlign: "center" }}>
+          {OFF}
+        </div>
+      )}
       {view === "sell" && (
         <div className="pos noprint" style={{ padding: "0 16px 16px" }}>
           <div className="card" style={{ border: "2px solid var(--y)" }}>
@@ -326,7 +356,7 @@ export default function Cashier() {
             <div className="row" style={{ gap: 6 }}>{[total, 50, 100, 200, 500].filter((v, i) => i === 0 || v > total).slice(0, 4).map((v, i) => <button key={i} className="btn" onClick={() => setCash(String(Math.ceil(v)))} style={{ height: 34 }}>{i === 0 ? "مظبوط" : v}</button>)}</div>
             <label className="fld">فيزا<input value={card} onChange={(e) => setCard(e.target.value)} inputMode="decimal" dir="ltr" /></label>
             {paid > total && <div className="okmsg">الباقي للعميل: {f2(paid - total)} ج</div>}
-            <button className="btn pri" onClick={pay} disabled={!lines.length} style={{ height: 56, fontSize: 18 }}>ادفع {f2(total)} ج</button>
+            <button className="btn pri" onClick={pay} disabled={!lines.length || !online || working} style={{ height: 56, fontSize: 18 }}>{working ? "بيسجّل…" : `ادفع ${f2(total)} ج`}</button>
           </div>
         </div>
       )}
@@ -340,7 +370,7 @@ export default function Cashier() {
                 <tr key={s.client_id}>
                   <td className="num">{s.no ? `#${s.no}` : s.local_no}</td><td className="num">{hhmm(s.at)}</td><td className="num"><b>{f2(s.total)}</b></td>
                   <td className="num">{f2(s.cash - s.change)} / {f2(s.card)}</td>
-                  <td>{s.no ? (s.conflicts?.length ? <span style={{ color: "var(--bad)" }}>اترفعت · {s.conflicts.join("، ")}</span> : "اترفعت ✓") : <span style={{ color: "#b7791f" }}>على الجهاز</span>}</td>
+                  <td>{s.no ? (s.conflicts?.length ? <span style={{ color: "var(--bad)" }}>{s.conflicts.join("، ")}</span> : "متسجّلة ✓") : <span style={{ color: "#b7791f" }}>مستنية تترفع</span>}</td>
                   <td><button className="btn" style={{ height: 30 }} onClick={() => { setRec(s); setTimeout(() => window.print(), 50); }}>اطبع تاني</button></td>
                 </tr>
               ))}
@@ -354,7 +384,8 @@ export default function Cashier() {
         <div className="card noprint" style={{ margin: "0 16px", display: "grid", gap: 10, maxWidth: 560 }}>
           <div>فتحت بـ <b className="num">{f2(shift.opening_cash)}</b> · كاش الفواتير <b className="num">{f2(expected - shift.opening_cash)}</b> · {done.length} فاتورة</div>
           <label className="fld">الكاش اللي في الدرج كام؟<input value={counted} onChange={(e) => setCounted(e.target.value)} inputMode="decimal" dir="ltr" autoFocus /></label>
-          <button className="btn pri" style={{ height: 50 }} disabled={counted === ""} onClick={closeShift}>اقفل الوردية</button>
+          <button className="btn pri" style={{ height: 50 }} disabled={counted === "" || !online || working} onClick={closeShift}>اقفل الوردية</button>
+          {(closeErr || !online) && <div className="badmsg">{closeErr ?? OFF}</div>}
           <div className="muted" style={{ fontSize: 13 }}>لو فيه مصروف اتصرف من الدرج في السيستم، هيتخصم من المتوقع وقت القفل.</div>
         </div>
       )}
