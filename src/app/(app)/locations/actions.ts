@@ -21,3 +21,12 @@ export async function toggleLocation(fd: FormData) {
   await sb.from("locations").update({ active: !data?.active }).eq("id", id);
   revalidatePath("/locations");
 }
+
+// إحداثيات الموقع ونطاق الحضور (متر)
+export async function saveGeo(fd: FormData) {
+  const sb = await supabaseServer();
+  const raw = String(fd.get("geo") || "").trim();
+  const m = raw.match(/(-?\d+(?:\.\d+)?)\s*[,،\s]\s*(-?\d+(?:\.\d+)?)/);
+  await sb.from("locations").update({ lat: m ? Number(m[1]) : null, lng: m ? Number(m[2]) : null, radius_m: Math.max(Number(fd.get("radius") || 150), 20) }).eq("id", String(fd.get("id")));
+  revalidatePath("/locations");
+}

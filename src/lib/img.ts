@@ -18,7 +18,7 @@ export async function uploadPhoto(file: File, folder: string, max = 1400): Promi
 }
 
 /** لينك مؤقت لصورة على Storage */
-export async function photoUrl(path: string): Promise<string | null> {
-  const { data } = await supabaseBrowser().storage.from("docs").createSignedUrl(path, 3600);
+export async function photoUrl(path: string, bucket = "docs"): Promise<string | null> {
+  const { data } = await supabaseBrowser().storage.from(bucket).createSignedUrl(path, 3600);
   return data?.signedUrl ?? null;
 }

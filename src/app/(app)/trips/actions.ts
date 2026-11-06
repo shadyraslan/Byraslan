@@ -6,7 +6,10 @@ import { dbMsg, type Result } from "@/lib/scan";
 
 export async function createTrip(fd: FormData) {
   const sb = await supabaseServer();
-  const { data } = await sb.from("trips").insert({ truck: String(fd.get("truck") || "").trim() || "عربية", driver: String(fd.get("driver") || "").trim() || null }).select("id").single();
+  const did = String(fd.get("driver_id") || "") || null;
+  let dname = String(fd.get("driver") || "").trim() || null;
+  if (did && !dname) { const { data: p } = await sb.from("profiles").select("name").eq("id", did).single(); dname = (p?.name as string) ?? null; }
+  const { data } = await sb.from("trips").insert({ truck: String(fd.get("truck") || "").trim() || "عربية", driver: dname, driver_id: did }).select("id").single();
   revalidatePath("/trips");
   if (data) redirect(`/trips/${data.id}`);
 }

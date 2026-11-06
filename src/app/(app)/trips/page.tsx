@@ -8,13 +8,16 @@ export default async function Trips() {
   const me = await getMe();
   if (!can(me, "trips.load")) redirect("/dashboard");
   const sb = await supabaseServer();
-  const { data: trips } = await sb.from("trips").select("id,no,truck,driver,status,created_at,left_at").order("id", { ascending: false }).limit(50);
+  const [{ data: trips }, { data: staff }] = await Promise.all([
+    sb.from("trips").select("id,no,truck,driver,status,created_at,left_at,loaded_ok_at").order("id", { ascending: false }).limit(50),
+    sb.from("profiles").select("id,name,job").eq("active", true).order("name"),
+  ]);
   return (
     <>
       <div className="top"><h1>تحميل العربيات</h1><Link className="btn" href="/crates" style={{ display: "inline-grid", placeItems: "center" }}>ملصقات الصناديق</Link></div>
       <form action={createTrip} className="card row">
         <label className="fld">العربية<input name="truck" placeholder="عربية 1 — نصف نقل مبرد" required /></label>
-        <label className="fld">السواق<input name="driver" /></label>
+        <label className="fld">السواق (بيشوف الرحلة في تطبيق الموظفين)<select name="driver_id"><option value="">—</option>{(staff ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}{p.job ? ` · ${p.job}` : ""}</option>)}</select></label>
         <button className="btn pri">+ رحلة جديدة وابدأ التحميل</button>
       </form>
       <div className="card">
