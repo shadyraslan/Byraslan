@@ -68,7 +68,10 @@ export default function Home() {
           </Card>
         )}
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+          <Tile ic="wallet-outline" t="مرتبي" s="الكشف والأرصدة" onPress={() => router.push("/salary")} />
           <Tile ic="calendar-outline" t="إجازة أو سلفة" s="اطلب وتابع الرد" onPress={() => router.push("/leaves")} />
+          <Tile ic="cash-outline" t="عهدتي" s="صرفت · سلّمت" onPress={() => router.push("/custody")} />
+          <Tile ic="document-attach-outline" t="أوراقي" s="شهادة مرتب وغيرها" onPress={() => router.push("/docs")} />
           <Tile ic="chatbubbles-outline" t="رسايل الإدارة" s={h.unread ? `${h.unread} جديدة` : "مفيش جديد"} badge={h.unread} onPress={() => router.push("/messages")} />
           {h.is_driver && <Tile ic="car-outline" t="رحلاتي" s="التحميل والفروع" onPress={() => router.push("/trips")} />}
           <Tile ic="document-text-outline" t="اللايحة" s="لايحة الشغل" onPress={() => router.push({ pathname: "/policy", params: { view: "1" } })} />

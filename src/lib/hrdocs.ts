@@ -1,0 +1,1 @@
+export const DOC_KINDS: Record<string, string> = { salary_cert: "شهادة مرتب", employment_cert: "شهادة إنه شغال عندنا", salary_details: "مفردات مرتب", insurance: "برنت تأمينات", experience: "شهادة خبرة", other: "ورقة تانية" };

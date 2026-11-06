@@ -5,7 +5,7 @@ import { decideLeave } from "../actions";
 
 const K: Record<string, string> = { annual: "سنوية", casual: "عارضة", sick: "مرضي", unpaid: "بدون مرتب", advance: "سلفة" };
 const S: Record<string, string> = { pending: "مستني", approved: "اتوافق", rejected: "اترفض", cancelled: "اتلغى" };
-type R = { id: number; user_id: string; kind: string; from_date: string | null; to_date: string | null; amount: number | null; note: string | null; status: string; at: string; decision_note: string | null };
+type R = { id: number; user_id: string; kind: string; from_date: string | null; to_date: string | null; amount: number | null; installments: number; first_month: string | null; note: string | null; status: string; at: string; decision_note: string | null };
 
 export default async function Leaves() {
   const me = await getMe();
@@ -19,7 +19,7 @@ export default async function Leaves() {
   const can2 = can(me, "hr.leaves");
   const Row = ({ r }: { r: R }) => (
     <tr>
-      <td><b>{PN.get(r.user_id)}</b></td><td>{K[r.kind]}{r.amount ? <b className="num"> {r.amount} ج</b> : null}</td>
+      <td><b>{PN.get(r.user_id)}</b></td><td>{K[r.kind]}{r.amount ? <b className="num"> {r.amount} ج</b> : null}{r.kind === "advance" ? <div className="muted">على {r.installments} قسط{r.first_month ? ` من ${r.first_month.slice(0, 7)}` : ""}</div> : null}</td>
       <td className="num">{r.from_date ? `${r.from_date} ← ${r.to_date}` : "—"}</td>
       <td style={{ whiteSpace: "normal" }}>{r.note}{r.decision_note ? <div className="muted">الرد: {r.decision_note}</div> : null}</td>
       <td>{r.status === "pending" && can2 ? (

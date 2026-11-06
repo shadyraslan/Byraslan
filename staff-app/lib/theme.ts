@@ -2,3 +2,4 @@ export const C = { black: "#0D0D0D", white: "#FFFFFF", off: "#F5F5F2", y: "#F5C8
 export const F = { r: "System", b: "System" };
 export const hhmm = (s?: string | null) => (s ? new Date(s).toLocaleTimeString("ar-EG", { hour: "numeric", minute: "2-digit" }) : "—");
 export const day = (s?: string | null) => (s ? new Date(s).toLocaleDateString("ar-EG", { weekday: "short", day: "numeric", month: "short" }) : "");
+export const money = (n: number | string | null | undefined) => `${Math.round(Number(n ?? 0)).toLocaleString("en")} ج`;

@@ -8,7 +8,7 @@ import { C, day } from "@/lib/theme";
 
 const KINDS: [string, string][] = [["annual", "إجازة سنوية"], ["casual", "عارضة"], ["sick", "مرضي"], ["unpaid", "بدون مرتب"], ["advance", "سلفة"]];
 const ST: Record<string, ["ok" | "wait" | "bad", string]> = { pending: ["wait", "مستني"], approved: ["ok", "اتوافق"], rejected: ["bad", "اترفض"], cancelled: ["bad", "اتلغى"] };
-type Req = { id: number; kind: string; from_date: string | null; to_date: string | null; amount: number | null; note: string | null; status: string; at: string; decision_note: string | null };
+type Req = { id: number; kind: string; from_date: string | null; to_date: string | null; amount: number | null; installments: number; note: string | null; status: string; at: string; decision_note: string | null };
 const today = () => new Date().toISOString().slice(0, 10);
 
 export default function Leaves() {
@@ -18,6 +18,7 @@ export default function Leaves() {
   const [from, setFrom] = useState(today());
   const [to, setTo] = useState(today());
   const [amount, setAmount] = useState("");
+  const [inst, setInst] = useState("1");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -35,7 +36,7 @@ export default function Leaves() {
     if (!adv && (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || to < from)) return setErr("التاريخ لازم يبقى كده: 2026-11-20، والنهاية بعد البداية");
     setBusy(true);
     const { data: u } = await sb.auth.getUser();
-    const { error } = await sb.from("leave_requests").insert({ user_id: u.user?.id, kind, from_date: adv ? null : from, to_date: adv ? null : to, amount: adv ? Number(amount) : null, note: note.trim() || null });
+    const { error } = await sb.from("leave_requests").insert({ user_id: u.user?.id, kind, from_date: adv ? null : from, to_date: adv ? null : to, amount: adv ? Number(amount) : null, installments: adv ? Math.max(1, Math.round(Number(inst) || 1)) : 1, note: note.trim() || null });
     setBusy(false);
     if (error) return setErr(errMsg(error));
     setOk("اتبعت الطلب — هيوصلك الرد هنا"); setNote(""); setAmount(""); load();
@@ -48,7 +49,12 @@ export default function Leaves() {
         <Card>
           <T b>طلب جديد</T>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{KINDS.map(([k, l]) => <Chip key={k} label={l} on={kind === k} onPress={() => setKind(k)} />)}</View>
-          {adv ? <Input value={amount} onChangeText={setAmount} placeholder="المبلغ (جنيه)" keyboardType="numeric" style={{ textAlign: "left" }} /> : (
+          {adv ? (
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <View style={{ flex: 2 }}><T style={{ color: C.mid, fontSize: 12 }}>المبلغ</T><Input value={amount} onChangeText={setAmount} placeholder="جنيه" keyboardType="numeric" style={{ textAlign: "left" }} /></View>
+              <View style={{ flex: 1 }}><T style={{ color: C.mid, fontSize: 12 }}>على كام قسط</T><Input value={inst} onChangeText={setInst} keyboardType="numeric" style={{ textAlign: "left" }} /></View>
+            </View>
+          ) : (
             <View style={{ flexDirection: "row", gap: 8 }}>
               <View style={{ flex: 1 }}><T style={{ color: C.mid, fontSize: 12 }}>من</T><Input value={from} onChangeText={setFrom} placeholder="2026-11-20" style={{ textAlign: "left" }} /></View>
               <View style={{ flex: 1 }}><T style={{ color: C.mid, fontSize: 12 }}>لحد</T><Input value={to} onChangeText={setTo} placeholder="2026-11-21" style={{ textAlign: "left" }} /></View>
@@ -62,7 +68,7 @@ export default function Leaves() {
         {list.map((r) => (
           <Card key={r.id}>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <T b>{KINDS.find((k) => k[0] === r.kind)?.[1]}{r.amount ? ` · ${r.amount} ج` : ""}</T>
+              <T b>{KINDS.find((k) => k[0] === r.kind)?.[1]}{r.amount ? ` · ${r.amount} ج` : ""}{r.kind === "advance" && r.installments > 1 ? ` على ${r.installments} قسط` : ""}</T>
               <Badge kind={ST[r.status][0]} t={ST[r.status][1]} />
             </View>
             {r.from_date && <T style={{ color: C.mid }}>{day(r.from_date)} ← {day(r.to_date)}</T>}
