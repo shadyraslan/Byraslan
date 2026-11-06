@@ -63,8 +63,8 @@ export default function Inbox({ me, canned, sla, agents, manage, openId }: { me:
   const openPhoto = async (p: string) => { const u = await photoUrl(p, "support"); if (u) window.open(u, "_blank"); };
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(260px, 330px) minmax(0, 1fr) minmax(220px, 300px)", gap: 12, alignItems: "start" }}>
-      <div className="card" style={{ padding: 8, maxHeight: "78vh", overflow: "auto" }}>
+    <div className={`inbox${cur ? " has" : ""}`}>
+      <div className="card ilist" style={{ padding: 8, maxHeight: "78vh", overflow: "auto" }}>
         <div className="row" style={{ gap: 4, marginBottom: 6 }}>
           {([["open", "المفتوحة"], ["mine", "بتاعتي"], ["late", "متأخرة"], ["all", "الكل"]] as const).map(([k, l]) => <button key={k} className={filter === k ? "btn pri" : "btn"} style={{ height: 30 }} onClick={() => setFilter(k)}>{l}</button>)}
         </div>
@@ -77,9 +77,10 @@ export default function Inbox({ me, canned, sla, agents, manage, openId }: { me:
         {!list.length && <div className="muted" style={{ padding: 10 }}>مفيش تذاكر</div>}
       </div>
 
-      <div className="card" style={{ display: "grid", gap: 8 }}>
+      <div className="card ithread" style={{ display: "grid", gap: 8, minWidth: 0 }}>
         {!t ? <div className="muted">اختار تذكرة</div> : (
           <>
+            <button className="btn iback" onClick={() => setCur(null)}>→ كل التذاكر</button>
             <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
               <b>تذكرة #{t.no} — {TOP[t.topic]} · {ST[t.status]}{t.rating ? ` · ${"★".repeat(t.rating)}` : ""}</b>
               <select value={t.assigned_to ?? ""} onChange={(e) => assign(e.target.value)} disabled={!manage && !!t.assigned_to && t.assigned_to !== me}>
@@ -110,7 +111,7 @@ export default function Inbox({ me, canned, sla, agents, manage, openId }: { me:
         )}
       </div>
 
-      <div className="card" style={{ display: "grid", gap: 6 }}>
+      <div className="card icust" style={{ display: "grid", gap: 6, minWidth: 0 }}>
         {!t ? <div className="muted">كارت العميل</div> : (
           <>
             <b>{cust?.name || t.name || "عميل"}</b>

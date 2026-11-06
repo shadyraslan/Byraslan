@@ -30,7 +30,7 @@ export default async function Section({ params }: { params: Promise<{ id: string
   };
   const series = (s.series ?? []).map((x) => ({ label: dl(x.d), v: Number(x.v) }));
   const chart: Record<string, [string, string]> = {
-    orders: ["الطلبات في آخر 14 يوم", " طلب"], branches: ["مبيعات الفروع في آخر 14 يوم", " ج"], factory: ["العلب اللي اتغلّفت في آخر 14 يوم", " علبة"],
+    orders: ["الطلبات في آخر 14 يوم", " طلب"], cs: ["التذاكر الجديدة في آخر 14 يوم", " تذكرة"], branches: ["مبيعات الفروع في آخر 14 يوم", " ج"], factory: ["العلب اللي اتغلّفت في آخر 14 يوم", " علبة"],
     purchasing: ["قيمة الاستلامات في آخر 14 يوم", " ج"], accounts: ["المصروفات في آخر 14 يوم", " ج"], hr: ["الحضور في آخر 14 يوم", " موظف"],
   };
   return (
@@ -41,6 +41,15 @@ export default async function Section({ params }: { params: Promise<{ id: string
       </div>
 
       <div className="kpis">
+        {id === "cs" && <>
+          <K href="/cs" label="عملاء مستنيين رد" v={n("waiting")} warn />
+          <K href="/cs" label="متأخرين في الرد" v={n("late")} warn />
+          <K href="/cs/orders" label="طلبات مفتوحة" v={n("orders_open")} />
+          <K href="/cs/orders?scope=bookings" label="حجوزات النهارده" v={n("bookings_today")} />
+          <K href="/complaints" label="شكاوى مفتوحة" v={n("complaints")} warn />
+          <K href="/cs/orders?scope=all" label="طلبات واتساب وتليفون النهارده" v={n("phone_orders")} />
+          {s.rating != null && <K label="تقييم الخدمة الشهر ده" v={`${s.rating} ★`} />}
+        </>}
         {id === "orders" && <>
           <K href="/orders" label="طلبات مفتوحة دلوقتي" v={n("open")} warn />
           <K href="/orders" label="طلبات النهارده" v={n("today")} sub={`${money(n("today_value"))} ج`} />

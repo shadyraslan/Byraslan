@@ -20,10 +20,10 @@ export default async function Cs({ searchParams }: { searchParams: Promise<{ t?:
   const greet = `أهلاً بيك في باي رسلان 👋\nاطلب من هنا: ${site}/order\nتابع طلبك أو كلّم خدمة العملاء: ${site}/help\nأو اكتب طلبك هنا وهنسجّله لك.`;
   return (
     <>
-      <div className="top"><h1>خدمة العملاء</h1><a className="btn pri" href="/cs/new" style={{ display: "inline-grid", placeItems: "center" }}>+ طلب واتساب / تليفون</a></div>
+      <div className="top"><h1>الرسايل والتذاكر</h1><a className="btn pri" href="/cs/new" style={{ display: "inline-grid", placeItems: "center" }}>+ طلب أو حجز جديد</a></div>
       <Inbox me={me!.id} canned={canned} sla={sla} agents={(agents ?? []) as { id: string; name: string }[]} manage={can(me, "cs.manage")} openId={sp.t ? Number(sp.t) : null} />
       {can(me, "cs.manage") && (
-        <form action={saveCsSettings} className="card">
+        <details className="card"><summary><b>⚙️ إعدادات خدمة العملاء ورسالة الواتساب</b></summary><form action={saveCsSettings}>
           <h2>إعدادات خدمة العملاء</h2>
           <label className="fld">التذكرة تبقى متأخرة لو مااترددش عليها خلال (دقيقة)<input name="sla" defaultValue={sla} dir="ltr" style={{ width: 90 }} /></label>
           <label className="fld" style={{ display: "grid" }}>الردود الجاهزة — كل سطر رد<textarea name="canned" rows={6} defaultValue={canned.join("\n")} /></label>
@@ -32,7 +32,7 @@ export default async function Cs({ searchParams }: { searchParams: Promise<{ t?:
           <div className="muted">في تطبيق واتساب بيزنس: الإعدادات ← أدوات الأعمال ← رسالة الترحيب، والصق دي:</div>
           <textarea readOnly rows={5} defaultValue={greet} style={{ width: "100%" }} />
           <div className="muted">ورابط خدمة العملاء للتطبيق والويب: <b dir="ltr">{site}/help</b> — مفيش أي رسالة مدفوعة.</div>
-        </form>
+        </form></details>
       )}
     </>
   );

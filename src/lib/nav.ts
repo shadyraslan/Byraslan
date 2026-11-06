@@ -3,12 +3,16 @@ export type NavLink = { href: string; label: string; icon: string; color: string
 export type NavGroup = { id: string; title: string; icon: string; color: string; links: NavLink[] };
 
 export const NAV: NavGroup[] = [
-  { id: "orders", title: "الطلبات والعملاء", icon: "app", color: "#0ea5e9", links: [
-    { href: "/orders", label: "طلبات الأونلاين", icon: "orders", color: "#0ea5e9", perms: ["orders.handle"] },
-    { href: "/bookings", label: "الحجوزات والتقارير", icon: "calendar", color: "#7c3aed", perms: ["orders.handle", "orders.booking", "cs.agent"] },
-    { href: "/cs", label: "خدمة العملاء", icon: "chat", color: "#16a34a", perms: ["cs.agent", "cs.manage"] },
-    { href: "/cs/new", label: "طلب أو حجز واتساب / تليفون", icon: "phone", color: "#059669", perms: ["cs.agent", "orders.handle"] },
+  { id: "cs", title: "خدمة العملاء", icon: "chat", color: "#16a34a", links: [
+    { href: "/cs", label: "الرسايل والتذاكر", icon: "chat", color: "#16a34a", perms: ["cs.agent", "cs.manage"] },
+    { href: "/cs/new", label: "طلب أو حجز جديد", icon: "phone", color: "#059669", perms: ["cs.agent", "orders.handle"] },
+    { href: "/cs/orders", label: "متابعة الطلبات وتعديل الحجوزات", icon: "search", color: "#0ea5e9", perms: ["cs.agent", "orders.handle"] },
+    { href: "/cs/customers", label: "العملاء", icon: "hr", color: "#7c3aed", perms: ["cs.agent", "orders.handle"] },
     { href: "/complaints", label: "الشكاوى والتعويضات", icon: "warning", color: "#e11d48", perms: ["orders.handle", "cs.agent"] },
+  ] },
+  { id: "orders", title: "الطلبات والتوصيل", icon: "app", color: "#0ea5e9", links: [
+    { href: "/orders", label: "طلبات الأونلاين", icon: "orders", color: "#0ea5e9", perms: ["orders.handle"] },
+    { href: "/bookings", label: "تقارير الحجوزات", icon: "calendar", color: "#7c3aed", perms: ["orders.handle", "orders.booking", "cs.agent"] },
     { href: "/zones", label: "مناطق التوصيل", icon: "map", color: "#0891b2", perms: ["settings.edit"] },
     { href: "/notify", label: "إشعارات ورسايل العملاء", icon: "bell", color: "#f59e0b", perms: ["notify.send"] },
   ] },
