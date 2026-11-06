@@ -1,0 +1,12 @@
+{
+  "name": "كاشير باي رسلان",
+  "short_name": "الكاشير",
+  "start_url": "/cashier",
+  "scope": "/cashier",
+  "display": "standalone",
+  "dir": "rtl",
+  "lang": "ar",
+  "background_color": "#0D0D0D",
+  "theme_color": "#0D0D0D",
+  "icons": [{ "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
+}

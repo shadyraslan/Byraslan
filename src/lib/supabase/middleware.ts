@@ -24,7 +24,7 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
-  const isPublic = path === "/login" || path.startsWith("/auth") || path.startsWith("/order") || path.startsWith("/t/");
+  const isPublic = path === "/login" || path.startsWith("/auth") || path.startsWith("/order") || path.startsWith("/t/") || path === "/cashier-sw.js" || path.endsWith(".webmanifest");
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";

@@ -2,7 +2,7 @@
 export type App = { id: string; label: string; icon: string; color: string; href: string | null; perm?: string };
 
 export const MODULES: App[] = [
-  { id: "sales", label: "الكاشير", icon: "pos", color: "#16a34a", href: "/pos", perm: "pos.sell" },
+  { id: "sales", label: "الكاشير", icon: "pos", color: "#16a34a", href: "/cashier", perm: "pos.sell" },
   { id: "orders", label: "طلبات الأونلاين", icon: "app", color: "#0ea5e9", href: "/orders", perm: "orders.handle" },
   { id: "purchase", label: "المشتريات والاستلام", icon: "purchase", color: "#7c3aed", href: "/purchasing" },
   { id: "specs", label: "كارت الصنف", icon: "items", color: "#9333ea", href: "/purchasing/specs" },
@@ -27,7 +27,7 @@ export const MODULES: App[] = [
 
 /** أيقونات جوه كل فرع */
 export const BRANCH_APPS: App[] = [
-  { id: "pos", label: "الكاشير", icon: "pos", color: "#16a34a", href: "/pos", perm: "pos.sell" },
+  { id: "pos", label: "الكاشير", icon: "pos", color: "#16a34a", href: "/cashier", perm: "pos.sell" },
   { id: "orders", label: "طلبات الأونلاين", icon: "orders", color: "#0ea5e9", href: "/orders", perm: "orders.handle" },
   { id: "stock", label: "مخزون الفرع", icon: "stock", color: "#d97706", href: "/stock", perm: "stock.view" },
   { id: "receive", label: "استلام العربية", icon: "truck", color: "#0891b2", href: "/transfers" },
