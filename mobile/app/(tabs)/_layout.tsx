@@ -1,4 +1,4 @@
-import { Tabs } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,31 +12,30 @@ const ITEMS: { name: string; label: string; icon: keyof typeof Ionicons.glyphMap
   { name: "orders", label: "طلباتي", icon: "receipt" },
   { name: "account", label: "حسابي", icon: "person" },
 ];
-
-// البار اللي تحت زي تطبيق رسلان ماركت: أبيض عايم، والسلة دايرة صفرا في النص
 type BarProps = { state: { index: number; routes: { name: string }[] }; navigation: { navigate: (name: never) => void } };
+
 function Bar({ state, navigation }: BarProps) {
   const ins = useSafeAreaInsets();
   const { cart } = useApp();
   const n = Object.keys(cart).length;
   const cur = state.routes[state.index]?.name;
   return (
-    <View style={{ position: "absolute", left: 12, right: 12, bottom: 12 + ins.bottom, backgroundColor: "#fff", borderRadius: 22, flexDirection: "row", alignItems: "center", paddingVertical: 8, paddingHorizontal: 4, shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8 }}>
+    <View style={{ position: "absolute", left: 14, right: 14, bottom: 10 + ins.bottom, backgroundColor: C.white, borderRadius: 24, flexDirection: "row", alignItems: "center", paddingVertical: 9, paddingHorizontal: 4, shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 10 }}>
       {ITEMS.map((it) => {
         const on = cur === it.name;
         const go = () => navigation.navigate(it.name as never);
         if (it.name === "cart") return (
           <Pressable key={it.name} onPress={go} style={{ flex: 1, alignItems: "center" }}>
-            <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: C.y, marginTop: -30, alignItems: "center", justifyContent: "center", shadowColor: C.y, shadowOpacity: 0.5, shadowRadius: 8, elevation: 6 }}>
-              <Ionicons name="cart" size={24} color={C.ink} />
-              {n > 0 && <View style={{ position: "absolute", top: -2, left: -2, backgroundColor: C.ink, borderRadius: 9, paddingHorizontal: 5, minWidth: 18 }}><Text style={{ color: "#fff", fontSize: 10, fontFamily: F.b, textAlign: "center" }}>{n}</Text></View>}
+            <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: C.y, marginTop: -34, alignItems: "center", justifyContent: "center", borderWidth: 4, borderColor: C.off, shadowColor: C.y, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 }}>
+              <Ionicons name="cart" size={24} color={C.black} />
+              <View style={{ position: "absolute", top: -4, left: -4, backgroundColor: C.black, borderRadius: 10, paddingHorizontal: 5, minWidth: 20, height: 20, justifyContent: "center" }}><Text style={{ color: C.white, fontSize: 10.5, fontFamily: F.b, textAlign: "center" }}>{n}</Text></View>
             </View>
           </Pressable>
         );
         return (
           <Pressable key={it.name} onPress={go} style={{ flex: 1, alignItems: "center", gap: 2 }}>
-            <Ionicons name={on ? it.icon : (`${it.icon}-outline` as keyof typeof Ionicons.glyphMap)} size={20} color={on ? C.ink : C.g} />
-            <Text style={{ fontFamily: F.b, fontSize: 10.5, color: on ? C.ink : C.g }}>{it.label}</Text>
+            <Ionicons name={on ? it.icon : (`${it.icon}-outline` as keyof typeof Ionicons.glyphMap)} size={21} color={on ? C.black : "#B0B0B0"} />
+            <Text style={{ fontFamily: on ? F.x : F.b, fontSize: 10.5, color: on ? C.black : "#B0B0B0" }}>{it.label}</Text>
           </Pressable>
         );
       })}
@@ -45,13 +44,12 @@ function Bar({ state, navigation }: BarProps) {
 }
 
 export default function TabsLayout() {
+  const { ready, seen } = useApp();
+  if (!ready) return null;
+  if (!seen) return <Redirect href="/welcome" />;
   return (
-    <Tabs tabBar={(p) => <Bar state={p.state} navigation={p.navigation as unknown as BarProps["navigation"]} />} screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: C.bg } }}>
-      <Tabs.Screen name="index" />
-      <Tabs.Screen name="cats" />
-      <Tabs.Screen name="cart" />
-      <Tabs.Screen name="orders" />
-      <Tabs.Screen name="account" />
+    <Tabs tabBar={(p) => <Bar state={p.state} navigation={p.navigation as unknown as BarProps["navigation"]} />} screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: C.off } }}>
+      {ITEMS.map((i) => <Tabs.Screen key={i.name} name={i.name} />)}
     </Tabs>
   );
 }

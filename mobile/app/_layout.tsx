@@ -28,11 +28,10 @@ export default function Root() {
     <SafeAreaProvider>
       <AppProvider>
         <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.off }, animation: "slide_from_left" }}>
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="login" options={{ presentation: "modal" }} />
-          <Stack.Screen name="address" options={{ presentation: "modal" }} />
-          <Stack.Screen name="loc" options={{ presentation: "modal" }} />
+          <Stack.Screen name="welcome" options={{ animation: "fade" }} />
+          <Stack.Screen name="done/[token]" options={{ animation: "fade", gestureEnabled: false }} />
         </Stack>
       </AppProvider>
     </SafeAreaProvider>

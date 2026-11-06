@@ -9,20 +9,22 @@ export default function Done() {
   const { token, no, total } = useLocalSearchParams<{ token: string; no?: string; total?: string }>();
   const ins = useSafeAreaInsets();
   return (
-    <View style={{ flex: 1, backgroundColor: C.ink, paddingTop: ins.top + 40, paddingBottom: ins.bottom + 20, paddingHorizontal: 24, justifyContent: "space-between" }}>
-      <View style={{ alignItems: "center", gap: 14 }}>
-        <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: C.y, alignItems: "center", justifyContent: "center" }}>
-          <Ionicons name="checkmark" size={56} color={C.ink} />
-        </View>
-        <T w="x" style={{ color: "#fff", fontSize: 24, textAlign: "center" }}>تم الطلب!</T>
-        {no ? <T w="b" style={{ color: C.y, fontSize: 16, textAlign: "center" }}>طلب رقم {no}</T> : null}
-        <T style={{ color: "#aaa", textAlign: "center" }}>وصلنا طلبك والفرع هيبدأ يجهّزه. هيوصلك إشعار مع كل خطوة.</T>
-        {total ? <T w="b" style={{ color: "#fff", textAlign: "center" }}>الإجمالي التقريبي {money(Number(total))}</T> : null}
+    <View style={{ flex: 1, backgroundColor: C.white, paddingTop: ins.top + 30, paddingBottom: ins.bottom + 24, paddingHorizontal: 30, justifyContent: "center", gap: 16 }}>
+      <View style={{ alignSelf: "center", width: 104, height: 104, borderRadius: 52, backgroundColor: C.y, alignItems: "center", justifyContent: "center", shadowColor: C.y, shadowOpacity: 0.5, shadowRadius: 20, elevation: 10 }}>
+        <Ionicons name="checkmark" size={58} color={C.black} />
       </View>
-      <View style={{ gap: 10 }}>
-        <Btn y title="تابع طلبك" onPress={() => router.replace(`/order/${token}`)} />
-        <Btn light title="ارجع للرئيسية" onPress={() => router.replace("/")} />
+      <T w="x" style={{ fontSize: 24, textAlign: "center" }}>تم تأكيد طلبك! 🎉</T>
+      <T style={{ color: C.mid, textAlign: "center", lineHeight: 22 }}>طلبك في طريقه إليك{"\n"}هنبعتلك إشعار لما يتحضر</T>
+      <View style={{ borderWidth: 1.5, borderColor: C.border, borderRadius: 16, padding: 14, alignItems: "center", gap: 2 }}>
+        <T style={{ color: C.mid, fontSize: 11.5 }}>رقم الطلب</T>
+        <T w="x" style={{ fontSize: 20, textAlign: "center" }}>#{no}</T>
+        {total ? <T w="b" style={{ color: C.mid, fontSize: 12 }}>الإجمالي التقريبي {money(Number(total))}</T> : null}
       </View>
+      <View style={{ alignSelf: "center", backgroundColor: C.black, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 10, flexDirection: "row", gap: 6 }}>
+        <T w="b" style={{ color: C.white }}>⏱ وقت التوصيل المتوقع</T><T w="x" style={{ color: C.y }}>35-45 دقيقة</T>
+      </View>
+      <Btn title="تتبع الطلب" onPress={() => router.replace(`/order/${token}`)} style={{ marginTop: 10 }} />
+      <Btn outline title="الرجوع للرئيسية" onPress={() => router.replace("/")} />
     </View>
   );
 }

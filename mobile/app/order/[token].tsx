@@ -1,48 +1,70 @@
-import { useCallback, useEffect, useState } from "react";
-import { RefreshControl, ScrollView, View } from "react-native";
-import { useLocalSearchParams } from "expo-router";
-import { sb } from "@/lib/supabase";
-import { Box, Ln, T, WTop } from "@/lib/ui";
+import { useState } from "react";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { hhmm, orderTotal, useTrack } from "@/lib/track";
+import { BlackHead, Btn, Card, T } from "@/lib/ui";
 import { C, STATUS, money } from "@/lib/theme";
 
-type Tr = { no: number; status: string; branch: string; est_total: number; total: number | null; fee: number; cancel_reason: string | null; lines: { name: string; unit: string; qty: number; prepared: number; price: number }[] };
-const STEPS = ["new", "preparing", "ready", "out", "delivered"];
-const at = (s: string) => (s === "accepted" ? 1 : STEPS.indexOf(s));
+const STEPS: { k: string; l: string; ic: string; at: "created_at" | "accepted_at" | "out_at" | "delivered_at" }[] = [
+  { k: "new", l: "تم استلام الطلب", ic: "📥", at: "created_at" },
+  { k: "preparing", l: "جاري التحضير", ic: "👨‍🍳", at: "accepted_at" },
+  { k: "out", l: "خرج للتوصيل", ic: "🛵", at: "out_at" },
+  { k: "delivered", l: "تم التوصيل", ic: "🏠", at: "delivered_at" },
+];
+const idxOf = (s: string) => ({ new: 0, accepted: 1, preparing: 1, ready: 1, out: 2, delivered: 3 } as Record<string, number>)[s] ?? 0;
 
 export default function Track() {
   const { token } = useLocalSearchParams<{ token: string }>();
-  const [o, setO] = useState<Tr | null>(null);
+  const ins = useSafeAreaInsets();
+  const { o, load } = useTrack(token);
   const [refreshing, setRefreshing] = useState(false);
-  const load = useCallback(async () => { const { data } = await sb.rpc("track_order", { p_token: token }); if (data) setO(data as Tr); }, [token]);
-  useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
-  if (!o) return <View style={{ flex: 1 }}><WTop title="تتبّع الطلب" /><T style={{ padding: 20, color: C.g }}>بيحمّل…</T></View>;
-  const idx = at(o.status);
-  const lt = (l: Tr["lines"][number]) => (l.prepared > 0 ? l.prepared : l.qty) * l.price;
-  const sub = o.lines.reduce((a, l) => a + lt(l), 0);
+  if (!o) return <View style={{ flex: 1 }}><BlackHead title="تتبع الطلب" /><T style={{ padding: 20, color: C.mid }}>بيحمّل…</T></View>;
+  const idx = idxOf(o.status);
   return (
     <View style={{ flex: 1 }}>
-      <WTop title={`طلب #${o.no}`} />
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}>
-        {o.status === "cancelled" ? (
-          <View style={{ margin: 14, backgroundColor: "#FDECEC", borderRadius: 12, padding: 12 }}><T w="b" style={{ color: C.bad }}>الطلب اتلغى{o.cancel_reason ? ` — ${o.cancel_reason}` : ""}</T></View>
-        ) : (
-          <Box title={`فرع ${o.branch}`}>
-            {STEPS.map((s, i) => (
-              <View key={s} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <View style={{ width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: i < idx || o.status === "delivered" ? C.good : i === idx ? C.y : "#EEEEEE" }}>
-                  <T w="x" style={{ fontSize: 12, textAlign: "center", color: i < idx || o.status === "delivered" ? "#fff" : C.ink }}>{i < idx || o.status === "delivered" ? "✓" : i + 1}</T>
+      <BlackHead title="تتبع الطلب" />
+      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 40 + ins.bottom, gap: 14 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}>
+        <View style={{ backgroundColor: C.ySoft, borderRadius: 18, padding: 16, gap: 4 }}>
+          <T w="b" style={{ color: C.mid, fontSize: 12 }}>#{o.no} · فرع {o.branch}</T>
+          <T w="x" style={{ fontSize: 18 }}>{o.status === "cancelled" ? "❌ الطلب اتلغى" : `${STEPS[idx].ic} ${STATUS[o.status]}`}</T>
+          {o.status === "cancelled" ? <T style={{ color: C.red }}>{o.cancel_reason}</T>
+            : o.status !== "delivered" ? <T style={{ color: C.mid }}>الوصول المتوقع خلال <T w="x">{o.status === "out" ? "15-20" : "35-45"} دقيقة</T></T> : null}
+        </View>
+        {o.status !== "cancelled" && (
+          <Card>
+            {STEPS.map((s, i) => {
+              const done = i < idx || o.status === "delivered";
+              const cur = i === idx && o.status !== "delivered";
+              return (
+                <View key={s.k} style={{ flexDirection: "row", gap: 12 }}>
+                  <View style={{ alignItems: "center" }}>
+                    <View style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: done ? C.black : cur ? C.y : C.off, borderWidth: done || cur ? 0 : 1.5, borderColor: C.border }}>
+                      <Text style={{ fontSize: 15 }}>{done ? "✓" : s.ic}</Text>
+                    </View>
+                    {i < STEPS.length - 1 && <View style={{ width: 2, height: 26, backgroundColor: done ? C.black : C.border }} />}
+                  </View>
+                  <View style={{ flex: 1, paddingTop: 4 }}>
+                    <T w={cur ? "x" : "b"} style={{ color: done || cur ? C.black : C.mid }}>{s.l}</T>
+                    <T style={{ color: C.mid, fontSize: 11.5 }}>{hhmm(o[s.at])}</T>
+                  </View>
                 </View>
-                <T w={i === idx ? "x" : "m"} style={{ color: i <= idx ? C.ink : C.g, fontSize: 13 }}>{STATUS[s]}</T>
-              </View>
-            ))}
-          </Box>
+              );
+            })}
+          </Card>
         )}
-        <Box title="تفاصيل الطلب">
-          {o.lines.map((l, i) => <Ln key={i} l={`${l.name} · ${l.prepared > 0 ? l.prepared : l.qty} ${l.unit}`} v={money(lt(l))} />)}
-          <View style={{ height: 1, backgroundColor: C.ln }} />
-          <Ln l="التوصيل" v={money(Number(o.fee))} />
-          <Ln l={o.total != null ? "الإجمالي" : "الإجمالي (تقريبي لحد الوزن)"} v={money(o.total != null ? Number(o.total) : sub + Number(o.fee))} big />
-        </Box>
+        {o.driver && (
+          <Card title="المندوب">
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.black, alignItems: "center", justifyContent: "center" }}><Text style={{ fontSize: 22 }}>🛵</Text></View>
+              <T w="x" style={{ flex: 1 }}>{o.driver}</T>
+            </View>
+          </Card>
+        )}
+        <Card title={`${o.lines.length} منتجات · ${money(orderTotal(o))}`} right={<T w="b" style={{ color: C.mid, fontSize: 12 }} onPress={() => router.push(`/detail/${token}`)}>التفاصيل</T>}>
+          <T style={{ color: C.mid, fontSize: 12.5 }} numberOfLines={2}>{o.lines.map((l) => `${l.icon ?? ""} ${l.name}`).join(" · ")}</T>
+        </Card>
+        <Btn outline title="مشكلة في الطلب؟" onPress={() => router.push(`/complaint/${token}`)} />
       </ScrollView>
     </View>
   );

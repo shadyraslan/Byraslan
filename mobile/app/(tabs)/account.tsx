@@ -1,68 +1,45 @@
-import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "@/lib/store";
-import { errMsg, sb } from "@/lib/supabase";
-import { Box, Btn, Err, Input, T } from "@/lib/ui";
+import { T } from "@/lib/ui";
 import { C } from "@/lib/theme";
+
+type R = [string, string, string, () => void, string?];
 
 export default function Account() {
   const ins = useSafeAreaInsets();
-  const { session, me, refreshMe, district } = useApp();
-  const [name, setName] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
-  useEffect(() => { setName(me?.name ?? ""); }, [me?.name]);
-
-  const Row = ({ icon, label, onPress, color }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; color?: string }) => (
-    <Pressable onPress={onPress} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.ln }}>
-      <Ionicons name={icon} size={20} color={color ?? C.ink} />
-      <T w="b" style={{ flex: 1, color }}>{label}</T>
-      <Ionicons name="chevron-back" size={16} color={C.g} />
-    </Pressable>
-  );
-
+  const { profile, tokens, district } = useApp();
+  const groups: [string, R[]][] = [
+    ["الطلبات", [["📋", "طلباتي", `${tokens.length} طلب`, () => router.push("/orders")], ["🗺", "تتبع طلب", "آخر طلب", () => (tokens[0] ? router.push(`/order/${tokens[0]}`) : router.push("/orders"))], ["🔥", "العروض", "", () => router.push("/offers")]]],
+    ["الحساب", [["👤", "بياناتي", profile.name || "الاسم والموبايل", () => router.push("/profile")], ["📍", "عناويني", `${profile.addresses.length} عنوان · ${district?.name ?? "اختار منطقتك"}`, () => router.push("/loc")], ["🔔", "الإشعارات", "مفعّلة", () => {}, "on"]]],
+    ["الدعم", [["💬", "خدمة العملاء", "", () => router.push("/support")], ["📄", "الشروط والأحكام", "", () => router.push({ pathname: "/legal", params: { k: "terms" } })], ["🔒", "سياسة الخصوصية", "", () => router.push({ pathname: "/legal", params: { k: "privacy" } })]]],
+  ];
   return (
-    <ScrollView contentContainerStyle={{ paddingBottom: 130 }}>
-      <View style={{ backgroundColor: C.ink, paddingTop: ins.top + 16, paddingHorizontal: 16, paddingBottom: 20, borderBottomLeftRadius: 22, borderBottomRightRadius: 22, flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: C.y, alignItems: "center", justifyContent: "center" }}><Ionicons name="person" size={28} color={C.ink} /></View>
-        <View style={{ flex: 1 }}>
-          <T w="x" style={{ color: "#fff", fontSize: 17 }}>{session ? me?.name || "عميلنا" : "زائر"}</T>
-          <T style={{ color: "#999", fontSize: 12 }}>{session ? me?.phone : "سجّل دخول عشان تطلب وتتابع"}</T>
-        </View>
+    <ScrollView contentContainerStyle={{ paddingBottom: 130 + ins.bottom }}>
+      <View style={{ backgroundColor: C.black, paddingTop: ins.top + 24, paddingBottom: 24, alignItems: "center", gap: 6 }}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: C.y, alignItems: "center", justifyContent: "center" }}><Text style={{ fontSize: 34 }}>👤</Text></View>
+        <T w="x" style={{ color: C.white, fontSize: 19, textAlign: "center" }}>{profile.name || "أهلاً بيك"}</T>
+        <T style={{ color: "#888", textAlign: "center", fontSize: 12.5 }}>{profile.phone || "ضيف اسمك ورقمك من «بياناتي»"}</T>
       </View>
-      {!session ? (
-        <Box><Btn y title="تسجيل الدخول بالموبايل" onPress={() => router.push("/login")} /></Box>
-      ) : (
-        <>
-          <Box title="اسمك">
-            <Input value={name} onChangeText={(t) => { setName(t); setOk(false); }} placeholder="الاسم" />
-            <Btn light title={ok ? "اتحفظ ✓" : "حفظ الاسم"} onPress={async () => { setErr(null); const { error } = await sb.rpc("app_save_name", { p_name: name }); if (error) setErr(errMsg(error)); else { setOk(true); refreshMe(); } }} />
-          </Box>
-          <Err t={err} />
-          <Box title="عناويني">
-            {(me?.addresses ?? []).map((a) => (
-              <View key={a.id} style={{ borderWidth: 1.5, borderColor: a.is_default ? C.ink : C.ln, backgroundColor: a.is_default ? C.soft : C.panel, borderRadius: 12, padding: 10, gap: 2 }}>
-                <T w="x" style={{ fontSize: 13 }}>{a.label} — {a.area}{a.is_default ? " · الأساسي" : ""}</T>
-                <T style={{ color: C.g, fontSize: 12 }}>{a.address}</T>
-                <View style={{ flexDirection: "row", gap: 16, marginTop: 4 }}>
-                  <T w="b" style={{ color: C.yDark }} onPress={() => router.push({ pathname: "/address", params: { id: String(a.id) } })}>تعديل</T>
-                  <T w="b" style={{ color: C.bad }} onPress={() => Alert.alert("تشيل العنوان ده؟", a.address, [{ text: "لا" }, { text: "شيله", style: "destructive", onPress: async () => { await sb.rpc("app_remove_address", { p_id: a.id }); refreshMe(); } }])}>شيل</T>
-                </View>
-              </View>
-            ))}
-            <Pressable onPress={() => router.push("/address")}><T w="b" style={{ color: C.yDark }}>+ عنوان جديد</T></Pressable>
-          </Box>
-        </>
-      )}
-      <Box>
-        <Row icon="location-outline" label={`منطقة التوصيل: ${district?.name ?? "اختار"}`} onPress={() => router.push("/loc")} />
-        <Row icon="receipt-outline" label="طلباتي" onPress={() => router.push("/orders")} />
-        {session && <Row icon="log-out-outline" label="خروج" onPress={() => sb.auth.signOut()} />}
-        {session && <Row icon="trash-outline" label="طلب مسح الحساب" color={C.bad} onPress={() => Alert.alert("مسح الحساب", "هنمسح حسابك وبياناتك خلال 48 ساعة. متأكد؟", [{ text: "لا" }, { text: "امسح", style: "destructive", onPress: async () => { await sb.rpc("app_request_delete"); await sb.auth.signOut(); } }])} />}
-      </Box>
+      <View style={{ padding: 18, gap: 16 }}>
+        {groups.map(([g, rows]) => (
+          <View key={g} style={{ gap: 8 }}>
+            <T w="b" style={{ color: C.mid, fontSize: 12 }}>{g}</T>
+            <View style={{ backgroundColor: C.white, borderRadius: 18, borderWidth: 1, borderColor: C.border, overflow: "hidden" }}>
+              {rows.map(([ic, l, s, fn, on], i) => (
+                <Pressable key={l} onPress={fn} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderTopWidth: i ? 1 : 0, borderTopColor: C.border }}>
+                  <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: C.off, alignItems: "center", justifyContent: "center" }}><Text style={{ fontSize: 17 }}>{ic}</Text></View>
+                  <View style={{ flex: 1 }}><T w="x" style={{ fontSize: 13.5 }}>{l}</T>{s ? <T style={{ color: C.mid, fontSize: 11.5 }}>{s}</T> : null}</View>
+                  {on ? <View style={{ width: 40, height: 24, borderRadius: 12, backgroundColor: C.y, justifyContent: "center", paddingHorizontal: 3 }}><View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: C.white, alignSelf: "flex-start" }} /></View> : <Ionicons name="chevron-back" size={16} color={C.mid} />}
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ))}
+        <T style={{ color: "#BBB", textAlign: "center", fontSize: 11 }}>باي رسلان · نسخة تجربة</T>
+      </View>
     </ScrollView>
   );
 }

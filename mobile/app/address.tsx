@@ -1,58 +1,45 @@
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/lib/store";
-import { errMsg, sb } from "@/lib/supabase";
-import { BottomBar, Box, Btn, Err, Input, Opt, Pill, T, WTop } from "@/lib/ui";
+import { BlackHead, BottomBar, Btn, Card, Chip, Input, Radio, T } from "@/lib/ui";
 import { C, money } from "@/lib/theme";
 
 export default function AddressForm() {
+  const ins = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { me, config, district, refreshMe, setDistrict, session } = useApp();
-  const old = me?.addresses.find((a) => String(a.id) === id);
+  const { profile, config, district, saveAddress } = useApp();
+  const old = profile.addresses.find((a) => a.id === id);
   const [label, setLabel] = useState(old?.label ?? "البيت");
   const [address, setAddress] = useState(old?.address ?? "");
   const [dId, setDId] = useState<number | null>(old?.district_id ?? district?.id ?? null);
   const d = config?.districts.find((x) => x.id === dId);
-  const [city, setCity] = useState<string | null>(d?.city ?? null);
   const cities = [...new Set((config?.districts ?? []).map((x) => x.city))];
+  const [city, setCity] = useState<string | null>(d?.city ?? null);
   const cur = city ?? cities[0];
   const [def, setDef] = useState(old?.is_default ?? true);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  if (!session) return <View style={{ flex: 1 }}><WTop title="عنوان جديد" /><Box><T>سجّل دخول الأول</T><Btn y title="تسجيل الدخول" onPress={() => router.replace("/login")} /></Box></View>;
-
-  const save = async () => {
-    setErr(null); setBusy(true);
-    const { error } = await sb.rpc("app_address_save", { p_id: old?.id ?? null, p_label: label, p_district: dId, p_address: address, p_default: def });
-    setBusy(false);
-    if (error) return setErr(errMsg(error));
-    if (dId && def) setDistrict(dId);
-    await refreshMe();
-    router.back();
-  };
+  const save = () => { if (!dId) return; saveAddress({ id: old?.id, label, district_id: dId, address: address.trim(), is_default: def }); router.back(); };
   return (
     <View style={{ flex: 1 }}>
-      <WTop title={old ? "تعديل العنوان" : "عنوان جديد"} />
-      <ScrollView contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
-        <Box title="اسم العنوان">
-          <View style={{ flexDirection: "row", gap: 8 }}>{["البيت", "الشغل", "تاني"].map((l) => <Pill key={l} label={l} on={label === l} onPress={() => setLabel(l)} />)}</View>
-        </Box>
-        <Box title="المنطقة">
-          <View style={{ flexDirection: "row", gap: 8 }}>{cities.map((c) => <Pill key={c} label={c} on={cur === c} onPress={() => setCity(c)} />)}</View>
+      <BlackHead title={old ? "تعديل العنوان" : "عنوان جديد"} />
+      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 120 + ins.bottom, gap: 12 }} keyboardShouldPersistTaps="handled">
+        <Card title="نوع العنوان">
+          <View style={{ flexDirection: "row", gap: 8 }}>{["البيت", "الشغل", "تاني"].map((l) => <Chip key={l} label={l} on={label === l} onPress={() => setLabel(l)} />)}</View>
+        </Card>
+        <Card title="المنطقة">
+          <View style={{ flexDirection: "row", gap: 8 }}>{cities.map((c) => <Chip key={c} label={c} on={cur === c} onPress={() => setCity(c)} />)}</View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {(config?.districts ?? []).filter((x) => x.city === cur).map((x) => <Pill key={x.id} label={x.name} on={dId === x.id} onPress={() => setDId(x.id)} />)}
+            {(config?.districts ?? []).filter((x) => x.city === cur).map((x) => <Chip key={x.id} label={x.name} on={dId === x.id} onPress={() => setDId(x.id)} />)}
           </View>
-          {d && <T style={{ color: d.branch ? C.g : C.bad, fontSize: 12 }}>{d.branch ? `هيوصلك من فرع ${d.branch_name} · التوصيل ${money(d.fee)}` : `منطقة ${d.name} لسه مش متغطية — هنسجّلها ونبلغك أول ما نوصلها`}</T>}
-        </Box>
-        <Box title="العنوان بالتفصيل">
-          <Input value={address} onChangeText={setAddress} placeholder="الشارع، رقم العمارة، الدور، الشقة، علامة مميزة" multiline style={{ minHeight: 90, textAlignVertical: "top", paddingTop: 10 }} />
-          <Opt on={def} onPress={() => setDef(!def)}><T w="b">خليه العنوان الأساسي</T></Opt>
-        </Box>
-        <Err t={err} />
+          {d && <T style={{ color: d.branch ? C.mid : C.red, fontSize: 12 }}>{d.branch ? `هيوصلك من فرع ${d.branch_name} · التوصيل ${d.fee ? money(d.fee) : "مجاني"}` : `منطقة ${d.name} لسه مش متغطية`}</T>}
+        </Card>
+        <Card title="العنوان بالتفصيل">
+          <Input value={address} onChangeText={setAddress} placeholder="الشارع، رقم العمارة، الدور، الشقة، علامة مميزة" multiline style={{ minHeight: 96, textAlignVertical: "top", paddingTop: 12 }} />
+          <Radio on={def} onPress={() => setDef(!def)}><T w="b">خليه العنوان الأساسي</T></Radio>
+        </Card>
       </ScrollView>
-      <BottomBar><Btn y title="حفظ العنوان" onPress={save} busy={busy} disabled={!address.trim() || !dId} style={{ flex: 1 }} /></BottomBar>
+      <BottomBar><Btn y title="حفظ العنوان" onPress={save} disabled={address.trim().length < 5 || !dId} style={{ flex: 1 }} /></BottomBar>
     </View>
   );
 }
