@@ -5,7 +5,7 @@ import ScanInput from "@/components/ScanInput";
 import { setStatus, scanToOrder, unscan, deliver } from "../actions";
 
 type O = {
-  id: number; no: number; status: string; address: string | null; note: string | null; pay_method: string; est_total: number; total: number | null; delivery_fee: number; driver: string | null; cancel_reason: string | null; created_at: string; channel: string;
+  id: number; no: number; status: string; address: string | null; note: string | null; pay_method: string; est_total: number; total: number | null; delivery_fee: number; discount: number; promo_code: string | null; driver: string | null; cancel_reason: string | null; created_at: string; channel: string;
   customers: { name: string; phone: string; area: string | null } | null; locations: { name: string } | null;
   online_order_lines: { line: number; qty: number; unit_price: number; prepared: number; items: { name: string; unit: string } | null }[];
   online_order_boxes: { box_sn: number; line: number; qty: number }[];
@@ -52,9 +52,9 @@ export default function OrderDesk({ o, canCancel }: { o: O; canCancel: boolean }
             );
           })}</tbody>
         </table>
-        <div className="row" style={{ justifyContent: "space-between", marginTop: 8 }}><span>التوصيل <b className="num">{o.delivery_fee}</b></span>
-          <b className="num" style={{ fontSize: 20 }}>{o.total != null ? `الإجمالي ${Math.round(o.total)}` : `الإجمالي بالوزن الفعلي ${Math.round(sub + Number(o.delivery_fee))}`} ج</b></div>
-        <div className="muted num" style={{ fontSize: 12.5 }}>تقدير العميل: {Math.round(Number(o.est_total) + Number(o.delivery_fee))} ج</div>
+        <div className="row" style={{ justifyContent: "space-between", marginTop: 8 }}><span>التوصيل <b className="num">{o.delivery_fee}</b>{Number(o.discount) > 0 && <> · خصم <b className="num">{o.discount}</b>{o.promo_code ? ` (${o.promo_code})` : ""}</>}</span>
+          <b className="num" style={{ fontSize: 20 }}>{o.total != null ? `الإجمالي ${Math.round(o.total)}` : `الإجمالي بالوزن الفعلي ${Math.round(sub + Number(o.delivery_fee) - Number(o.discount || 0))}`} ج</b></div>
+        <div className="muted num" style={{ fontSize: 12.5 }}>تقدير العميل: {Math.round(Number(o.est_total) + Number(o.delivery_fee) - Number(o.discount || 0))} ج</div>
       </div>
 
       <div className="card row noprint">

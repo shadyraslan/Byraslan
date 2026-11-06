@@ -10,7 +10,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const { data } = await sb.from("online_orders").select("*,customers(name,phone,area),locations(name),online_order_lines(line,qty,unit_price,prepared,items(name,unit)),online_order_boxes(box_sn,line,qty,removed)").eq("id", id).single();
   if (!data) notFound();
   const o = data as unknown as {
-    id: number; no: number; status: string; address: string | null; note: string | null; pay_method: string; est_total: number; total: number | null; delivery_fee: number; driver: string | null; cancel_reason: string | null; created_at: string; token: string; channel: string;
+    id: number; no: number; status: string; address: string | null; note: string | null; pay_method: string; est_total: number; total: number | null; delivery_fee: number; discount: number; promo_code: string | null; driver: string | null; cancel_reason: string | null; created_at: string; token: string; channel: string;
     customers: { name: string; phone: string; area: string | null } | null; locations: { name: string } | null;
     online_order_lines: { line: number; qty: number; unit_price: number; prepared: number; items: { name: string; unit: string } | null }[];
     online_order_boxes: { box_sn: number; line: number; qty: number; removed: boolean }[];
