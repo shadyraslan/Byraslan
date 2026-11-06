@@ -57,7 +57,7 @@ export default async function Bookings({ searchParams }: { searchParams: Promise
   if (sp.max) R = R.filter((b) => val(b) <= Number(sp.max));
   if (sp.reason) R = R.filter((b) => (b.cancel_reason ?? "").includes(sp.reason!));
   const active = R.filter((b) => b.status !== "cancelled");
-  const cfg = (cfgRow?.value ?? {}) as { on?: boolean; days_ahead?: number; lead_hours?: number; edit_cutoff_hours?: number; release_hours?: number; remind_hours?: number; deposit_pct?: number; max_per_slot?: number; slot_minutes?: number; slots?: string[] };
+  const cfg = (cfgRow?.value ?? {}) as { on?: boolean; days_ahead?: number; lead_hours?: number; edit_cutoff_hours?: number; edit_cutoff_mode?: string; release_hours?: number; remind_hours?: number; deposit_pct?: number; max_per_slot?: number; slot_minutes?: number; slots?: string[] };
 
   // التجميع
   const g = sp.group ?? "";
@@ -176,7 +176,8 @@ export default async function Bookings({ searchParams }: { searchParams: Promise
             <label className="row" style={{ gap: 6 }}><input type="checkbox" name="on" defaultChecked={cfg.on !== false} style={{ width: 20, height: 20 }} /> الحجز شغال</label>
             <label className="fld">الحجز متاح لحد كام يوم قدام<input name="days" defaultValue={cfg.days_ahead ?? 30} dir="ltr" style={{ width: 80 }} /></label>
             <label className="fld">أقل وقت قبل الميعاد (ساعة)<input name="lead" defaultValue={cfg.lead_hours ?? 12} dir="ltr" style={{ width: 80 }} /></label>
-            <label className="fld">العميل يعدّل لحد قبل الميعاد بـ (ساعة)<input name="cutoff" defaultValue={cfg.edit_cutoff_hours ?? 24} dir="ltr" style={{ width: 80 }} /></label>
+            <label className="fld">آخر تعديل للعميل<select name="cutmode" defaultValue={cfg.edit_cutoff_mode ?? "midnight"}><option value="midnight">قبل 12 منتصف الليل (أول يوم الحجز)</option><option value="hours">بعدد ساعات قبل الميعاد</option></select></label>
+            <label className="fld">عدد الساعات (لو بالساعات)<input name="cutoff" defaultValue={cfg.edit_cutoff_hours ?? 24} dir="ltr" style={{ width: 80 }} /></label>
             <label className="fld">ينزل للفرع قبل الميعاد بـ (ساعة)<input name="release" defaultValue={cfg.release_hours ?? 3} dir="ltr" style={{ width: 80 }} /></label>
             <label className="fld">تذكير العميل قبلها بـ (ساعة)<input name="remind" defaultValue={cfg.remind_hours ?? 24} dir="ltr" style={{ width: 80 }} /></label>
             <label className="fld">العربون % (0 = مفيش)<input name="deposit" defaultValue={cfg.deposit_pct ?? 0} dir="ltr" style={{ width: 80 }} /></label>

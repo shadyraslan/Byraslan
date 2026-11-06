@@ -13,6 +13,6 @@ export async function saveBookingCfg(fd: FormData) {
   const slots = String(fd.get("slots") || "").split(/[,،\s]+/).map((x) => x.trim()).filter((x) => /^\d{1,2}:\d{2}$/.test(x)).map((x) => x.padStart(5, "0"));
   await sb.from("settings").upsert({ key: "booking", updated_at: new Date().toISOString(), value: {
     on: fd.get("on") === "on", days_ahead: n("days", 30), lead_hours: n("lead", 12), edit_cutoff_hours: n("cutoff", 24), release_hours: n("release", 3),
-    remind_hours: n("remind", 24), deposit_pct: n("deposit", 0), max_per_slot: n("max", 0), slot_minutes: n("slotmin", 120), slots } });
+    remind_hours: n("remind", 24), edit_cutoff_mode: String(fd.get("cutmode") || "midnight") === "hours" ? "hours" : "midnight", deposit_pct: n("deposit", 0), max_per_slot: n("max", 0), slot_minutes: n("slotmin", 120), slots } });
   revalidatePath("/bookings");
 }

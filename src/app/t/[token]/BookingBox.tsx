@@ -3,7 +3,7 @@ import { useEffect, useState, useTransition } from "react";
 import { editBooking, getSlots, type Slot } from "@/app/order/actions";
 
 /** صفحة متابعة الحجز: تغيير الميعاد أو العنوان، تعديل الأصناف، أو الإلغاء — لحد المهلة */
-export default function BookingBox({ token, district, when, slot, canEdit, deposit, depositPaid }: { token: string; district: number | null; when: string; slot: string; canEdit: boolean; deposit: number; depositPaid: boolean }) {
+export default function BookingBox({ token, district, when, slot, canEdit, deposit, depositPaid, editUntil }: { token: string; district: number | null; when: string; slot: string; canEdit: boolean; deposit: number; depositPaid: boolean; editUntil?: string | null }) {
   const [open, setOpen] = useState<"time" | "addr" | "cancel" | null>(null);
   const [date, setDate] = useState(new Date(when).toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" }));
   const [sl, setSl] = useState(slot);
@@ -21,6 +21,7 @@ export default function BookingBox({ token, district, when, slot, canEdit, depos
     <div className="card" style={{ display: "grid", gap: 8, border: "2px solid #F5C800" }}>
       <b style={{ fontSize: 17 }}>📅 حجز يوم {new Date(when).toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long", timeZone: "Africa/Cairo" })} — الساعة {slot}</b>
       {deposit > 0 && <div>{depositPaid ? `✅ العربون ${deposit} ج اتدفع` : `العربون المطلوب: ${deposit} ج`}</div>}
+      {canEdit && editUntil && <div className="muted">تقدر تعدّل لحد الساعة 12 بالليل — {new Date(new Date(editUntil).getTime() - 60000).toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long", timeZone: "Africa/Cairo" })}</div>}
       {canEdit ? (
         <div className="row" style={{ gap: 6 }}>
           <button className="btn" onClick={() => setOpen(open === "time" ? null : "time")}>🕒 غيّر الميعاد</button>

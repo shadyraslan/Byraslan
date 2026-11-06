@@ -4,7 +4,7 @@ import Refresh from "./Refresh";
 import BookingBox from "./BookingBox";
 
 const STEPS: [string, string][] = [["new", "وصلنا طلبك"], ["accepted", "اتقبل"], ["preparing", "بيتحضّر"], ["ready", "جاهز"], ["out", "مع الطيار"], ["delivered", "اتسلّم"]];
-type T = { no: number; status: string; branch: string; est_total: number; total: number | null; fee: number; cancel_reason: string | null; booking?: boolean; scheduled_for?: string; slot?: string; can_edit?: boolean; deposit?: number; deposit_paid?: boolean; district_id?: number | null; lines: { name: string; unit: string; qty: number; prepared: number; price: number }[] };
+type T = { no: number; status: string; branch: string; est_total: number; total: number | null; fee: number; cancel_reason: string | null; booking?: boolean; scheduled_for?: string; slot?: string; can_edit?: boolean; edit_until?: string | null; deposit?: number; deposit_paid?: boolean; district_id?: number | null; lines: { name: string; unit: string; qty: number; prepared: number; price: number }[] };
 
 export default async function Track({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -25,7 +25,7 @@ export default async function Track({ params }: { params: Promise<{ token: strin
           <div className="steps">{STEPS.map(([k, l], i) => <div key={k} className={i <= idx ? "on" : ""}><span>{i + 1}</span>{l}</div>)}</div>
         )}
         {o.booking && o.status !== "cancelled" && o.scheduled_for && (
-          <BookingBox token={token} district={o.district_id ?? null} when={o.scheduled_for} slot={o.slot ?? ""} canEdit={!!o.can_edit} deposit={Number(o.deposit ?? 0)} depositPaid={!!o.deposit_paid} />
+          <BookingBox token={token} district={o.district_id ?? null} when={o.scheduled_for} slot={o.slot ?? ""} canEdit={!!o.can_edit} deposit={Number(o.deposit ?? 0)} depositPaid={!!o.deposit_paid} editUntil={o.edit_until ?? null} />
         )}
         <div className="card">
           <div className="muted">فرع {o.branch}</div>
