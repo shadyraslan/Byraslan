@@ -1,92 +1,59 @@
-import { useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/lib/store";
-import { Btn, Card, Chip, Err, Input, T } from "@/lib/ui";
+import { AddCtr, Box, Btn, ItemArt, Ln, T, WTop } from "@/lib/ui";
 import { C, money } from "@/lib/theme";
-import { errMsg, sb } from "@/lib/supabase";
-
-const PAY: [string, string][] = [["cash", "كاش عند الاستلام"], ["card", "فيزا عند الاستلام"], ["instapay", "إنستاباي"]];
 
 export default function Cart() {
-  const { session, me, config, branch, menu, cart, add, clearCart, refreshMe } = useApp();
-  const [pay, setPay] = useState("cash");
-  const [note, setNote] = useState("");
-  const [addr, setAddr] = useState<number | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const br = config?.branches.find((b) => b.id === branch);
+  const ins = useSafeAreaInsets();
+  const { menu, cart, district, config, clearCart } = useApp();
   const lines = (menu ?? []).filter((m) => cart[m.item_id]);
   const sub = lines.reduce((a, m) => a + cart[m.item_id] * m.price, 0);
-  const addrs = (me?.addresses ?? []).filter((a) => a.location_id === branch);
-  const chosen = addrs.find((a) => a.id === addr) ?? addrs.find((a) => a.is_default) ?? addrs[0];
+  const fee = district?.fee ?? 0;
+  const min = config?.min_order ?? 0;
+  const outs = lines.filter((m) => m.available <= 0);
 
   if (!lines.length) return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 }}>
-      <T w="b" style={{ fontSize: 18, textAlign: "center" }}>السلة فاضية</T>
-      <Btn title="ابدأ الطلب" onPress={() => router.push("/")} />
+    <View style={{ flex: 1 }}>
+      <WTop title="السلة" />
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 }}>
+        <T style={{ fontSize: 48 }}>🛒</T>
+        <T w="x" style={{ fontSize: 17 }}>السلة فاضية</T>
+        <Btn y title="ابدأ التسوّق" onPress={() => router.push("/")} style={{ alignSelf: "stretch" }} />
+      </View>
     </View>
   );
-
-  const place = async () => {
-    setErr(null);
-    if (!session) return router.push("/login");
-    if (!me?.name) return setErr("اكتب اسمك من صفحة حسابي");
-    if (!chosen) return router.push({ pathname: "/address", params: { loc: branch ?? "" } });
-    setBusy(true);
-    const { data, error } = await sb.rpc("app_place_order", { p_address: chosen.id, p_note: note, p_pay: pay, p_lines: lines.map((m) => ({ item_id: m.item_id, qty: cart[m.item_id] })) });
-    setBusy(false);
-    if (error) return setErr(errMsg(error));
-    const r = (Array.isArray(data) ? data[0] : data) as { token: string };
-    clearCart(); setNote(""); refreshMe();
-    router.push(`/order/${r.token}`);
-  };
-
   return (
-    <ScrollView contentContainerStyle={{ padding: 12, gap: 12, paddingBottom: 40 }}>
-      <Card>
-        {lines.map((m) => (
-          <View key={m.item_id} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <View style={{ flex: 1 }}><T w="b">{m.name}</T><T style={{ color: C.muted }}>{cart[m.item_id]} {m.unit} × {money(m.price)}</T></View>
-            <Pressable onPress={() => add(m, -1)} hitSlop={8}><T w="x" style={{ fontSize: 22, paddingHorizontal: 8 }}>−</T></Pressable>
-            <Pressable onPress={() => add(m, 1)} hitSlop={8}><T w="x" style={{ fontSize: 22, paddingHorizontal: 8 }}>+</T></Pressable>
-            <T w="b" style={{ minWidth: 70, textAlign: "left" }}>{money(cart[m.item_id] * m.price)}</T>
-          </View>
-        ))}
-      </Card>
-
-      <Card>
-        <T w="b">التوصيل على</T>
-        {!session ? <Btn kind="sec" title="سجّل دخول بموبايلك" onPress={() => router.push("/login")} /> : (
-          <>
-            {addrs.map((a) => (
-              <Pressable key={a.id} onPress={() => setAddr(a.id)} style={{ borderWidth: 2, borderColor: chosen?.id === a.id ? C.y : C.line, borderRadius: 14, padding: 10 }}>
-                <T w="b">{a.label}</T><T style={{ color: C.muted }}>{[a.area, a.address].filter(Boolean).join(" — ")}</T>
-              </Pressable>
-            ))}
-            <Btn kind="sec" title="+ عنوان جديد" onPress={() => router.push({ pathname: "/address", params: { loc: branch ?? "" } })} />
-          </>
-        )}
-      </Card>
-
-      <Card>
-        <T w="b">الدفع</T>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{PAY.map(([k, l]) => <Chip key={k} label={l} on={pay === k} onPress={() => setPay(k)} />)}</View>
-        <Input placeholder="ملاحظة (مثلًا: تقطيع معيّن)" value={note} onChangeText={setNote} />
-      </Card>
-
-      <Card>
-        <Row l="الأصناف (تقريبي)" v={money(sub)} />
-        <Row l="التوصيل" v={money(br?.fee ?? 0)} />
-        <Row l="الإجمالي التقريبي" v={money(sub + (br?.fee ?? 0))} big />
-        {!!config?.note && <T style={{ color: C.muted, fontSize: 13 }}>{config.note}</T>}
-        {br && sub < br.min_order && <T style={{ color: C.bad }}>أقل طلب {money(br.min_order)}</T>}
-      </Card>
-      <Err t={err} />
-      <Btn title="أكّد الطلب" onPress={place} busy={busy} disabled={!br?.open || (br && sub < br.min_order)} />
-    </ScrollView>
+    <View style={{ flex: 1 }}>
+      <WTop title="السلة" right={<T w="b" style={{ color: C.bad, fontSize: 12.5 }} onPress={clearCart}>فضّي السلة</T>} />
+      <ScrollView contentContainerStyle={{ paddingBottom: 190 + ins.bottom }}>
+        <Box>
+          {lines.map((m) => (
+            <View key={m.item_id} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: C.ln }}>
+              <View style={{ width: 54, height: 54, borderRadius: 12, overflow: "hidden" }}><ItemArt m={m} h={54} size={26} /></View>
+              <View style={{ flex: 1 }}>
+                <T w="x" style={{ fontSize: 13 }} numberOfLines={2}>{m.name}</T>
+                <T style={{ color: C.g, fontSize: 11.5 }}>{money(m.price)} / {m.unit}</T>
+                {m.available <= 0 && <T w="b" style={{ color: C.bad, fontSize: 11.5 }}>خلص — شيله عشان تكمّل</T>}
+                <T w="x" style={{ fontSize: 13 }}>{money(cart[m.item_id] * m.price)}</T>
+              </View>
+              <AddCtr m={m} />
+            </View>
+          ))}
+        </Box>
+        <Box>
+          <Ln l="المجموع (تقريبي)" v={money(sub)} />
+          <Ln l={`التوصيل${district ? ` — ${district.name}` : ""}`} v={money(fee)} />
+          <View style={{ height: 1, backgroundColor: C.ln }} />
+          <Ln l="الإجمالي" v={money(sub + fee)} big />
+          <T style={{ color: C.g, fontSize: 11.5 }}>{config?.note || "السعر النهائي بيتحسب بالوزن الفعلي للعلبة"}</T>
+        </Box>
+        {sub < min && <View style={{ marginHorizontal: 14, marginTop: 12, backgroundColor: "#FFF3CD", borderRadius: 12, padding: 10 }}><T w="b" style={{ color: "#7A5B00" }}>أقل طلب {money(min)} — ضيف بـ {money(min - sub)} كمان</T></View>}
+      </ScrollView>
+      <View style={{ position: "absolute", left: 14, right: 14, bottom: 90 + ins.bottom }}>
+        <Btn title="إتمام الطلب" onPress={() => router.push("/checkout")} disabled={sub < min || outs.length > 0 || !district?.branch} />
+      </View>
+    </View>
   );
 }
-const Row = ({ l, v, big }: { l: string; v: string; big?: boolean }) => (
-  <View style={{ flexDirection: "row", justifyContent: "space-between" }}><T w={big ? "x" : "r"} style={big ? { fontSize: 18 } : undefined}>{l}</T><T w={big ? "x" : "b"} style={big ? { fontSize: 18 } : undefined}>{v}</T></View>
-);

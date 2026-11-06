@@ -2,21 +2,23 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { getMenu, placeOrder, type Menu } from "./actions";
 
-type Br = { id: string; name: string; fee: number; min_order: number; open: boolean };
+type Dist = { id: number; name: string; city: string; branch: string | null; branch_name: string | null; fee: number };
 const f = (n: number) => Math.round(n).toLocaleString("en-US");
 
-export default function Shop({ branches, initial, channel, note }: { branches: Br[]; initial: string | null; channel: string; note: string }) {
-  const [loc, setLoc] = useState<string | null>(initial);
+export default function Shop({ districts, open, minOrder, channel, note }: { districts: Dist[]; open: boolean; minOrder: number; channel: string; note: string }) {
+  const [dist, setDist] = useState<number | null>(null);
+  const dd = districts.find((d) => d.id === dist);
+  const loc = dd?.branch ?? null;
   const [menu, setMenu] = useState<Menu[] | null>(null);
   const [cart, setCart] = useState<Record<number, number>>({});
   const [step, setStep] = useState<"menu" | "info">("menu");
-  const [info, setInfo] = useState({ name: "", phone: "", address: "", area: "", note: "", pay: "cash" });
+  const [info, setInfo] = useState({ name: "", phone: "", address: "", note: "", pay: "cash" });
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const br = branches.find((b) => b.id === loc);
+  const br = dd && dd.branch ? { name: dd.branch_name ?? "", fee: dd.fee, min_order: minOrder } : null;
 
   useEffect(() => {
-    try { const s = localStorage.getItem("rostos-info"); if (s) setInfo((i) => ({ ...i, ...JSON.parse(s), note: "" })); } catch {}
+    try { const s = localStorage.getItem("rostos-info"); if (s) { const v = JSON.parse(s); setInfo((i) => ({ ...i, name: v.name ?? "", phone: v.phone ?? "", address: v.address ?? "" })); if (v.district) setDist(Number(v.district)); } } catch {}
   }, []);
   useEffect(() => { if (loc) { setMenu(null); getMenu(loc).then(setMenu); setCart({}); } }, [loc]);
 
@@ -28,9 +30,16 @@ export default function Shop({ branches, initial, channel, note }: { branches: B
 
   if (!br) return (
     <div className="shopbody">
-      <h2>اختار أقرب فرع ليك</h2>
-      <div className="tiles">{branches.map((b) => <button key={b.id} className="tile" onClick={() => setLoc(b.id)} disabled={!b.open}><b>{b.name}</b><small>توصيل {b.fee} ج</small></button>)}</div>
-      {branches.length > 0 && !branches[0].open && <div className="badmsg">الطلبات أونلاين مقفولة دلوقتي</div>}
+      <h2>ساكن فين؟</h2>
+      <div className="muted">اختار منطقتك، وهنوريك المتاح في أقرب فرع ليك وسعر التوصيل.</div>
+      {!open && <div className="badmsg">الطلبات أونلاين مقفولة دلوقتي</div>}
+      {[...new Set(districts.map((d) => d.city))].map((c) => (
+        <div key={c}>
+          <h3>{c}</h3>
+          <div className="tiles">{districts.filter((d) => d.city === c).map((d) => <button key={d.id} className="tile" disabled={!open} onClick={() => setDist(d.id)}><b>{d.name}</b><small>{d.branch ? `توصيل ${d.fee} ج` : "لسه مش متغطية"}</small></button>)}</div>
+        </div>
+      ))}
+      {dd && !dd.branch && <div className="badmsg">منطقة {dd.name} لسه مش متغطية — قريب إن شاء الله</div>}
     </div>
   );
 
@@ -41,7 +50,7 @@ export default function Shop({ branches, initial, channel, note }: { branches: B
       <div style={{ display: "grid", gap: 10 }}>
         <input placeholder="الاسم" value={info.name} onChange={(e) => setInfo({ ...info, name: e.target.value })} />
         <input placeholder="رقم الموبايل" inputMode="tel" dir="ltr" value={info.phone} onChange={(e) => setInfo({ ...info, phone: e.target.value })} />
-        <input placeholder="المنطقة" value={info.area} onChange={(e) => setInfo({ ...info, area: e.target.value })} />
+        <div className="muted">المنطقة: <b>{dd?.name}</b></div>
         <textarea placeholder="العنوان بالتفصيل (الشارع، العمارة، الدور، الشقة، علامة مميزة)" rows={3} value={info.address} onChange={(e) => setInfo({ ...info, address: e.target.value })} />
         <input placeholder="ملاحظة (مثلًا: تقطيع معيّن)" value={info.note} onChange={(e) => setInfo({ ...info, note: e.target.value })} />
         <div className="row">{[["cash", "كاش عند الاستلام"], ["card", "فيزا عند الاستلام"], ["instapay", "إنستاباي"]].map(([k, l]) => <button key={k} className={info.pay === k ? "btn pri" : "btn"} onClick={() => setInfo({ ...info, pay: k })}>{l}</button>)}</div>
@@ -54,9 +63,9 @@ export default function Shop({ branches, initial, channel, note }: { branches: B
       </div>
       <button className="btn pri" style={{ width: "100%", height: 50, fontSize: 17 }} disabled={pending} onClick={() => start(async () => {
         setErr(null);
-        const r = await placeOrder({ loc: br.id, ...info, channel, lines: Object.entries(cart).map(([id, q]) => ({ item_id: Number(id), qty: q })) });
+        const r = await placeOrder({ district: dd!.id, ...info, channel, lines: Object.entries(cart).map(([id, q]) => ({ item_id: Number(id), qty: q })) });
         if (!r.ok) return setErr(r.error);
-        try { localStorage.setItem("rostos-info", JSON.stringify({ name: info.name, phone: info.phone, address: info.address, area: info.area })); } catch {}
+        try { localStorage.setItem("rostos-info", JSON.stringify({ name: info.name, phone: info.phone, address: info.address, district: dd?.id })); } catch {}
         window.location.href = `/t/${r.token}`;
       })}>أكّد الطلب</button>
       {err && <div className="badmsg" style={{ marginTop: 8 }}>{err}</div>}
@@ -65,7 +74,7 @@ export default function Shop({ branches, initial, channel, note }: { branches: B
 
   return (
     <div className="shopbody">
-      <div className="row" style={{ justifyContent: "space-between" }}><b>فرع {br.name}</b><button className="btn" onClick={() => setLoc(null)}>غيّر الفرع</button></div>
+      <div className="row" style={{ justifyContent: "space-between" }}><b>التوصيل لـ {dd?.name} <span className="muted" style={{ fontWeight: 400 }}>· فرع {br.name}</span></b><button className="btn" onClick={() => setDist(null)}>غيّر المنطقة</button></div>
       {!menu && <div className="muted">بيحمّل…</div>}
       {menu && !menu.length && <div className="muted">مفيش أصناف متاحة دلوقتي</div>}
       {fams.map((fm) => (

@@ -7,7 +7,7 @@ import * as Notifications from "expo-notifications";
 import { useFonts, Cairo_400Regular, Cairo_600SemiBold, Cairo_700Bold, Cairo_800ExtraBold } from "@expo-google-fonts/cairo";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppProvider } from "@/lib/store";
-import { C, F } from "@/lib/theme";
+import { C } from "@/lib/theme";
 
 I18nManager.allowRTL(true);
 I18nManager.forceRTL(true);
@@ -28,11 +28,11 @@ export default function Root() {
     <SafeAreaProvider>
       <AppProvider>
         <StatusBar style="light" />
-        <Stack screenOptions={{ headerStyle: { backgroundColor: C.black }, headerTintColor: C.y, headerTitleStyle: { fontFamily: F.b }, contentStyle: { backgroundColor: C.bg }, headerBackTitle: "رجوع" }}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ title: "تسجيل الدخول", presentation: "modal" }} />
-          <Stack.Screen name="address" options={{ title: "العنوان", presentation: "modal" }} />
-          <Stack.Screen name="order/[token]" options={{ title: "متابعة الطلب" }} />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="login" options={{ presentation: "modal" }} />
+          <Stack.Screen name="address" options={{ presentation: "modal" }} />
+          <Stack.Screen name="loc" options={{ presentation: "modal" }} />
         </Stack>
       </AppProvider>
     </SafeAreaProvider>

@@ -10,7 +10,7 @@ const NAV: [string, [string, string][]][] = [
   ["المشتريات", [["/purchasing", "أوامر التوريد والاستلام"], ["/purchasing/specs", "كارت الصنف"], ["/purchasing/suppliers", "الموردين"], ["/overrides", "التجاوزات"]]],
   ["الحسابات", [["/accounts", "الملخص اليومي"], ["/accounts/expenses", "المصروفات"], ["/accounts/suppliers", "حسابات الموردين"]]],
   ["الأصناف", [["/items", "الأصناف والعائلات"]]],
-  ["الإعداد", [["/locations", "المواقع"], ["/users", "المستخدمين والصلاحيات"], ["/settings", "الإعدادات"]]],
+  ["الإعداد", [["/locations", "المواقع"], ["/users", "المستخدمين والصلاحيات"], ["/zones", "مناطق التوصيل"], ["/settings", "الإعدادات"]]],
 ];
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
