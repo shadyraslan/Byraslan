@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ScanInput from "@/components/ScanInput";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import * as kv from "@/lib/idb";
+import OrdersPanel, { useOrders } from "./Orders";
 
 /* ===== الكاشير من غير نت =====
    - نسخة من أصناف وأسعار وعلب الفرع محفوظة على الجهاز وبتتحدّث كل 5 دقايق لما النت موجود.
@@ -10,7 +11,7 @@ import * as kv from "@/lib/idb";
    - الوردية نفسها بتتفتح وتتقفل من غير نت، وبتتسجّل في السيستم أول ما النت يرجع. */
 
 type Item = { id: number; name: string; unit: string; sold_by: string; arm: string; kind: string; plu: string | null; price: number };
-type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number }[] };
+type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number }[] };
 type Line = { item_id: number; name: string; unit: string; box_sn: number | null; qty: number; unit_price: number };
 type Sale = { client_id: string; shift: string; at: string; local_no: string; lines: Line[]; discount: number; cash: number; card: number; offline: boolean };
 type Done = Sale & { no?: number; conflicts?: string[]; total: number; change: number };
@@ -41,7 +42,7 @@ export default function Cashier() {
   const [cash, setCash] = useState("");
   const [card, setCard] = useState("");
   const [rec, setRec] = useState<Done | null>(null);
-  const [view, setView] = useState<"sell" | "list" | "close">("sell");
+  const [view, setView] = useState<"sell" | "orders" | "list" | "close">("sell");
   const [counted, setCounted] = useState("");
   const [openLoc, setOpenLoc] = useState("");
   const [openCash, setOpenCash] = useState("0");
@@ -84,6 +85,7 @@ export default function Cashier() {
   const refreshMin = useRef(1);
   const refreshSnap = useCallback(async (loc: string) => {
     if (!navigator.onLine) return;
+    sb.rpc("pos_ping", { p_loc: loc }).then(() => {}, () => {});
     const { data, error } = await sb.rpc("pos_snapshot", { p_loc: loc });
     if (error || !data) return;
     const s = data as Snap;
@@ -103,6 +105,9 @@ export default function Cashier() {
     window.addEventListener("online", on);
     return () => { clearTimeout(t); window.removeEventListener("online", on); };
   }, [loc, refreshSnap]);
+
+  // ---------- طلبات الأونلاين ----------
+  const ord = useOrders(sb, shift?.loc, !!snap?.can_orders, online);
 
   // ---------- الرفع ----------
   const sync = useCallback(async () => {
@@ -275,10 +280,17 @@ export default function Cashier() {
     <>
       {bar}
       <div className="noprint" style={{ display: "flex", gap: 8, padding: "10px 16px", flexWrap: "wrap" }}>
-        {([["sell", "البيع"], ["list", `فواتير الوردية (${done.length})`], ["close", "اقفل الوردية"]] as const).map(([k, l]) => <button key={k} className={view === k ? "btn pri" : "btn"} onClick={() => setView(k)}>{l}</button>)}
+        {([["sell", "البيع"], ...(snap?.can_orders ? [["orders", `طلبات الأونلاين (${ord.orders.length})`]] : []), ["list", `فواتير الوردية (${done.length})`], ["close", "اقفل الوردية"]] as [typeof view, string][]).map(([k, l]) => <button key={k} className={view === k ? "btn pri" : "btn"} style={k === "orders" && ord.fresh.length ? { background: "var(--bad)", color: "#fff", borderColor: "var(--bad)" } : undefined} onClick={() => setView(k)}>{l}</button>)}
         <button className="btn" onClick={() => shift && refreshSnap(shift.loc)} disabled={!online}>حدّث الأسعار والعلب</button>
         {syncErr && <span className="badmsg" style={{ margin: 0 }}>الرفع وقف: {syncErr}</span>}
       </div>
+
+      {!!ord.fresh.length && view !== "orders" && (
+        <button className="noprint" onClick={() => setView("orders")} style={{ display: "block", width: "calc(100% - 32px)", margin: "0 16px 10px", padding: 14, borderRadius: 12, border: 0, background: "var(--bad)", color: "#fff", fontSize: 17, fontWeight: 800, cursor: "pointer" }}>
+          🔔 {ord.fresh.length === 1 ? "طلب أونلاين جديد" : `${ord.fresh.length} طلبات أونلاين جديدة`} — دوس هنا
+        </button>
+      )}
+      {view === "orders" && <OrdersPanel sb={sb} orders={ord.orders} ack={ord.ack} reload={ord.load} online={online} />}
 
       {view === "sell" && (
         <div className="pos noprint" style={{ padding: "0 16px 16px" }}>
