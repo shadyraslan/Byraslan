@@ -1,6 +1,12 @@
 "use client";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { getMenu, placeOrder, staffPlace, makeCart, getSlots, bookOrder, editBooking, type Menu, type Slot } from "./actions";
+import { getMenu, placeOrder, staffPlace, makeCart, getSlots, bookOrder, editBooking, setPin, type Menu, type Slot } from "./actions";
+
+/** لينك لوكيشن (جوجل ماب/واتساب) أو "lat,lng" ← إحداثيات */
+function parseLoc(t: string): { lat: number; lng: number } | null {
+  const m = t.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) ?? t.match(/[?&](?:q|query|ll)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/) ?? t.match(/(-?\d{1,2}\.\d{3,}),\s*(-?\d{1,3}\.\d{3,})/);
+  return m ? { lat: Number(m[1]), lng: Number(m[2]) } : null;
+}
 
 type Dist = { id: number; name: string; city: string; branch: string | null; branch_name: string | null; fee: number };
 const f = (n: number) => Math.round(n).toLocaleString("en-US");
@@ -25,6 +31,14 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
   const [cart, setCart] = useState<Record<number, number>>({});
   const [step, setStep] = useState<"menu" | "info">("menu");
   const [info, setInfo] = useState({ name: "", phone: "", address: "", note: "", pay: "cash" });
+  const [pin, setPinXY] = useState<{ lat: number; lng: number } | null>(null);
+  const [pinMsg, setPinMsg] = useState("");
+  const locate = () => {
+    if (!navigator.geolocation) return setPinMsg("الموبايل ده مش بيدّي المكان");
+    setPinMsg("بنحدد مكانك…");
+    navigator.geolocation.getCurrentPosition((p) => { setPinXY({ lat: p.coords.latitude, lng: p.coords.longitude }); setPinMsg("📍 اتحدد مكانك"); }, () => setPinMsg("ماقدرناش نحدد المكان — اكتب العنوان بالتفصيل"), { enableHighAccuracy: true, timeout: 15000 });
+  };
+  const pinIt = async (token?: string) => { if (token && pin) { try { await setPin(token, pin.lat, pin.lng); } catch {} } };
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const br = dd && dd.branch ? { name: dd.branch_name ?? "", fee: dd.fee, min_order: minOrder } : null;
@@ -93,6 +107,10 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
         <input placeholder="رقم الموبايل" inputMode="tel" dir="ltr" value={info.phone} onChange={(e) => setInfo({ ...info, phone: e.target.value })} />
         <div className="muted">المنطقة: <b>{dd?.name}</b></div>
         <textarea placeholder="العنوان بالتفصيل (الشارع، العمارة، الدور، الشقة، علامة مميزة)" rows={3} value={info.address} onChange={(e) => setInfo({ ...info, address: e.target.value })} />
+        {staff
+          ? <input placeholder="لينك اللوكيشن من الواتساب (اختياري)" dir="ltr" onChange={(e) => { const x = parseLoc(e.target.value); setPinXY(x); setPinMsg(x ? "📍 اتحدد المكان من اللينك" : e.target.value ? "اللينك ده مافيهوش مكان" : ""); }} />
+          : <button type="button" className="btn" onClick={locate}>📍 حدّد مكاني بالظبط (أسرع في التوصيل)</button>}
+        {pinMsg && <div className="muted" style={{ fontSize: 13 }}>{pinMsg}</div>}
         <input placeholder="ملاحظة (مثلًا: تقطيع معيّن)" value={info.note} onChange={(e) => setInfo({ ...info, note: e.target.value })} />
         {(booking?.on || edit) && (
           <div className="card" style={{ display: "grid", gap: 8 }}>
@@ -129,6 +147,7 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
         if (mode === "book") {
           const r = await bookOrder({ district: dd!.id, ...info, channel: staff?.channel ?? channel, lines: lines(), date: bdate, slot: bslot });
           if (!r.ok) return setErr(r.error);
+          await pinIt(r.token);
           if (staff) return setDone({ no: r.no, token: r.token, total: r.total, when: `${dayName(bdate)} ${bslot}` });
           try { const L = JSON.parse(localStorage.getItem("my-orders") ?? "[]") as string[]; localStorage.setItem("my-orders", JSON.stringify([r.token, ...L].slice(0, 20))); } catch {}
           try { localStorage.setItem("rostos-info", JSON.stringify({ name: info.name, phone: info.phone, address: info.address, district: dd?.id })); } catch {}
@@ -137,10 +156,12 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
         if (staff) {
           const r = await staffPlace({ district: dd!.id, ...info, channel: staff.channel, lines: lines() });
           if (!r.ok) return setErr(r.error);
+          await pinIt(r.token);
           return setDone({ no: r.no, token: r.token, total: r.total });
         }
         const r = await placeOrder({ district: dd!.id, ...info, channel, lines: lines() });
         if (!r.ok) return setErr(r.error);
+        await pinIt(r.token);
         try { const L = JSON.parse(localStorage.getItem("my-orders") ?? "[]") as string[]; localStorage.setItem("my-orders", JSON.stringify([r.token, ...L].slice(0, 20))); } catch {}
         try { localStorage.setItem("rostos-info", JSON.stringify({ name: info.name, phone: info.phone, address: info.address, district: dd?.id })); } catch {}
         window.location.href = `/t/${r.token}`;

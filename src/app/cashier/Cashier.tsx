@@ -9,10 +9,11 @@ import OrdersPanel, { useOrders } from "./Orders";
    قرار شادي: من غير نت البيع بيقف خالص. كل فاتورة بتتسجّل في السيستم الأول، وبعدها بس بتتطبع.
    المسح بيسأل السيستم على طول (pos_lookup)، وملصق الميزان بيتقري من نسخة الفرع اللي بتتحدّث كل دقيقة. */
 
-type Item = { id: number; name: string; unit: string; sold_by: string; arm: string; kind: string; plu: string | null; price: number };
-type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number }[] };
+type Item = { id: number; name: string; unit: string; sold_by: string; arm: string; kind: string; fams?: number[]; plu: string | null; price: number };
+type Promo = { id: number; name: string; kind: string; value: number; max_off: number | null; auto: boolean; code: string | null; min_order: number; families: number[] | null; stackable: boolean; ends_at: string | null };
+type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number }[]; promos?: Promo[] };
 type Line = { item_id: number; name: string; unit: string; box_sn: number | null; qty: number; unit_price: number };
-type Sale = { client_id: string; shift: string; at: string; local_no: string; lines: Line[]; discount: number; cash: number; card: number; offline: boolean };
+type Sale = { client_id: string; shift: string; at: string; local_no: string; lines: Line[]; discount: number; cash: number; card: number; offline: boolean; promo_code?: string | null };
 type Done = Sale & { no?: number; conflicts?: string[]; total: number; change: number };
 type Shift = { client_id: string; loc: string; loc_name: string; opening_cash: number; opened_at: string; server_id?: number; closing?: { counted: number; closed_at: string } };
 type Me = { id: string; name: string; home: string | null };
@@ -38,6 +39,7 @@ export default function Cashier() {
   const [lines, setLines] = useState<Line[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [disc, setDisc] = useState("");
+  const [pcode, setPcode] = useState("");
   const [cash, setCash] = useState("");
   const [card, setCard] = useState("");
   // على حساب موظف (بيتخصم من مرتبه)
@@ -232,7 +234,25 @@ export default function Cashier() {
   // ---------- الدفع ----------
   const sub = lines.reduce((a, l) => a + r2(l.qty * l.unit_price), 0);
   const stDisc = stInfo ? r2(sub * (Number(stInfo.discount_pct) || 0) / 100) : 0;
-  const d = Math.min((Number(disc) || 0) + stDisc, sub);
+  // العروض: نفس قاعدة السيرفر — الأكبر بس، والمتعلّم "بيتجمع" بيتضاف عليه
+  const promo = (() => {
+    const code = pcode.trim().toUpperCase();
+    let best = 0, bestN = "", stack = 0; const names: string[] = []; let codeOk = false;
+    for (const p of snap?.promos ?? []) {
+      if (!p.auto && (!code || p.code !== code)) continue;
+      if (p.ends_at && new Date(p.ends_at).getTime() < Date.now()) continue;
+      if (sub < Number(p.min_order)) continue;
+      const base = p.families?.length ? lines.reduce((a, l) => { const it = snap?.items.find((i) => i.id === l.item_id); return a + ((it?.fams ?? []).some((f) => p.families!.includes(f)) ? r2(l.qty * l.unit_price) : 0); }, 0) : sub;
+      if (base <= 0) continue;
+      let amt = p.kind === "pct" ? r2(base * Number(p.value) / 100) : Math.min(Number(p.value), base);
+      if (p.max_off != null) amt = Math.min(amt, Number(p.max_off));
+      if (p.stackable) { stack += amt; names.push(p.name); if (!p.auto) codeOk = true; }
+      else if (amt > best) { best = amt; bestN = p.name; codeOk = !p.auto || codeOk; }
+    }
+    if (bestN) names.push(bestN);
+    return { amt: Math.min(r2(best + stack), sub), names, codeOk };
+  })();
+  const d = Math.min((Number(disc) || 0) + stDisc + promo.amt, sub);
   const total = Math.max(r2(sub - d), 0);
   const st = stInfo ? Number(stAmt) || 0 : 0;
   const paid = (Number(cash) || 0) + (Number(card) || 0) + st;
@@ -246,7 +266,7 @@ export default function Cashier() {
     const c = cash ? Number(cash) || 0 : Math.max(total - k - st, 0);
     if (c + k + st < total) return bad(`المدفوع أقل من الإجمالي (${f2(total)} ج)`);
     if (k > total) return bad("الفيزا أكتر من الإجمالي");
-    const s: Sale = { client_id: uuid(), shift: shift.client_id, at: new Date().toISOString(), local_no: "", lines, discount: d, cash: c, card: k, offline: false };
+    const s: Sale = { client_id: uuid(), shift: shift.client_id, at: new Date().toISOString(), local_no: "", lines, discount: d, cash: c, card: k, offline: false, promo_code: pcode.trim().toUpperCase() || null };
     setWorking(true);
     const { data, error } = await sb.rpc("pos_sync", { p_loc: shift.loc, p_shifts: [{ client_id: shift.client_id, opening_cash: shift.opening_cash, opened_at: shift.opened_at }],
       p_sales: [{ ...s, staff: st, staff_id: stInfo?.id ?? null, lines: lines.map(({ item_id, box_sn, qty, unit_price }) => ({ item_id, box_sn, qty, unit_price })) }] });
@@ -255,7 +275,7 @@ export default function Cashier() {
     const r = (data as { sales: { no: number; conflicts?: string[] }[] }).sales[0];
     const dn: Done = { ...s, no: r?.no, conflicts: r?.conflicts ?? [], total: totalOf(s), change: r2(Math.max(c + k + st - totalOf(s), 0)) };
     const all = [dn, ...((await kv.get<Done[]>("done")) ?? [])].slice(0, 300); await kv.set("done", all); setDone(all);
-    setRec(dn); setLines([]); setDisc(""); setCash(""); setCard(""); setStPhone(""); setStAmt(""); setStInfo(null); setMsg(null);
+    setRec(dn); setLines([]); setDisc(""); setPcode(""); setCash(""); setCard(""); setStPhone(""); setStAmt(""); setStInfo(null); setMsg(null);
     setTimeout(() => window.print(), 80);
   };
 
@@ -369,6 +389,13 @@ export default function Cashier() {
           </div>
           <div className="card paybox">
             <div className="row" style={{ justifyContent: "space-between" }}><span>المجموع</span><b className="num">{f2(sub)}</b></div>
+            {!!snap?.promos?.length && (
+              <div style={{ display: "grid", gap: 4 }}>
+                <input value={pcode} onChange={(e) => setPcode(e.target.value)} placeholder="بروموكود" dir="ltr" style={{ textTransform: "uppercase" }} />
+                {promo.amt > 0 && <div className="okmsg" style={{ padding: "6px 10px" }}>عرض: {promo.names.join(" + ")} — {f2(promo.amt)} ج</div>}
+                {!!pcode.trim() && !promo.codeOk && <div className="muted" style={{ fontSize: 12 }}>الكود مش منطبق على الفاتورة دي</div>}
+              </div>
+            )}
             {snap?.can_discount && <label className="fld">خصم على الفاتورة (ج)<input value={disc} onChange={(e) => setDisc(e.target.value)} inputMode="decimal" dir="ltr" /></label>}
             <div className="row" style={{ justifyContent: "space-between", fontSize: 22 }}><span>الإجمالي</span><b className="num">{f2(total)}</b></div>
             <label className="fld">كاش<input value={cash} onChange={(e) => setCash(e.target.value)} inputMode="decimal" dir="ltr" placeholder={f2(total)} /></label>

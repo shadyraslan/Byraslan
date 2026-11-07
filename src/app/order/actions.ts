@@ -56,3 +56,10 @@ export async function editBooking(o: { token: string; lines?: { item_id: number;
   if (error) return { ok: false, error: dbMsg(error.message) };
   return { ok: true, total: Number((data as { total?: number })?.total ?? 0) };
 }
+
+/** دبوس العنوان بعد الطلب (من الموبايل أو لينك لوكيشن الواتساب) */
+export async function setPin(token: string, lat: number, lng: number): Promise<{ km: number | null; far: boolean } | null> {
+  const sb = await supabaseServer();
+  const { data } = await sb.rpc("order_set_pin", { p_token: token, p_lat: lat, p_lng: lng });
+  return (data as { km: number | null; far: boolean }) ?? null;
+}

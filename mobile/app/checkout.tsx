@@ -63,6 +63,7 @@ export default function Checkout() {
     setBusy(false);
     if (error) return setErr(errMsg(error));
     const r = data as { no: number; token: string; total: number };
+    if (a.lat != null && a.lng != null) await sb.rpc("order_set_pin", { p_token: r.token, p_lat: a.lat, p_lng: a.lng });
     if (mode === "book") {
       const { error: be } = await sb.rpc("booking_attach", { p_token: r.token, p_date: bdate, p_slot: bslot });
       if (be) setErr(`الطلب اتسجّل بس الحجز ماتمش: ${errMsg(be)} — كلّم خدمة العملاء`);
@@ -115,7 +116,7 @@ export default function Checkout() {
           {lines.map((m) => <Ln key={m.item_id} l={`${m.name} × ${cart[m.item_id]}`} v={money(cart[m.item_id] * m.price)} />)}
           <View style={{ height: 1, backgroundColor: C.border }} />
           <Ln l="المجموع" v={money(q?.sub ?? 0)} />
-          {!!q?.discount && <Ln l={`الخصم (${code})`} v={`- ${money(q.discount)}`} color={C.green} />}
+          {!!q?.discount && <Ln l={`الخصم (${(q.offers ?? []).map((o) => o.name).join(" + ") || code})`} v={`- ${money(q.discount)}`} color={C.green} />}
           <Ln l="التوصيل" v={q ? (q.fee ? money(q.fee) : "مجاني") : "…"} color={q && !q.fee ? C.green : undefined} />
           <Ln l="الإجمالي" v={money(q?.total ?? 0)} big />
           <T style={{ color: C.mid, fontSize: 11 }}>{config?.note || "السعر النهائي بيتحسب بالوزن الفعلي للعلبة"}</T>

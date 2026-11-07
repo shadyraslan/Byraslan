@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as Location from "expo-location";
 import { ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,7 +20,19 @@ export default function AddressForm() {
   const [city, setCity] = useState<string | null>(d?.city ?? null);
   const cur = city ?? cities[0];
   const [def, setDef] = useState(old?.is_default ?? true);
-  const save = () => { if (!dId) return; saveAddress({ id: old?.id, label, district_id: dId, address: address.trim(), is_default: def }); router.back(); };
+  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(old?.lat != null && old?.lng != null ? { lat: old.lat, lng: old.lng } : null);
+  const [pinMsg, setPinMsg] = useState(pin ? "📍 مكانك متحدد" : "");
+  // دبوس المكان: الطيار بيوصل أسرع، ولو بعيد عن الفرع خدمة العملاء بتتنبّه
+  const locate = async () => {
+    try {
+      setPinMsg("بنحدد مكانك…");
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return setPinMsg("محتاجين إذن المكان عشان نحدده");
+      const p = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setPin({ lat: p.coords.latitude, lng: p.coords.longitude }); setPinMsg("📍 اتحدد مكانك");
+    } catch { setPinMsg("ماقدرناش نحدد المكان — اكتب العنوان بالتفصيل"); }
+  };
+  const save = () => { if (!dId) return; saveAddress({ id: old?.id, label, district_id: dId, address: address.trim(), is_default: def, lat: pin?.lat, lng: pin?.lng }); router.back(); };
   return (
     <View style={{ flex: 1 }}>
       <BlackHead title={old ? "تعديل العنوان" : "عنوان جديد"} />
@@ -36,6 +49,8 @@ export default function AddressForm() {
         </Card>
         <Card title="العنوان بالتفصيل">
           <Input value={address} onChangeText={setAddress} placeholder="الشارع، رقم العمارة، الدور، الشقة، علامة مميزة" multiline style={{ minHeight: 96, textAlignVertical: "top", paddingTop: 12 }} />
+          <Btn title={pin ? "📍 حدّد مكاني تاني" : "📍 حدّد مكاني بالظبط"} onPress={locate} />
+          {!!pinMsg && <T style={{ color: C.mid, fontSize: 12 }}>{pinMsg}</T>}
           <Radio on={def} onPress={() => setDef(!def)}><T w="b">خليه العنوان الأساسي</T></Radio>
         </Card>
       </ScrollView>
