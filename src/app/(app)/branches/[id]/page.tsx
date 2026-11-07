@@ -41,6 +41,7 @@ export default async function Branch({ params }: { params: Promise<{ id: string 
         <div className="kpis">
           {seeSales && <div className="kpi hl"><span>مبيعات النهارده</span><b className="num">{money(todaySales)} ج</b></div>}
           {seeSales && <div className="kpi"><span>آخر 14 يوم</span><b className="num">{money(series.reduce((a, x) => a + x.v, 0))} ج</b></div>}
+          {(can(me, "acc.view") || can(me, "acc.pnl")) && <Link href={`/accounts/pnl?loc=${loc.id}`} className="kpi"><span>تقرير الفرع وأرباحه</span><b className="num">←</b><small>الأصناف والساعات والصافي</small></Link>}
           {openOrders != null && <Link href="/orders" className={`kpi${openOrders ? " hl" : ""}`}><span>طلبات أونلاين مفتوحة</span><b className="num">{openOrders}</b></Link>}
         </div>
       )}
