@@ -1,9 +1,11 @@
 "use server";
+import { need } from "@/lib/perms";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
 import { dbMsg } from "@/lib/scan";
 
 export async function send(_: unknown, fd: FormData): Promise<{ ok: boolean; t: string }> {
+  await need("notify.send", "hr.messages");
   const sb = await supabaseServer();
   const app = String(fd.get("app"));
   const target = String(fd.get("target") || "all");
@@ -22,6 +24,7 @@ export async function send(_: unknown, fd: FormData): Promise<{ ok: boolean; t: 
 }
 
 export async function saveWelcome(fd: FormData) {
+  await need("notify.send", "hr.messages");
   const sb = await supabaseServer();
   const key = String(fd.get("key"));
   const { data: old } = await sb.from("settings").select("value").eq("key", key).maybeSingle();

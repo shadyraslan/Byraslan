@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
-import { getMe, can } from "@/lib/perms";
+import { getMe, can, need } from "@/lib/perms";
 
 async function save(fd: FormData) {
   "use server";
+  await need("settings.edit");
   const sb = await supabaseServer();
   const rows = [
     { key: "online.open", value: fd.get("open") === "on" },
@@ -12,6 +13,8 @@ async function save(fd: FormData) {
     { key: "online.late_minutes", value: Number(fd.get("late") || 45) },
     { key: "online.weight_note", value: String(fd.get("note") || "") },
     { key: "app.test_mode", value: fd.get("test") === "on" },
+    { key: "limits.orders_per_hour", value: Math.max(Number(fd.get("oph") ?? 10), 0) },
+    { key: "auth.pin_min", value: Math.max(Number(fd.get("pinmin") || 6), 4) },
     { key: "pos.refresh_minutes", value: Math.max(Number(fd.get("posmin") || 1), 0.25) },
     { key: "online.offline_reroute_minutes", value: Math.max(Number(fd.get("reroute") || 0), 0) },
     { key: "scale_barcode", value: {
@@ -79,6 +82,11 @@ export default async function Settings() {
         ); })()}
         <h2 style={{ marginTop: 14 }}>تطبيق العميل</h2>
         <label className="row" style={{ gap: 8, color: g("app.test_mode") === true ? "var(--bad)" : undefined }}><input type="checkbox" name="test" defaultChecked={g("app.test_mode") === true} style={{ width: 22, height: 22 }} /> وضع التجربة: الدخول بأي رقم من غير كود SMS — <b>لازم يتقفل قبل ما التطبيق ينزل للناس</b></label>
+        <h2 style={{ marginTop: 14 }}>الأمان</h2>
+        <div className="row">
+          <label className="fld">أقصى عدد طلبات من نفس الرقم في الساعة (0 = من غير حد)<input name="oph" type="number" min={0} defaultValue={Number(g("limits.orders_per_hour") ?? 10)} /></label>
+          <label className="fld">أقل عدد أرقام للرقم السري بتاع الموظفين<input name="pinmin" type="number" min={4} defaultValue={Number(g("auth.pin_min") ?? 6)} /></label>
+        </div>
         <button className="btn pri" style={{ marginTop: 8 }}>حفظ</button>
       </form>
     </>

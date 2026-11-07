@@ -1,4 +1,5 @@
 "use server";
+import { need } from "@/lib/perms";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -16,38 +17,45 @@ async function done(back: string, error: { message?: string } | null, ok: string
 
 // ===== المرتبات =====
 export async function payrollCalc(fd: FormData) {
+  await need("hr.pay");
   const sb = await supabaseServer();
   const m = S(fd, "m");
   const { error } = await sb.rpc("payroll_calc", { p_month: `${m}-01` });
   await done(`/hr/payroll?m=${m}`, error, "اتحسبت المرتبات من الحضور واللايحة");
 }
 export async function payrollSend(fd: FormData) {
+  await need("hr.pay");
   const sb = await supabaseServer();
   const { error } = await sb.rpc("payroll_send", { p_run: N(fd, "run") });
   await done(`/hr/payroll?m=${S(fd, "m")}`, error, "اتبعتت للاعتماد");
 }
 export async function payrollBack(fd: FormData) {
+  await need("hr.pay");
   const sb = await supabaseServer();
   const { error } = await sb.rpc("payroll_back", { p_run: N(fd, "run"), p_note: S(fd, "note") });
   await done(`/hr/payroll?m=${S(fd, "m")}`, error, "رجعت مسودة");
 }
 export async function payrollApprove(fd: FormData) {
+  await need("hr.pay");
   const sb = await supabaseServer();
   const { error } = await sb.rpc("payroll_approve", { p_run: N(fd, "run") });
   await done(`/hr/payroll?m=${S(fd, "m")}`, error, "اتعتمدت — اتسجّلت في المصروفات ووصل إشعار لكل موظف");
 }
 export async function payrollAdjust(fd: FormData) {
+  await need("hr.pay");
   const sb = await supabaseServer();
   const m = S(fd, "m");
   const { error } = await sb.rpc("payroll_adjust", { p_user: S(fd, "user"), p_month: `${m}-01`, p_kind: S(fd, "kind"), p_label: S(fd, "label"), p_amount: N(fd, "amount"), p_reason: S(fd, "reason") });
   await done(`/hr/payroll?m=${m}`, error, "اتسجّلت — احسب المرتبات تاني عشان تدخل");
 }
 export async function adjustCancel(fd: FormData) {
+  await need("hr.pay");
   const sb = await supabaseServer();
   const { error } = await sb.from("payroll_adjustments").update({ cancelled: true }).eq("id", N(fd, "id")).is("payslip_id", null);
   await done(`/hr/payroll?m=${S(fd, "m")}`, error, "اتلغت");
 }
 export async function savePay(fd: FormData) {
+  await need("hr.pay");
   const sb = await supabaseServer();
   const { error } = await sb.from("employee_pay").upsert({
     user_id: S(fd, "user"), pay_type: S(fd, "pay_type") || "monthly", base: N(fd, "base"), allowances: N(fd, "allowances"), insurance_wage: N(fd, "ins"),
@@ -59,16 +67,19 @@ export async function savePay(fd: FormData) {
 
 // ===== العهد =====
 export async function custodyGive(fd: FormData) {
+  await need();
   const sb = await supabaseServer();
   const { error } = await sb.rpc("custody_give", { p_user: S(fd, "user"), p_amount: N(fd, "amount"), p_note: S(fd, "note") });
   await done("/hr/custody", error, "اتسجّلت العهدة ووصله إشعار");
 }
 export async function custodyDecide(fd: FormData) {
+  await need();
   const sb = await supabaseServer();
   const { error } = await sb.rpc("custody_decide", { p_id: N(fd, "id"), p_ok: S(fd, "ok") === "1", p_note: S(fd, "note") });
   await done("/hr/custody", error, "اتسجّل الرد");
 }
 export async function custodyConfirm(fd: FormData) {
+  await need();
   const sb = await supabaseServer();
   const { error } = await sb.rpc("custody_confirm_return", { p_id: N(fd, "id"), p_received: Number(S(fd, "received") || -1), p_note: S(fd, "note") });
   await done("/hr/custody", error, "اتأكّد الاستلام");
@@ -76,11 +87,13 @@ export async function custodyConfirm(fd: FormData) {
 
 // ===== الاعتراضات والأوراق =====
 export async function disputeDecide(fd: FormData) {
+  await need("hr.pay");
   const sb = await supabaseServer();
   const { error } = await sb.rpc("dispute_decide", { p_id: N(fd, "id"), p_accept: S(fd, "ok") === "1", p_amount: N(fd, "amount"), p_reply: S(fd, "reply") });
   await done("/hr/requests", error, "اتبعت الرد للموظف");
 }
 export async function docDecide(fd: FormData) {
+  await need("hr.docs");
   const sb = await supabaseServer();
   const { error } = await sb.rpc("doc_decide", { p_id: N(fd, "id"), p_status: S(fd, "status"), p_reply: S(fd, "reply"), p_file: S(fd, "file") });
   await done("/hr/requests", error, "اتسجّل");
@@ -91,6 +104,7 @@ const tiers = (t: string) => t.split(/\n/).map((l) => l.match(/(\d+)\s*[-–]\s*
 const brackets = (t: string) => t.split(/\n/).map((l) => l.match(/(\d+|فوق)\s*=\s*([\d.]+)/)).filter(Boolean).map((m) => [m![1] === "فوق" ? null : +m![1], +m![2]]);
 const lose = (t: string) => t.split(/\n/).map((l) => l.match(/(\d+)\s*=\s*(\d+)/)).filter(Boolean).map((m) => [+m![1], +m![2]]);
 export async function saveRules(fd: FormData) {
+  await need("settings.edit");
   const sb = await supabaseServer();
   const now = new Date().toISOString();
   const { error } = await sb.from("settings").upsert([
@@ -111,6 +125,7 @@ export async function saveRules(fd: FormData) {
 
 // ===== الورديات والأذون =====
 export async function saveShifts(fd: FormData) {
+  await need();
   const sb = await supabaseServer();
   const rows: { user: string; day: string; start?: string; end?: string; off?: boolean }[] = [];
   for (const [k, v] of fd.entries()) {
@@ -134,11 +149,13 @@ export async function saveShifts(fd: FormData) {
   await done(`/hr/shifts?w=${S(fd, "w")}`, error, `اتحفظ (${data ?? 0} تغيير) — الإشعارات بتتبعت لوحدها قبل كل يوم`);
 }
 export async function grantPermit(fd: FormData) {
+  await need();
   const sb = await supabaseServer();
   const { error } = await sb.rpc("permit_grant", { p_user: S(fd, "user"), p_day: S(fd, "day"), p_kind: S(fd, "kind"), p_time: S(fd, "time") || null, p_paid: fd.get("paid") === "on", p_reason: S(fd, "reason") });
   await done(`/hr/shifts?w=${S(fd, "w")}`, error, "اتسجّل الإذن ووصل للموظف");
 }
 export async function decidePermit(fd: FormData) {
+  await need();
   const sb = await supabaseServer();
   const { error } = await sb.rpc("permit_decide", { p_id: N(fd, "id"), p_ok: S(fd, "ok") === "1", p_paid: fd.get("paid") === "on" });
   await done(`/hr/shifts?w=${S(fd, "w")}`, error, "اتسجّل");
@@ -146,6 +163,7 @@ export async function decidePermit(fd: FormData) {
 
 // ===== أيام الشركة والإجازات الرسمية =====
 export async function addDay(fd: FormData) {
+  await need("hr.days");
   const sb = await supabaseServer();
   const scope = S(fd, "scope") || "all";
   const from = S(fd, "day"), to = S(fd, "to") || from;
@@ -158,6 +176,7 @@ export async function addDay(fd: FormData) {
   await done("/hr/days", error, "اتسجّلت — بتدخل في المرتبات والأرصدة لوحدها");
 }
 export async function cancelDay(fd: FormData) {
+  await need("hr.days");
   const sb = await supabaseServer();
   const { error } = await sb.from("company_days").update({ cancelled: true }).eq("id", N(fd, "id"));
   await done("/hr/days", error, "اتلغت");
@@ -165,6 +184,7 @@ export async function cancelDay(fd: FormData) {
 
 // ===== تقييم الأداء =====
 export async function saveTemplate(fd: FormData) {
+  await need();
   const sb = await supabaseServer();
   const items = S(fd, "items").split(/\n/).map((l) => l.split("|").map((x) => x.trim())).filter((p) => p[0])
     .map(([name, weight, target, unit, lower]) => ({ name, weight: Number(weight) || 1, target: Number(target) || 0, unit: unit || "", lower: /أقل|lower|-/.test(lower ?? "") }));
@@ -172,6 +192,7 @@ export async function saveTemplate(fd: FormData) {
   await done(`/hr/appraisals?m=${S(fd, "m")}`, error, "اتحفظت مؤشرات الوظيفة");
 }
 export async function saveAppraisal(fd: FormData) {
+  await need();
   const sb = await supabaseServer();
   const n = N(fd, "n");
   const items = Array.from({ length: n }, (_, i) => ({ name: S(fd, `name${i}`), weight: N(fd, `w${i}`) || 1, target: N(fd, `t${i}`), unit: S(fd, `u${i}`), lower: S(fd, `l${i}`) === "1", actual: S(fd, `a${i}`) === "" ? null : N(fd, `a${i}`), note: S(fd, `note${i}`) })).filter((i) => i.name);
@@ -179,11 +200,13 @@ export async function saveAppraisal(fd: FormData) {
   await done(`/hr/appraisals?m=${S(fd, "m")}`, error, S(fd, "submit") === "1" ? "اتبعت للاعتماد" : "اتحفظ مسودة");
 }
 export async function decideAppraisal(fd: FormData) {
+  await need();
   const sb = await supabaseServer();
   const { error } = await sb.rpc("appraisal_decide", { p_id: N(fd, "id"), p_ok: S(fd, "ok") === "1", p_note: S(fd, "note") });
   await done(`/hr/appraisals?m=${S(fd, "m")}`, error, S(fd, "ok") === "1" ? "اتعتمد — المكافأة نزلت في المرتب ووصل إشعار للموظف" : "رجع للمدير");
 }
 export async function saveAppraisalRules(fd: FormData) {
+  await need("settings.edit");
   const sb = await supabaseServer();
   const grades = S(fd, "grades").split(/\n/).map((l) => l.match(/^\s*([\d.]+)\s*=\s*([^=]+?)\s*=\s*([\d.]+)\s*$/)).filter(Boolean).map((m) => ({ min: +m![1], name: m![2], bonus_pct: +m![3] })).sort((a, b) => b.min - a.min);
   const { error } = await sb.from("settings").upsert({ key: "hr.appraisal", value: { cap: N(fd, "cap") || 120, grades }, updated_at: new Date().toISOString() });
@@ -192,6 +215,7 @@ export async function saveAppraisalRules(fd: FormData) {
 
 // ===== نص اللايحة =====
 export async function publishPolicy(fd: FormData) {
+  await need("settings.edit");
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("policy_publish", { p_text: S(fd, "text") });
   await done("/hr/policy", error, `اتنشرت النسخة ${data ?? ""} — كل موظف لازم يوافق عليها من التطبيق`);

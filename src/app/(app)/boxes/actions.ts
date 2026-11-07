@@ -1,4 +1,5 @@
 "use server";
+import { deny } from "@/lib/perms";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
 import { dbMsg, type Result } from "@/lib/scan";
@@ -10,6 +11,7 @@ export type BoxCard = {
 };
 
 export async function getBox(sn: number): Promise<Result<{ box: BoxCard }>> {
+  { const g = await deny("stock.view"); if (g) return g; }
   const sb = await supabaseServer();
   const { data: b, error } = await sb.from("boxes").select("sn,weight,status,location_id,packed_at,expires_at,items(name,unit),locations(name)").eq("sn", sn).maybeSingle();
   if (error) return { ok: false, error: dbMsg(error.message) };
@@ -27,6 +29,7 @@ export async function getBox(sn: number): Promise<Result<{ box: BoxCard }>> {
 }
 
 export async function resolveMissing(sn: number, found: boolean, note: string): Promise<Result<{ msg: string }>> {
+  { const g = await deny("stock.edit", "stock.adjust"); if (g) return g; }
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("resolve_missing", { p_sn: sn, p_found: found, p_note: note || null });
   if (error) return { ok: false, error: dbMsg(error.message) };
@@ -36,6 +39,7 @@ export async function resolveMissing(sn: number, found: boolean, note: string): 
 }
 
 export async function disposeBoxes(loc: string, kind: "waste" | "donate", boxes: number[], reason: string): Promise<Result<{ n: number }>> {
+  { const g = await deny("stock.waste", "stock.donate"); if (g) return g; }
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("dispose_boxes", { p_loc: loc, p_kind: kind, p_boxes: boxes, p_reason: reason });
   if (error) return { ok: false, error: dbMsg(error.message) };

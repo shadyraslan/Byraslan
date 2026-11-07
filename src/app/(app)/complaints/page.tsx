@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
+import { need } from "@/lib/perms";
 
 async function close(fd: FormData) {
   "use server";
+  await need("orders.handle", "cs.agent");
   const sb = await supabaseServer();
   await sb.from("app_complaints").update({ status: "done" }).eq("id", Number(fd.get("id")));
   revalidatePath("/complaints");

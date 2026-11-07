@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
-import { getMe, can } from "@/lib/perms";
+import { getMe, can, need } from "@/lib/perms";
 
 async function saveDistrict(fd: FormData) {
   "use server";
+  await need("settings.edit");
   const sb = await supabaseServer();
   const id = Number(fd.get("id") || 0);
   const row = {

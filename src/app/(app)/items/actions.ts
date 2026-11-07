@@ -1,4 +1,5 @@
 "use server";
+import { need } from "@/lib/perms";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -6,6 +7,7 @@ const pluOf = (v: FormDataEntryValue | null) => { const d = String(v ?? "").repl
 const intOf = (v: FormDataEntryValue | null) => { const n = parseInt(String(v ?? ""), 10); return Number.isFinite(n) && n > 0 ? n : null; };
 
 export async function updateItem(fd: FormData) {
+  await need("items.edit");
   const sb = await supabaseServer();
   await sb.from("items").update({ scale_plu: pluOf(fd.get("scale_plu")), shelf_days: intOf(fd.get("shelf_days")), icon: String(fd.get("icon") || "").trim() || null }).eq("id", Number(fd.get("id")));
   revalidatePath("/items");
@@ -14,6 +16,7 @@ export async function updateItem(fd: FormData) {
 const tagsOf = (s: string) => [...new Set(s.split(/[\s,،]+/).map((t) => t.replace(/^#/, "").trim()).filter(Boolean))];
 
 export async function addItem(fd: FormData) {
+  await need("items.edit");
   const sb = await supabaseServer();
   const fam = String(fd.get("family_id") || "");
   const { data } = await sb
@@ -38,6 +41,7 @@ export async function addItem(fd: FormData) {
 }
 
 export async function addFamily(fd: FormData) {
+  await need("items.edit");
   const sb = await supabaseServer();
   const p = String(fd.get("parent_id") || "");
   await sb.from("families").insert({
@@ -53,6 +57,7 @@ export async function addFamily(fd: FormData) {
 
 // شكل العائلة في التطبيق: الأيقونة واللون والترتيب
 export async function updateFamily(fd: FormData) {
+  await need("items.edit");
   const sb = await supabaseServer();
   await sb.from("families").update({
     name: String(fd.get("name") || "").trim(),

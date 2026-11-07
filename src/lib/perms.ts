@@ -21,3 +21,15 @@ export async function getMe(): Promise<Me | null> {
 }
 
 export const can = (me: Me | null, perm: string) => !!me && (me.isOwner || me.perms.has(perm));
+
+/** حماية على السيرفر لكل حركة: لازم يكون موظف داخل، ومعاه صلاحية من اللي مكتوبة (فاضي = أي موظف). قاعدة البيانات بتتأكد تاني. */
+export async function need(...perms: string[]): Promise<Me> {
+  const me = await getMe();
+  if (!me) throw new Error("سجّل دخول الأول");
+  if (perms.length && !perms.some((p) => can(me, p))) throw new Error("مش معاك صلاحية للحركة دي");
+  return me;
+}
+/** نفس need بس بيرجّع رسالة بدل ما يوقف الصفحة — للحركات اللي بترجّع Result */
+export async function deny(...perms: string[]): Promise<{ ok: false; error: string } | null> {
+  try { await need(...perms); return null; } catch (e) { return { ok: false, error: (e as Error).message }; }
+}

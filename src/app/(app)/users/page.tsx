@@ -4,7 +4,8 @@ import { grant, revoke } from "./actions";
 import { resetStaffPassword, setStaffActive } from "./staff";
 import NewStaff from "./NewStaff";
 
-export default async function Users() {
+export default async function Users({ searchParams }: { searchParams: Promise<{ err?: string; ok?: string }> }) {
+  const sp = await searchParams;
   const me = await getMe();
   const sb = await supabaseServer();
   const [{ data: users }, { data: perms }, { data: grants }, { data: locs }] = await Promise.all([
@@ -19,6 +20,7 @@ export default async function Users() {
   return (
     <>
       <div className="top"><h1>المستخدمين والصلاحيات</h1></div>
+      {sp.err && <div className="badmsg">{sp.err}</div>}{sp.ok && <div className="okmsg">{sp.ok}</div>}
       {edit && <NewStaff locs={locs ?? []} />}
       <div className="note" style={{ marginBottom: 14 }}>الموظف بيدخل بالموبايل والرقم السري. أي صلاحية من صلاحيات المالك تقدر تديها لأي حد، لمدة أو بحد مبلغ.</div>
       {(users ?? []).map((u) => {
@@ -29,7 +31,7 @@ export default async function Users() {
             <div className="muted" style={{ fontSize: 12.5 }}>{[u.job, ln(u.home_loc), u.login ? `دخول: ${u.login}` : ""].filter(Boolean).join(" · ")}</div>
             {edit && !u.is_owner && u.login && (
               <div className="row" style={{ gap: 6 }}>
-                <form action={resetStaffPassword} className="row" style={{ gap: 6 }}><input type="hidden" name="id" value={u.id} /><input name="password" placeholder="رقم سري جديد" minLength={6} dir="ltr" style={{ width: 130, height: 34 }} /><button className="btn" style={{ height: 34 }}>غيّر</button></form>
+                <form action={resetStaffPassword} className="row" style={{ gap: 6 }}><input type="hidden" name="id" value={u.id} /><input name="password" placeholder="رقم سري جديد" inputMode="numeric" dir="ltr" style={{ width: 130, height: 34 }} /><button className="btn" style={{ height: 34 }}>غيّر</button></form>
                 <form action={setStaffActive}><input type="hidden" name="id" value={u.id} /><input type="hidden" name="active" value={u.active === false ? "1" : "0"} /><button className="btn" style={{ height: 34 }}>{u.active === false ? "رجّعه" : "وقّف الحساب"}</button></form>
               </div>
             )}

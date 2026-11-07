@@ -1,8 +1,10 @@
 "use server";
+import { need } from "@/lib/perms";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export async function grant(fd: FormData) {
+  await need("users.manage");
   const sb = await supabaseServer();
   const {
     data: { user },
@@ -19,6 +21,7 @@ export async function grant(fd: FormData) {
 }
 
 export async function revoke(fd: FormData) {
+  await need("users.manage");
   const sb = await supabaseServer();
   await sb.from("grants").delete().eq("user_id", String(fd.get("user_id"))).eq("perm", String(fd.get("perm")));
   revalidatePath("/users");

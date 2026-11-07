@@ -1,8 +1,10 @@
 "use server";
+import { need } from "@/lib/perms";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export async function addLocation(fd: FormData) {
+  await need("stock.edit", "settings.edit");
   const sb = await supabaseServer();
   await sb.from("locations").insert({
     id: String(fd.get("id")).trim(),
@@ -15,6 +17,7 @@ export async function addLocation(fd: FormData) {
 }
 
 export async function toggleLocation(fd: FormData) {
+  await need("stock.edit", "settings.edit");
   const sb = await supabaseServer();
   const id = String(fd.get("id"));
   const { data } = await sb.from("locations").select("active").eq("id", id).single();
@@ -24,6 +27,7 @@ export async function toggleLocation(fd: FormData) {
 
 // إحداثيات الموقع ونطاق الحضور (متر)
 export async function saveGeo(fd: FormData) {
+  await need("stock.edit", "settings.edit");
   const sb = await supabaseServer();
   const raw = String(fd.get("geo") || "").trim();
   const m = raw.match(/(-?\d+(?:\.\d+)?)\s*[,،\s]\s*(-?\d+(?:\.\d+)?)/);

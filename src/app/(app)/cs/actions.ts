@@ -1,8 +1,10 @@
 "use server";
+import { need } from "@/lib/perms";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export async function saveCsSettings(fd: FormData) {
+  await need("cs.manage", "settings.edit");
   const sb = await supabaseServer();
   const now = new Date().toISOString();
   await sb.from("settings").upsert([
@@ -14,6 +16,7 @@ export async function saveCsSettings(fd: FormData) {
 
 // إلغاء حجز / عربون من شاشة المتابعة
 export async function cancelBooking(fd: FormData) {
+  await need("cs.agent", "orders.handle");
   const sb = await supabaseServer();
   const { error } = await sb.rpc("booking_edit", { p_token: String(fd.get("token")), p_lines: null, p_date: null, p_slot: null, p_address: null, p_note: null, p_cancel: true, p_reason: String(fd.get("reason") || "") || null });
   revalidatePath("/cs/orders");
@@ -21,12 +24,14 @@ export async function cancelBooking(fd: FormData) {
   redirect(error ? `/cs/orders?scope=bookings&err=${encodeURIComponent(error.message.replace(/^.*?ERROR:\s*/, ""))}` : "/cs/orders?scope=bookings");
 }
 export async function toggleDeposit(fd: FormData) {
+  await need("cs.agent", "orders.handle", "orders.booking");
   const sb = await supabaseServer();
   await sb.rpc("booking_deposit", { p_token: String(fd.get("token")), p_paid: fd.get("paid") === "1" });
   revalidatePath("/cs/orders");
 }
 // عميل جديد أو تعديل
 export async function saveCustomer(fd: FormData) {
+  await need("cs.agent", "orders.handle");
   const sb = await supabaseServer();
   const { error } = await sb.rpc("cs_customer_save", {
     p_phone: String(fd.get("phone") || ""), p_name: String(fd.get("name") || ""), p_notes: String(fd.get("notes") || ""),

@@ -1,8 +1,10 @@
 "use server";
+import { deny } from "@/lib/perms";
 import { supabaseServer } from "@/lib/supabase/server";
 import { dbMsg, type Result } from "@/lib/scan";
 
 export async function savePrice(item: number, loc: string, price: string, channel: "direct" | "app" = "direct"): Promise<Result<{ v: number | null }>> {
+  { const g = await deny("prices.edit"); if (g) return g; }
   const sb = await supabaseServer();
   const v = price.trim() === "" ? null : Number(price);
   if (v !== null && (!Number.isFinite(v) || v < 0)) return { ok: false, error: "السعر لازم رقم" };

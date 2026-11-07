@@ -1,12 +1,12 @@
 import "react-native-url-polyfill/auto";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { secureStorage } from "./secure";
 import Constants from "expo-constants";
 import { createClient } from "@supabase/supabase-js";
 import { AppState } from "react-native";
 
 const extra = (Constants.expoConfig?.extra ?? {}) as { supabaseUrl: string; supabaseAnonKey: string };
 export const sb = createClient(extra.supabaseUrl, extra.supabaseAnonKey, {
-  auth: { storage: AsyncStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
+  auth: { storage: secureStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
 });
 AppState.addEventListener("change", (s) => { if (s === "active") sb.auth.startAutoRefresh(); else sb.auth.stopAutoRefresh(); });
 
