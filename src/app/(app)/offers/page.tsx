@@ -40,10 +40,11 @@ export default async function Offers({ searchParams }: { searchParams: Promise<{
   const state = (p: P) => !p.active ? "موقوف" : p.starts_at && new Date(p.starts_at).getTime() > now ? "لسه هيبدأ" : p.ends_at && new Date(p.ends_at).getTime() < now ? "خلص" : "شغال";
 
   // جرّب على فاتورة
-  let test: { discount: number; applied: { name: string; amount: number }[]; code_msg: string | null } | null = null;
+  type Test = { discount: number; applied: { name: string; amount: number }[]; code_msg: string | null };
+  let test: Test | null = null;
   if (sp.t_amt) {
     const { data } = await sb.rpc("promo_eval", { p_channel: sp.t_ch || "app", p_loc: sp.t_loc || null, p_phone: sp.t_phone || null, p_lines: [{ item_id: 0, qty: 1, unit_price: Number(sp.t_amt) }], p_code: sp.t_code || null });
-    test = data as typeof test;
+    test = data as Test;
   }
 
   return (
