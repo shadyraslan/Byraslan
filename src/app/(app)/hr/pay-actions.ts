@@ -60,7 +60,7 @@ export async function savePay(fd: FormData) {
   const { error } = await sb.from("employee_pay").upsert({
     user_id: S(fd, "user"), pay_type: S(fd, "pay_type") || "monthly", base: N(fd, "base"), allowances: N(fd, "allowances"), insurance_wage: N(fd, "ins"),
     shift_start: S(fd, "shift") || "09:00", rest_day: N(fd, "rest"), hire_date: S(fd, "hire") || new Date().toISOString().slice(0, 10),
-    custody_max: S(fd, "cmax") ? N(fd, "cmax") : null, manager_id: S(fd, "mgr") || null, updated_at: new Date().toISOString(),
+    custody_max: S(fd, "cmax") ? N(fd, "cmax") : null, presence_checks: S(fd, "pchk") ? N(fd, "pchk") : null, manager_id: S(fd, "mgr") || null, updated_at: new Date().toISOString(),
   });
   await done("/hr/payroll/setup", error, "اتحفظ");
 }

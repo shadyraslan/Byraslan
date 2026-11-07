@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { Linking, RefreshControl, ScrollView, View } from "react-native";
 import { useFocusEffect } from "expo-router";
+import { MyDocs } from "@/lib/extra";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { errMsg, sb } from "@/lib/supabase";
 import { Badge, Btn, Card, Chip, Err, Head, Input, Ok, T } from "@/lib/ui";
@@ -46,6 +47,7 @@ export default function Docs() {
       <Head title="أوراقي" sub="شهادات وأوراق من الشركة" />
       <ScrollView contentContainerStyle={{ padding: 18, gap: 14, paddingBottom: 40 + ins.bottom }} keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}>
+        <MyDocs />
         <Card>
           <T b>اطلب ورقة</T>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{KINDS.map(([k, l]) => <Chip key={k} label={l} on={kind === k} onPress={() => setKind(k)} />)}</View>

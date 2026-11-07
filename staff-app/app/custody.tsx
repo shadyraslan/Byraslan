@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { Image, RefreshControl, ScrollView, View } from "react-native";
 import { useFocusEffect } from "expo-router";
+import { Assets } from "@/lib/extra";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { errMsg, sb } from "@/lib/supabase";
@@ -82,6 +83,7 @@ export default function Custody() {
       <Head title="عهدتي" />
       <ScrollView contentContainerStyle={{ padding: 18, gap: 14, paddingBottom: 40 + ins.bottom }} keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}>
+        <Assets />
         <Card style={{ backgroundColor: C.black, borderColor: C.black, alignItems: "center" }}>
           <T style={{ color: "#999" }}>معاك دلوقتي</T>
           <T b style={{ color: Number(d?.balance) < 0 ? "#FF8A8A" : C.y, fontSize: 34 }}>{money(d?.balance)}</T>

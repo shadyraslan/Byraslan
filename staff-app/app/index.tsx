@@ -7,6 +7,7 @@ import { useHome } from "@/lib/home";
 import { sb } from "@/lib/supabase";
 import { registerPush } from "@/lib/push";
 import { Welcome } from "@/lib/welcome";
+import { Presence } from "@/lib/extra";
 import { Badge, Btn, Card, Err, T } from "@/lib/ui";
 import { C, hhmm, shiftLine } from "@/lib/theme";
 
@@ -57,6 +58,7 @@ export default function Home() {
           {h.last?.status === "pending" && <Badge kind="wait" t="آخر تسجيل مستني موافقة المدير" />}
           {(h.shift_today || h.shift_tomorrow) && <T style={{ color: C.mid, fontSize: 13, textAlign: "center" }}>{[h.shift_today && `النهارده: ${shiftLine(h.shift_today)}`, h.shift_tomorrow && `بكره: ${shiftLine(h.shift_tomorrow)}`].filter(Boolean).join("  ·  ")}</T>}
         </Card>
+        <Presence />
         {!!h.today.length && (
           <Card>
             <T b>النهارده</T>
@@ -75,6 +77,7 @@ export default function Home() {
           <Tile ic="cash-outline" t="عهدتي" s="صرفت · سلّمت" onPress={() => router.push("/custody")} />
           <Tile ic="document-attach-outline" t="أوراقي" s="شهادة مرتب وغيرها" onPress={() => router.push("/docs")} />
           <Tile ic="star-outline" t="تقييمي" s="تقييم الأداء" onPress={() => router.push("/appraisal")} />
+          <Tile ic="alert-circle-outline" t="جزاءاتي" s="حسب اللايحة" onPress={() => router.push("/penalties")} />
           {h.is_manager && <Tile ic="people-outline" t="فريقي" s="ساعاتهم والأذون" onPress={() => router.push("/team")} />}
           <Tile ic="chatbubbles-outline" t="رسايل الإدارة" s={h.unread ? `${h.unread} جديدة` : "مفيش جديد"} badge={h.unread} onPress={() => router.push("/messages")} />
           {h.is_driver && <Tile ic="car-outline" t="رحلاتي" s="التحميل والفروع" onPress={() => router.push("/trips")} />}
