@@ -23,6 +23,7 @@ export default async function Stock({ searchParams }: { searchParams: Promise<{ 
       <div className="top"><h1>المخزون</h1>
         <div className="row">
           {can(me, "stock.edit") && <Link className="btn pri" href="/transfers/new" style={{ display: "inline-grid", placeItems: "center" }}>+ تحويل بالمسح</Link>}
+          {(can(me, "stock.count") || can(me, "stock.adjust")) && <Link className="btn" href="/stock/count" style={{ display: "inline-grid", placeItems: "center" }}>الجرد</Link>}
           <Link className="btn" href="/transfers" style={{ display: "inline-grid", placeItems: "center" }}>التحويلات</Link>
           {(can(me, "stock.waste") || can(me, "stock.donate")) && <Link className="btn" href="/stock/dispose" style={{ display: "inline-grid", placeItems: "center" }}>هالك وتبرعات</Link>}
           <Link className="btn" href="/boxes" style={{ display: "inline-grid", placeItems: "center" }}>تتبّع علبة</Link>

@@ -27,6 +27,7 @@ export const NAV: NavGroup[] = [
     { href: "/pack", label: "محطة التغليف", icon: "box", color: "#dc2626", perms: ["prod.pack"] },
     { href: "/trips", label: "تحميل العربيات", icon: "truck", color: "#0891b2", perms: ["trips.load"] },
     { href: "/stock", label: "المخزون", icon: "stock", color: "#d97706", perms: ["stock.view"] },
+    { href: "/stock/count", label: "الجرد", icon: "count", color: "#0d9488", perms: ["stock.count", "stock.adjust", "stock.view"] },
     { href: "/transfers", label: "التحويلات", icon: "transfer", color: "#7c3aed", perms: ["stock.view", "stock.edit"] },
     { href: "/stock/dispose", label: "هالك وتبرعات", icon: "trash", color: "#dc2626", perms: ["stock.waste"] },
     { href: "/boxes", label: "تتبّع العلبة", icon: "search", color: "#0891b2", perms: ["stock.view"] },
