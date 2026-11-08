@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import Receive from "./Receive";
@@ -11,6 +11,7 @@ const ST: Record<string, string> = { sent: "مبعوتة", received: "اتسلّ
 export default async function TransferPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const me = await getMe();
+  if (!can(me, "stock.view")) redirect("/dashboard");
   const sb = await supabaseServer();
   const { data: t } = await sb.from("transfers").select("id,no,from_loc,to_loc,status,reason,note,sent_at,recv_at,transfer_boxes(box_sn,state,boxes(weight,crate,items(name,unit)))").eq("id", Number(id)).maybeSingle();
   if (!t) notFound();

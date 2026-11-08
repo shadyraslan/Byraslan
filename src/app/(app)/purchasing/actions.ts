@@ -2,15 +2,20 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
+import { getMe, can } from "@/lib/perms";
 import { dbMsg, type Result } from "@/lib/scan";
 
 export async function addSupplier(fd: FormData) {
+  const me = await getMe();
+  if (!can(me, "purchase.edit")) throw new Error("ليس لديك صلاحية إدارة الموردين");
   const sb = await supabaseServer();
   await sb.from("suppliers").insert({ name: String(fd.get("name")).trim(), phone: String(fd.get("phone") || "").trim() || null, terms: String(fd.get("terms") || "").trim() || null });
   revalidatePath("/purchasing/suppliers");
 }
 
 export async function updateSupplier(fd: FormData) {
+  const me = await getMe();
+  if (!can(me, "purchase.edit")) throw new Error("ليس لديك صلاحية إدارة الموردين");
   const sb = await supabaseServer();
   await sb.from("suppliers").update({ phone: String(fd.get("phone") || "").trim() || null, terms: String(fd.get("terms") || "").trim() || null }).eq("id", Number(fd.get("id")));
   revalidatePath("/purchasing/suppliers");
@@ -19,8 +24,10 @@ export async function updateSupplier(fd: FormData) {
 export type PoLine = { item_id: number; qty: number; price: number };
 
 export async function createPo(supplier: number, expected: string, note: string, lines: PoLine[]): Promise<Result<{ id: number }>> {
+  const me = await getMe();
+  if (!can(me, "purchase.edit")) throw new Error("ليس لديك صلاحية إنشاء أوامر توريد");
   const sb = await supabaseServer();
-  const L = lines.filter((l) => l.item_id && l.qty > 0);
+  const L = lines.filter((l) => l.item_id && l.qty > 0 && l.price >= 0);
   if (!supplier) return { ok: false, error: "اختار المورد" };
   if (!L.length) return { ok: false, error: "ضيف صنف واحد على الأقل" };
   const { data: po, error } = await sb.from("purchase_orders").insert({ supplier_id: supplier, expected: expected || null, note: note || null }).select("id").single();
@@ -32,6 +39,8 @@ export async function createPo(supplier: number, expected: string, note: string,
 }
 
 export async function cancelPo(fd: FormData) {
+  const me = await getMe();
+  if (!can(me, "purchase.edit")) throw new Error("ليس لديك صلاحية إلغاء أوامر التوريد");
   const sb = await supabaseServer();
   await sb.from("purchase_orders").update({ status: "cancelled" }).eq("id", Number(fd.get("id"))).eq("status", "open");
   revalidatePath("/purchasing");
@@ -41,6 +50,8 @@ export async function cancelPo(fd: FormData) {
 export type SpecIn = { brand: string; description: string; size: string; temp_max: string; min_shelf_days: string; waste_pct: string; checks: string; certs: string; img_ok: string | null; img_bad: string | null };
 
 export async function saveSpec(item: number, s: SpecIn): Promise<Result<{ saved: true }>> {
+  const me = await getMe();
+  if (!can(me, "purchase.edit")) throw new Error("ليس لديك صلاحية تعديل كارت الصنف");
   const sb = await supabaseServer();
   const lines = (t: string) => t.split("\n").map((x) => x.trim()).filter(Boolean);
   const num = (t: string) => (t.trim() === "" ? null : Number(t));
@@ -55,6 +66,8 @@ export async function saveSpec(item: number, s: SpecIn): Promise<Result<{ saved:
 }
 
 export async function approveSpec(item: number, what: string): Promise<Result<{ v: number }>> {
+  const me = await getMe();
+  if (!can(me, "purchase.edit")) throw new Error("ليس لديك صلاحية اعتماد كارت الصنف");
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("approve_spec", { p_item: item, p_what: what || null });
   if (error) return { ok: false, error: dbMsg(error.message) };
@@ -64,6 +77,8 @@ export async function approveSpec(item: number, what: string): Promise<Result<{ 
 }
 
 export async function saveItemSupplier(fd: FormData) {
+  const me = await getMe();
+  if (!can(me, "purchase.edit")) throw new Error("ليس لديك صلاحية تعديل موردي الصنف");
   const sb = await supabaseServer();
   const item = Number(fd.get("item")), rank = Number(fd.get("rank"));
   const sup = Number(fd.get("supplier") || 0);
@@ -74,6 +89,8 @@ export async function saveItemSupplier(fd: FormData) {
 }
 
 export async function addAltBrand(fd: FormData) {
+  const me = await getMe();
+  if (!can(me, "purchase.edit")) throw new Error("ليس لديك صلاحية إضافة علامات بديلة");
   const sb = await supabaseServer();
   const item = Number(fd.get("item"));
   const brand = String(fd.get("brand") || "").trim();
@@ -87,6 +104,8 @@ export async function addAltBrand(fd: FormData) {
 export type RecvLine = { line: number; weighed: number; rejected: number; price: number; temp: number | null; expires: string | null; note: string; checks: { t: string; ok: boolean }[]; docs: { n: string; photo?: string; missing?: boolean }[] };
 
 export async function receivePo(po: number, lines: RecvLine[], reason: string | null, override: number | null, invoice: string | null): Promise<Result<{ no: number | null; lots: string[]; violations: string[] }>> {
+  const me = await getMe();
+  if (!can(me, "purchase.edit")) throw new Error("ليس لديك صلاحية استلام أوامر التوريد");
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("receive_po", { p_po: po, p_lines: lines, p_override: override, p_reason: reason, p_invoice: invoice });
   if (error) return { ok: false, error: dbMsg(error.message) };
@@ -96,6 +115,8 @@ export async function receivePo(po: number, lines: RecvLine[], reason: string | 
 }
 
 export async function requestOverride(po: number, poNo: number, violations: string[], value: number, reason: string): Promise<Result<{ id: number }>> {
+  const me = await getMe();
+  if (!can(me, "purchase.edit")) throw new Error("ليس لديك صلاحية طلب تجاوز");
   const sb = await supabaseServer();
   if (reason.trim().length < 5) return { ok: false, error: "اكتب السبب" };
   const { data, error } = await sb.from("override_requests").insert({ kind: "recv", ref: `PO-${poNo}`, violations, value, reason }).select("id").single();
@@ -105,6 +126,8 @@ export async function requestOverride(po: number, poNo: number, violations: stri
 }
 
 export async function decideOverride(fd: FormData) {
+  const me = await getMe();
+  if (!can(me, "override.recv")) throw new Error("ليس لديك صلاحية الموافقة على التجاوزات");
   const sb = await supabaseServer();
   await sb.rpc("decide_override", { p_id: Number(fd.get("id")), p_approve: fd.get("approve") === "1", p_note: String(fd.get("note") || "") });
   revalidatePath("/overrides");

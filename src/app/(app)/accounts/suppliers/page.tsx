@@ -1,8 +1,12 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
+import { getMe, can } from "@/lib/perms";
 import Tabs from "../Tabs";
 
 export default async function SupplierAccounts() {
+  const me = await getMe();
+  if (!can(me, "acc.view")) redirect("/dashboard");
   const sb = await supabaseServer();
   const { data } = await sb.from("supplier_balances").select("*").order("balance", { ascending: false });
   const R = data ?? [];

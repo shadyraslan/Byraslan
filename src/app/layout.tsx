@@ -9,7 +9,15 @@ export const metadata: Metadata = { title: "باي رسلان — ERP", descript
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ar" dir="rtl" className={cairo.variable}>
-      <body>{children}</body>
+      <body>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('by-raslan-dashboard-theme');if(t==='dark'||t==='light'||t==='image')document.documentElement.dataset.theme=t}catch(e){}",
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }

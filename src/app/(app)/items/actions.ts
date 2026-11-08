@@ -1,11 +1,14 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
+import { getMe, can } from "@/lib/perms";
 
 const pluOf = (v: FormDataEntryValue | null) => { const d = String(v ?? "").replace(/\D/g, ""); return d ? d.padStart(5, "0") : null; };
 const intOf = (v: FormDataEntryValue | null) => { const n = parseInt(String(v ?? ""), 10); return Number.isFinite(n) && n > 0 ? n : null; };
 
 export async function updateItem(fd: FormData) {
+  const me = await getMe();
+  if (!can(me, "items.edit")) throw new Error("ليس لديك صلاحية تعديل الأصناف");
   const sb = await supabaseServer();
   await sb.from("items").update({ scale_plu: pluOf(fd.get("scale_plu")), shelf_days: intOf(fd.get("shelf_days")) }).eq("id", Number(fd.get("id")));
   revalidatePath("/items");
@@ -14,6 +17,8 @@ export async function updateItem(fd: FormData) {
 const tagsOf = (s: string) => [...new Set(s.split(/[\s,،]+/).map((t) => t.replace(/^#/, "").trim()).filter(Boolean))];
 
 export async function addItem(fd: FormData) {
+  const me = await getMe();
+  if (!can(me, "items.edit")) throw new Error("ليس لديك صلاحية إضافة أصناف");
   const sb = await supabaseServer();
   const fam = String(fd.get("family_id") || "");
   const { data } = await sb
@@ -37,6 +42,8 @@ export async function addItem(fd: FormData) {
 }
 
 export async function addFamily(fd: FormData) {
+  const me = await getMe();
+  if (!can(me, "items.edit")) throw new Error("ليس لديك صلاحية إضافة عائلات");
   const sb = await supabaseServer();
   const p = String(fd.get("parent_id") || "");
   await sb.from("families").insert({

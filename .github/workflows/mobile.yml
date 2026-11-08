@@ -25,7 +25,6 @@ jobs:
         with:
           node-version: 20
       - run: npm install --no-audit --no-fund
-      - run: npx expo install --fix
       - name: Typecheck
         run: npx tsc --noEmit
       - name: Expo doctor

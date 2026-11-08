@@ -5,6 +5,8 @@ import { getMe, can } from "@/lib/perms";
 
 async function save(fd: FormData) {
   "use server";
+  const me = await getMe();
+  if (!can(me, "settings.edit")) throw new Error("ما عندكش صلاحية تغيير الإعدادات");
   const sb = await supabaseServer();
   const fees: Record<string, number> = {};
   for (const [k, v] of fd.entries()) if (k.startsWith("fee:") && String(v).trim() !== "") fees[k.slice(4)] = Number(v);

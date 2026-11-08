@@ -4,6 +4,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin, staffEmail } from "@/lib/supabase/admin";
 import { getMe, can } from "@/lib/perms";
 import { ROLES } from "@/lib/roles";
+import { validatePassword } from "@/lib/password-policy";
 import type { Result } from "@/lib/scan";
 
 const NO_KEY = "لسه مفتاح Supabase السري مش متحط في Vercel (SUPABASE_SERVICE_ROLE_KEY)";
@@ -18,7 +19,8 @@ export async function createStaff(_: unknown, fd: FormData): Promise<Result<{ na
   const pass = String(fd.get("password") || "");
   if (name.length < 2) return { ok: false, error: "اكتب اسم الموظف" };
   if (phone.length < 8) return { ok: false, error: "اكتب رقم موبايل صحيح" };
-  if (pass.length < 6) return { ok: false, error: "الرقم السري لازم 6 أرقام أو حروف على الأقل" };
+  const pwCheck = validatePassword(pass);
+  if (!pwCheck.valid) return { ok: false, error: pwCheck.errors[0] };
   const { data, error } = await admin.auth.admin.createUser({ email: staffEmail(phone), password: pass, email_confirm: true, user_metadata: { name }, app_metadata: { staff: true } });
   if (error || !data.user) return { ok: false, error: error?.message.includes("already") ? "الموبايل ده متسجّل قبل كده" : error?.message ?? "ماتعملش" };
   const id = data.user.id;
@@ -35,7 +37,8 @@ export async function resetStaffPassword(fd: FormData) {
   const admin = supabaseAdmin();
   if (!can(me, "users.manage") || !admin) return;
   const pass = String(fd.get("password") || "");
-  if (pass.length < 6) return;
+  const pwCheck = validatePassword(pass);
+  if (!pwCheck.valid) return;
   await admin.auth.admin.updateUserById(String(fd.get("id")), { password: pass });
   revalidatePath("/users");
 }

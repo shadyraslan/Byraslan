@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
+import { getMe, can } from "@/lib/perms";
 import { dbMsg, type Result } from "@/lib/scan";
 
 export type BoxCard = {
@@ -10,6 +11,8 @@ export type BoxCard = {
 };
 
 export async function getBox(sn: number): Promise<Result<{ box: BoxCard }>> {
+  const me = await getMe();
+  if (!can(me, "stock.view")) return { ok: false, error: "ليس لديك صلاحية" };
   const sb = await supabaseServer();
   const { data: b, error } = await sb.from("boxes").select("sn,weight,status,location_id,packed_at,expires_at,items(name,unit),locations(name)").eq("sn", sn).maybeSingle();
   if (error) return { ok: false, error: dbMsg(error.message) };
@@ -27,6 +30,8 @@ export async function getBox(sn: number): Promise<Result<{ box: BoxCard }>> {
 }
 
 export async function resolveMissing(sn: number, found: boolean, note: string): Promise<Result<{ msg: string }>> {
+  const me = await getMe();
+  if (!can(me, "stock.adjust")) throw new Error("ليس لديك صلاحية حل الفرق في المخزون");
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("resolve_missing", { p_sn: sn, p_found: found, p_note: note || null });
   if (error) return { ok: false, error: dbMsg(error.message) };
@@ -36,6 +41,9 @@ export async function resolveMissing(sn: number, found: boolean, note: string): 
 }
 
 export async function disposeBoxes(loc: string, kind: "waste" | "donate", boxes: number[], reason: string): Promise<Result<{ n: number }>> {
+  const me = await getMe();
+  const perm = kind === "waste" ? "stock.waste" : "stock.donate";
+  if (!can(me, perm)) throw new Error(`ليس لديك صلاحية ${kind === "waste" ? "تسجيل هالك" : "تسجيل تبرع"}`);
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("dispose_boxes", { p_loc: loc, p_kind: kind, p_boxes: boxes, p_reason: reason });
   if (error) return { ok: false, error: dbMsg(error.message) };

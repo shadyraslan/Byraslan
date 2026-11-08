@@ -1,8 +1,12 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
+import { getMe, can } from "@/lib/perms";
 import Tabs from "../Tabs";
 
 export default async function Specs() {
+  const me = await getMe();
+  if (!can(me, "purchase.edit")) redirect("/dashboard");
   const sb = await supabaseServer();
   const [{ data: items }, { data: specs }, { data: cur }, { data: isup }] = await Promise.all([
     sb.from("items").select("id,name,unit,kind").eq("active", true).in("kind", ["raw", "mix", "pack", "semi"]).order("name"),

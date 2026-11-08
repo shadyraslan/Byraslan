@@ -1,13 +1,48 @@
 import "react-native-url-polyfill/auto";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { createClient } from "@supabase/supabase-js";
 import { AppState } from "react-native";
+import * as SecureStore from "expo-secure-store";
 
 const extra = (Constants.expoConfig?.extra ?? {}) as { supabaseUrl: string; supabaseAnonKey: string };
 
+// تخزين آمن للـsession: SecureStore عليه حد ~2048 بايت على أندرويد،
+// وبيانات الجلسة ممكن تعدّي الحد، فبنقسّم القيمة لـchunks ونحفظ عددها في manifest.
+const CHUNK = 1800;
+const nKey = (key: string) => `sb.${key}.n`;
+const cKey = (key: string, i: number) => `sb.${key}.${i}`;
+
+const secureStorage = {
+  async getItem(key: string): Promise<string | null> {
+    const n = await SecureStore.getItemAsync(nKey(key));
+    if (!n) return null;
+    const count = parseInt(n, 10);
+    if (!Number.isFinite(count) || count <= 0) return null;
+    const parts: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const part = await SecureStore.getItemAsync(cKey(key, i));
+      if (part == null) return null;
+      parts.push(part);
+    }
+    return parts.join("");
+  },
+  async setItem(key: string, value: string): Promise<void> {
+    const chunks = Math.max(1, Math.ceil(value.length / CHUNK));
+    for (let i = 0; i < chunks; i++) {
+      await SecureStore.setItemAsync(cKey(key, i), value.slice(i * CHUNK, (i + 1) * CHUNK));
+    }
+    await SecureStore.setItemAsync(nKey(key), String(chunks));
+  },
+  async removeItem(key: string): Promise<void> {
+    const n = await SecureStore.getItemAsync(nKey(key));
+    const count = n ? parseInt(n, 10) : 0;
+    for (let i = 0; i < count; i++) await SecureStore.deleteItemAsync(cKey(key, i));
+    await SecureStore.deleteItemAsync(nKey(key));
+  },
+};
+
 export const sb = createClient(extra.supabaseUrl, extra.supabaseAnonKey, {
-  auth: { storage: AsyncStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
+  auth: { storage: secureStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
 });
 
 AppState.addEventListener("change", (s) => {

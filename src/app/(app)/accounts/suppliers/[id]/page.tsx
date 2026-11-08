@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import Tabs from "../../Tabs";
@@ -7,6 +7,7 @@ import Pay from "./Pay";
 export default async function Statement({ params }: { params: Promise<{ id: string }> }) {
   const id = Number((await params).id);
   const me = await getMe();
+  if (!can(me, "acc.view")) redirect("/dashboard");
   const sb = await supabaseServer();
   const [{ data: b }, { data: L }] = await Promise.all([
     sb.from("supplier_balances").select("*").eq("supplier_id", id).single(),

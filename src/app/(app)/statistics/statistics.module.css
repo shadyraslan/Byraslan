@@ -1,0 +1,90 @@
+.page{display:grid;gap:16px;max-width:1600px;margin:0 auto}
+.heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.heading h1{margin:0;font-size:22px}
+.heading p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.headingActions{display:flex;align-items:center;gap:8px}
+.presets{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.preset{padding:6px 11px;border:1px solid var(--line);border-radius:99px;background:var(--panel);color:var(--muted);font-size:12px;text-decoration:none}
+.preset:hover,.presetActive{border-color:#1677e8;background:color-mix(in srgb,#1677e8 10%,var(--panel));color:#1677e8}
+.filters{display:grid;grid-template-columns:repeat(6,minmax(115px,1fr)) auto auto;align-items:end;gap:10px;padding:14px;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 3px 14px rgba(27,61,111,.05)}
+.field{display:grid;gap:5px;min-width:0;color:var(--muted);font-size:12px;font-weight:700}
+.field input,.field select{width:100%;min-width:0;height:40px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:var(--sunk);color:var(--ink);font:inherit}
+.filterButton,.resetButton{height:40px;padding:0 14px;border-radius:10px;font:inherit;font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer}
+.filterButton{border:1px solid #1677e8;background:#1677e8;color:#fff}
+.filterButton:hover{background:#0f68d0}
+.resetButton{display:grid;place-items:center;border:1px solid var(--line);background:var(--panel);color:var(--muted);text-decoration:none}
+.notice{padding:11px 14px;border:1px solid #f1d48a;border-radius:12px;background:#fff8e4;color:#805600;font-size:13px}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.metric{position:relative;display:grid;grid-template-columns:44px minmax(0,1fr);align-items:center;gap:11px;min-height:104px;overflow:hidden;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--panel);box-shadow:0 4px 15px rgba(27,61,111,.06)}
+.metric:after{position:absolute;right:0;bottom:0;left:0;height:17px;background:radial-gradient(ellipse at 17% 100%,color-mix(in srgb,var(--metric-color) 18%,transparent) 0 35%,transparent 36%),radial-gradient(ellipse at 66% 130%,color-mix(in srgb,var(--metric-color) 12%,transparent) 0 42%,transparent 43%);content:""}
+.metricIcon{z-index:1;display:grid;width:44px;height:44px;place-items:center;border-radius:50%;background:var(--metric-color);color:#fff;font-size:22px}
+.metricText{z-index:1;display:grid;gap:3px;min-width:0}
+.metricLabel{overflow:hidden;color:var(--muted);font-size:12px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.metricValue{overflow:hidden;color:var(--ink);font-size:23px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+.metricFoot{color:var(--muted);font-size:11px}
+.primaryGrid{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(260px,.8fr);gap:14px}
+.panel{min-width:0;padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--panel);box-shadow:0 4px 16px rgba(27,61,111,.05)}
+.panelTitle{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 14px;font-size:15px}
+.panelTitle small{color:var(--muted);font-size:11px;font-weight:500}
+.chartWrap{overflow-x:auto}
+.chart{display:block;width:100%;min-width:620px;height:230px;overflow:visible}
+.gridLine{stroke:var(--line);stroke-width:1}
+.axisLabel{fill:var(--muted);font-size:11px}
+.chartArea{fill:url(#sales-area)}
+.chartLine{fill:none;stroke:#1677e8;stroke-linecap:round;stroke-linejoin:round;stroke-width:3}
+.chartPoint{fill:#1677e8;stroke:var(--panel);stroke-width:2}
+.chartLabels{display:flex;justify-content:space-between;gap:8px;min-width:620px;margin-top:4px;color:var(--muted);font-size:10px}
+.chartLabels span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.emptyChart{display:grid;min-height:230px;place-items:center;color:var(--muted);font-size:13px}
+.statusContent{display:grid;grid-template-columns:132px minmax(0,1fr);align-items:center;gap:12px}
+.donut{width:132px;height:132px}
+.donutTrack{fill:none;stroke:var(--line);stroke-width:14}
+.donutValue{fill:none;stroke:#0bb98d;stroke-linecap:round;stroke-width:14;transform:rotate(-90deg);transform-origin:50% 50%}
+.donutNumber{fill:var(--ink);font-size:21px;font-weight:900;text-anchor:middle}
+.donutCaption{fill:var(--muted);font-size:10px;text-anchor:middle}
+.legend{display:grid;gap:9px}
+.legendRow{display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;gap:7px;font-size:12px}
+.legendDot{width:9px;height:9px;border-radius:50%}
+.legendName{overflow:hidden;color:var(--muted);text-overflow:ellipsis;white-space:nowrap}
+.legendValue{font-weight:800}
+.detailsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.tableWrap{overflow:auto}
+.table{width:100%;border-collapse:collapse;font-size:12px}
+.table th,.table td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:start;white-space:nowrap}
+.table th{color:var(--muted);font-size:11px;font-weight:700}
+.table td:last-child,.table th:last-child{text-align:end}
+.table tr:last-child td{border-bottom:0}
+.barCell{display:flex;align-items:center;gap:8px}
+.miniBar{width:76px;height:6px;overflow:hidden;border-radius:9px;background:var(--sunk)}
+.miniBar i{display:block;height:100%;border-radius:inherit;background:#1677e8}
+.empty{padding:20px 8px;color:var(--muted);font-size:13px;text-align:center}
+.overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.overviewItem{display:grid;gap:4px;padding:12px;border-radius:12px;background:var(--sunk)}
+.overviewItem span{color:var(--muted);font-size:11px}
+.overviewItem strong{font-size:18px}
+.tableFoot{margin-top:8px;color:var(--muted);font-size:11px}
+
+@media(max-width:1100px){
+  .filters{grid-template-columns:repeat(4,minmax(120px,1fr))}
+  .primaryGrid{grid-template-columns:minmax(0,1.4fr) minmax(250px,.8fr)}
+  .metricValue{font-size:20px}
+}
+@media(max-width:760px){
+  .heading{align-items:flex-start}
+  .filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .primaryGrid,.detailsGrid{grid-template-columns:1fr}
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .metric{min-height:92px;padding:11px}
+  .statusContent{grid-template-columns:120px minmax(0,1fr)}
+  .donut{width:120px;height:120px}
+  .overview{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:420px){
+  .heading h1{font-size:19px}
+  .heading p{max-width:230px}
+  .headingActions .filterButton{padding:0 9px;font-size:12px}
+  .filters{gap:8px;padding:10px}
+  .filterButton,.resetButton{padding:0 8px;font-size:12px}
+  .statusContent{grid-template-columns:108px minmax(0,1fr);gap:8px}
+  .donut{width:108px;height:108px}
+}

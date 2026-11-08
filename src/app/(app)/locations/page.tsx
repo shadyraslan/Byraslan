@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import { addLocation, toggleLocation } from "./actions";
@@ -9,6 +10,7 @@ const LTYPE: Record<string, string> = {
 
 export default async function Locations() {
   const me = await getMe();
+  if (!can(me, "stock.edit")) redirect("/dashboard");
   const sb = await supabaseServer();
   const { data: locs, error } = await sb.from("locations").select("*").order("sort");
   const edit = can(me, "stock.edit");

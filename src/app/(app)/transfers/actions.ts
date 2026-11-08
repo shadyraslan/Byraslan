@@ -1,12 +1,15 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
+import { getMe, can } from "@/lib/perms";
 import { dbMsg, type Result } from "@/lib/scan";
 
 export type BoxInfo = { sn: number; item: string; weight: number; unit: string };
 
 /** العلبة دي ينفع تتحوّل من المكان ده؟ */
 export async function checkBox(sn: number, from: string): Promise<Result<{ box: BoxInfo }>> {
+  const me = await getMe();
+  if (!can(me, "stock.view")) return { ok: false, error: "ليس لديك صلاحية" };
   const sb = await supabaseServer();
   const { data: b, error } = await sb.from("boxes").select("sn,weight,status,location_id,expires_at,items(name,unit)").eq("sn", sn).maybeSingle();
   if (error) return { ok: false, error: dbMsg(error.message) };
@@ -23,6 +26,8 @@ export async function checkBox(sn: number, from: string): Promise<Result<{ box: 
 }
 
 export async function sendTransfer(from: string, to: string, boxes: number[], reason: string, note: string): Promise<Result<{ id: number }>> {
+  const me = await getMe();
+  if (!can(me, "stock.edit")) throw new Error("ليس لديك صلاحية إرسال تحويل");
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("transfer_boxes", { p_from: from, p_to: to, p_boxes: boxes, p_reason: reason || null, p_note: note || null });
   if (error) return { ok: false, error: dbMsg(error.message) };
@@ -32,6 +37,8 @@ export async function sendTransfer(from: string, to: string, boxes: number[], re
 }
 
 export async function receiveTransfer(id: number, scanned: number[]): Promise<Result<{ missing: number }>> {
+  const me = await getMe();
+  if (!can(me, "stock.edit")) throw new Error("ليس لديك صلاحية استلام تحويل");
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("receive_transfer", { p_id: id, p_scanned: scanned });
   if (error) return { ok: false, error: dbMsg(error.message) };

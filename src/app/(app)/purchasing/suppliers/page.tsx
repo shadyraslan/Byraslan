@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import Tabs from "../Tabs";
@@ -5,6 +6,7 @@ import { addSupplier, updateSupplier } from "../actions";
 
 export default async function Suppliers() {
   const me = await getMe();
+  if (!can(me, "purchase.edit")) redirect("/dashboard");
   const edit = can(me, "purchase.edit");
   const sb = await supabaseServer();
   const { data: sups } = await sb.from("suppliers").select("id,name,phone,terms").order("name");

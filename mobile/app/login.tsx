@@ -34,6 +34,8 @@ export default function Login() {
   };
 
   // وضع التجربة: دخول بأي رقم من غير كود (بيتقفل من إعدادات السيستم قبل النزول للناس)
+  // إضافةً لإعداد السيستم، لازم علم البناء EXPO_PUBLIC_ALLOW_TEST_LOGIN=1 كمان.
+  // ⚠️ ممنوع تمامًا نضبط العلم ده في نسخ الإنتاج — أي نسخة حقيقية لازم تكون من غيره.
   const skip = async () => {
     setErr(null);
     const d = phone.replace(/\D/g, "");
@@ -57,7 +59,7 @@ export default function Login() {
           <>
             <Input value={phone} onChangeText={setPhone} placeholder="01xxxxxxxxx" keyboardType="phone-pad" textContentType="telephoneNumber" autoFocus style={{ textAlign: "left", fontSize: 20 }} />
             <Btn title="ابعت الكود" onPress={send} busy={busy} />
-            {config?.test_mode && <Btn kind="sec" title="تخطّي دلوقتي (تجربة من غير كود)" onPress={skip} busy={busy} />}
+            {config?.test_mode && process.env.EXPO_PUBLIC_ALLOW_TEST_LOGIN === "1" && <Btn kind="sec" title="تخطّي دلوقتي (تجربة من غير كود)" onPress={skip} busy={busy} />}
           </>
         ) : (
           <>

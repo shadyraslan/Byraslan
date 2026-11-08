@@ -2,9 +2,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
+import { getMe, can } from "@/lib/perms";
 import { dbMsg, type Result } from "@/lib/scan";
 
 export async function createTrip(fd: FormData) {
+  const me = await getMe();
+  if (!can(me, "trips.load")) throw new Error("ليس لديك صلاحية إنشاء رحلة");
   const sb = await supabaseServer();
   const { data } = await sb.from("trips").insert({ truck: String(fd.get("truck") || "").trim() || "عربية", driver: String(fd.get("driver") || "").trim() || null }).select("id").single();
   revalidatePath("/trips");
@@ -14,6 +17,8 @@ export async function createTrip(fd: FormData) {
 export type CrateState = { crate: string; to_loc: string; boxes: { sn: number; item: string }[] };
 
 export async function tripState(trip: number): Promise<CrateState[]> {
+  const me = await getMe();
+  if (!can(me, "trips.load")) return [];
   const sb = await supabaseServer();
   const [{ data: cr }, { data: bx }] = await Promise.all([
     sb.from("trip_crates").select("crate_id,to_loc").eq("trip_id", trip),
@@ -32,6 +37,8 @@ export async function tripState(trip: number): Promise<CrateState[]> {
 }
 
 export async function crateOpen(trip: number, crate: string, to: string | null): Promise<Result<{ to: string | null }>> {
+  const me = await getMe();
+  if (!can(me, "trips.load")) throw new Error("ليس لديك صلاحية فتح صندوق");
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("crate_open", { p_trip: trip, p_crate: crate, p_to: to });
   if (error) return { ok: false, error: dbMsg(error.message) };
@@ -39,6 +46,8 @@ export async function crateOpen(trip: number, crate: string, to: string | null):
 }
 
 export async function loadBox(trip: number, crate: string, sn: number): Promise<Result<{ item: string }>> {
+  const me = await getMe();
+  if (!can(me, "trips.load")) throw new Error("ليس لديك صلاحية تحميل علبة");
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("load_box", { p_trip: trip, p_crate: crate, p_sn: sn });
   if (error) return { ok: false, error: dbMsg(error.message) };
@@ -46,6 +55,8 @@ export async function loadBox(trip: number, crate: string, sn: number): Promise<
 }
 
 export async function unloadBox(trip: number, sn: number): Promise<Result<{ sn: number }>> {
+  const me = await getMe();
+  if (!can(me, "trips.load")) throw new Error("ليس لديك صلاحية تفريغ علبة");
   const sb = await supabaseServer();
   const { error } = await sb.rpc("unload_box", { p_trip: trip, p_sn: sn });
   if (error) return { ok: false, error: dbMsg(error.message) };
@@ -53,6 +64,8 @@ export async function unloadBox(trip: number, sn: number): Promise<Result<{ sn: 
 }
 
 export async function tripDepart(trip: number): Promise<Result<{ n: number }>> {
+  const me = await getMe();
+  if (!can(me, "trips.load")) throw new Error("ليس لديك صلاحية إرسال رحلة");
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("trip_depart", { p_trip: trip });
   if (error) return { ok: false, error: dbMsg(error.message) };

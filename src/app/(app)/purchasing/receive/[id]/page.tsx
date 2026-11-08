@@ -1,11 +1,14 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
+import { getMe, can } from "@/lib/perms";
 import Receive, { type RLine } from "./Receive";
 
 type Snap = { checks?: string[]; certs?: string[]; temp_max?: number | null; min_shelf_days?: number };
 
 export default async function ReceivePage({ params }: { params: Promise<{ id: string }> }) {
   const id = Number((await params).id);
+  const me = await getMe();
+  if (!can(me, "purchase.edit")) redirect("/dashboard");
   const sb = await supabaseServer();
   const { data: po } = await sb.from("purchase_orders").select("id,no,status,suppliers(name),po_lines(line,item_id,qty,price,received,items(name,unit))").eq("id", id).single();
   if (!po) notFound();

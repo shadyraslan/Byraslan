@@ -1,10 +1,13 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
+import { getMe, can } from "@/lib/perms";
 import Labels from "./Labels";
 
 export default async function ReceiptPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ by?: string }> }) {
   const id = Number((await params).id);
   const byNo = (await searchParams).by === "no";
+  const me = await getMe();
+  if (!can(me, "purchase.edit")) redirect("/dashboard");
   const sb = await supabaseServer();
   const { data } = await sb.from("receipts").select("id,no,result,flags,invoice_no,at,purchase_orders(no),suppliers(name),receipt_lines(line,weighed,rejected,accepted,price,temp,expires,spec_version,lot_code,items(name,unit))").eq(byNo ? "no" : "id", id).single();
   if (!data) notFound();

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import { cairoDate } from "@/lib/time";
@@ -11,6 +12,7 @@ const ST: Record<string, [string, string]> = { ok: ["", ""], pending: ["مستن
 
 export default async function Expenses({ searchParams }: { searchParams: Promise<{ m?: string }> }) {
   const me = await getMe();
+  if (!can(me, "acc.view")) redirect("/dashboard");
   const m = (await searchParams).m || cairoDate().slice(0, 7);
   const sb = await supabaseServer();
   const end = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 1).toISOString().slice(0, 10);

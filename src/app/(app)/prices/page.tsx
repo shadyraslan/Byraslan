@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import Link from "next/link";
 import { getMe, can } from "@/lib/perms";
@@ -6,6 +7,7 @@ import PriceGrid from "./PriceGrid";
 export default async function Prices({ searchParams }: { searchParams: Promise<{ ch?: string }> }) {
   const ch = (await searchParams).ch === "app" ? "app" : "direct";
   const me = await getMe();
+  if (!can(me, "prices.edit")) redirect("/dashboard");
   const sb = await supabaseServer();
   const [{ data: items }, { data: locs }, { data: pr }] = await Promise.all([
     sb.from("items").select("id,name,unit").eq("active", true).eq("kind", "product").order("name"),

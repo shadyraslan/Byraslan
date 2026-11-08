@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import OrderDesk from "./OrderDesk";
@@ -6,6 +6,7 @@ import OrderDesk from "./OrderDesk";
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
   const id = Number((await params).id);
   const me = await getMe();
+  if (!can(me, "orders.handle")) redirect("/dashboard");
   const sb = await supabaseServer();
   const { data } = await sb.from("online_orders").select("*,customers(name,phone,area),locations(name),online_order_lines(line,qty,unit_price,prepared,items(name,unit)),online_order_boxes(box_sn,line,qty,removed)").eq("id", id).single();
   if (!data) notFound();

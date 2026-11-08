@@ -2,6 +2,7 @@
 import { useActionState } from "react";
 import { createStaff } from "./staff";
 import { ROLES } from "@/lib/roles";
+import PasswordInput from "@/components/PasswordInput";
 
 type R = Awaited<ReturnType<typeof createStaff>>;
 
@@ -13,7 +14,7 @@ export default function NewStaff({ locs }: { locs: { id: string; name: string }[
       <div className="row">
         <label className="fld">الاسم<input name="name" required /></label>
         <label className="fld">الموبايل (بيدخل بيه)<input name="phone" inputMode="tel" dir="ltr" required /></label>
-        <label className="fld">الرقم السري (6 على الأقل)<input name="password" inputMode="numeric" dir="ltr" required minLength={6} /></label>
+        <PasswordInput name="password" label="الرقم السري" required />
         <label className="fld">الوظيفة<input name="job" placeholder="مثلًا: كاشير رشدي" /></label>
         <label className="fld">الفرع الأساسي<select name="home_loc"><option value="">—</option>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
         <label className="fld">صلاحيات جاهزة<select name="role"><option value="">— من غير (هتديله بعدين) —</option>{ROLES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}</select></label>

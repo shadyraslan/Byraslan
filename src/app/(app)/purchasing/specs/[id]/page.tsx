@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import Tabs from "../../Tabs";
@@ -8,6 +8,7 @@ import { saveItemSupplier, addAltBrand } from "../../actions";
 export default async function Spec({ params }: { params: Promise<{ id: string }> }) {
   const id = Number((await params).id);
   const me = await getMe();
+  if (!can(me, "purchase.edit")) redirect("/dashboard");
   const edit = can(me, "purchase.edit"), qa = can(me, "qa.approve");
   const sb = await supabaseServer();
   const [{ data: item }, { data: s }, { data: vers }, { data: isup }, { data: alts }, { data: sups }] = await Promise.all([

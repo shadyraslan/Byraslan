@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { loginAction } from "./login-action";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -14,11 +14,15 @@ export default function Login() {
     e.preventDefault();
     setBusy(true);
     setErr("");
-    const id = email.trim();
-    const login = /^[+\d\s-]+$/.test(id) ? `${id.replace(/\D/g, "")}@staff.byraslan.app` : id;
-    const { error } = await supabaseBrowser().auth.signInWithPassword({ email: login, password });
+
+    const fd = new FormData();
+    fd.set("email", email.trim());
+    fd.set("password", password);
+
+    const result = await loginAction(null, fd);
     setBusy(false);
-    if (error) return setErr("الموبايل/الإيميل أو الرقم السري غلط");
+
+    if (!result.ok) return setErr(result.error ?? "حدث خطأ");
     router.replace("/dashboard");
     router.refresh();
   }

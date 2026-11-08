@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import { saveRoute } from "../actions";
 
 export default async function Routes() {
   const me = await getMe();
+  if (!can(me, "items.edit")) redirect("/dashboard");
   const sb = await supabaseServer();
   const [{ data: items }, { data: secs }, { data: routes }] = await Promise.all([
     sb.from("items").select("id,name").eq("active", true).eq("kind", "product").order("name"),

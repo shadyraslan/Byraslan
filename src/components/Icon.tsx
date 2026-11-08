@@ -1,5 +1,5 @@
 import type { IconType } from "react-icons";
-import { PiArrowsLeftRightFill, PiArrowsLeftRight, PiBarcodeFill, PiBarcode, PiBellFill, PiBell, PiCalculatorFill, PiCalculator, PiChartBarFill, PiChartBar, PiClipboardTextFill, PiClipboardText, PiDeviceMobileFill, PiDeviceMobile, PiFactoryFill, PiFactory, PiGearSixFill, PiGearSix, PiHandHeartFill, PiHandHeart, PiHandshakeFill, PiHandshake, PiHouseFill, PiHouse, PiMagnifyingGlassFill, PiMagnifyingGlass, PiMapPinFill, PiMapPin, PiMoneyFill, PiMoney, PiPackageFill, PiPackage, PiReceiptFill, PiReceipt, PiShieldCheckFill, PiShieldCheck, PiShoppingBagOpenFill, PiShoppingBagOpen, PiShoppingCartFill, PiShoppingCart, PiStorefrontFill, PiStorefront, PiTagFill, PiTag, PiTrashFill, PiTrash, PiTruckFill, PiTruck, PiUsersThreeFill, PiUsersThree, PiWarehouseFill, PiWarehouse } from "react-icons/pi";
+import { PiArrowsLeftRightFill, PiArrowsLeftRight, PiBarcodeFill, PiBarcode, PiBellFill, PiBell, PiCalculatorFill, PiCalculator, PiChartBarFill, PiChartBar, PiClipboardTextFill, PiClipboardText, PiDeviceMobileFill, PiDeviceMobile, PiFactoryFill, PiFactory, PiGearSixFill, PiGearSix, PiHandHeartFill, PiHandHeart, PiHandshakeFill, PiHandshake, PiHouseFill, PiHouse, PiMagnifyingGlassFill, PiMagnifyingGlass, PiMapPinFill, PiMapPin, PiMoneyFill, PiMoney, PiPackageFill, PiPackage, PiReceiptFill, PiReceipt, PiShieldCheckFill, PiShieldCheck, PiShoppingBagOpenFill, PiShoppingBagOpen, PiShoppingCartFill, PiShoppingCart, PiStorefrontFill, PiStorefront, PiTagFill, PiTag, PiTrashFill, PiTrash, PiTruckFill, PiTruck, PiUsersThreeFill, PiUsersThree, PiWarehouseFill, PiWarehouse, PiChartPieFill, PiChartPie } from "react-icons/pi";
 
 /** أيقونات Phosphor: Fill جوه المربعات الملونة، Regular في القائمة الجانبية */
 const I: Record<string, [IconType, IconType]> = {
@@ -29,6 +29,8 @@ const I: Record<string, [IconType, IconType]> = {
   partner: [PiHandshakeFill, PiHandshake],
   bell: [PiBellFill, PiBell],
   search: [PiMagnifyingGlassFill, PiMagnifyingGlass],
+  "bar-chart": [PiChartBarFill, PiChartBar],
+  "pie-chart": [PiChartPieFill, PiChartPie],
 };
 
 export default function Icon({ name, size = 24, fill = true }: { name: string; size?: number; fill?: boolean }) {
