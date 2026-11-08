@@ -10,6 +10,7 @@ import {
   PiMagnifyingGlass,
   PiUserCircle,
 } from "react-icons/pi";
+import ThemeToggle from "@/components/ThemeToggle";
 
 type NavLink = { href: string; label: string };
 
@@ -158,6 +159,7 @@ export default function AppTopbar({
         >
           {isFullscreen ? <PiArrowsInSimple aria-hidden /> : <PiArrowsOutSimple aria-hidden />}
         </button>
+        <ThemeToggle />
       </div>
     </header>
   );

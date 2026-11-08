@@ -13,7 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var t=localStorage.getItem('by-raslan-dashboard-theme');if(t==='dark'||t==='light'||t==='image')document.documentElement.dataset.theme=t}catch(e){}",
+              "try{var t=localStorage.getItem('by-raslan-dashboard-theme');document.documentElement.dataset.theme=t==='dark'?'dark':'image'}catch(e){document.documentElement.dataset.theme='image'}",
           }}
         />
         {children}

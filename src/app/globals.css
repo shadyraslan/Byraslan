@@ -317,6 +317,7 @@ input,select{border-radius:12px;height:42px}input:focus,select:focus{outline:non
 @media (max-width:480px){.app-topbar{gap:8px;padding:8px}.topbar-user-copy{display:none}.topbar-search{flex:1;width:auto;min-width:0}.topbar-search input{font-size:12px}.topbar-tools{gap:5px}.topbar-icon-button,.app-topbar .theme-toggle{width:34px;height:34px;min-height:34px}}
 :root[data-theme="light"]{color-scheme:light;--ink:#211913;--y:#b77945;--bg:#f6f2ed;--panel:#fff;--line:#e8ded4;--muted:#786b60;--good:#198754;--bad:#c43d3d;--warn:#a65f1b;--sunk:#f3ede7}
 :root[data-theme="dark"]{color-scheme:dark;--ink:#f4ece4;--y:#c8905d;--bg:#17120f;--panel:#241b16;--line:#44352b;--muted:#b7a595;--good:#57bd83;--bad:#f07878;--warn:#e2a15d;--sunk:#1d1612}
+:root[data-theme="image"]{color-scheme:light;--ink:#172b4d;--y:#1677e8;--bg:#edf3fc;--panel:#fff;--line:#dce6f4;--muted:#63738b;--good:#16a777;--bad:#dc4d60;--warn:#f18c35;--sunk:#f5f8fd}
 :root[data-theme="dark"] body{background:var(--bg);color:var(--ink)}
 :root[data-theme="dark"] .shell{background:var(--bg);color:var(--ink)}
 :root[data-theme="dark"] .erp-sidebar{background:linear-gradient(180deg,#24170f 0%,#342116 100%)}
