@@ -53,6 +53,7 @@ export default async function CsCustomers({ searchParams }: { searchParams: Prom
             <div className="row" style={{ gap: 6 }}>
               <Link className="btn pri" href={`/cs/new?phone=${c.phone}`}>+ طلب / حجز</Link>
               <Link className="btn" href={`/cs/orders?scope=all&q=${c.phone}`}>طلباته</Link>
+              <Link className="btn" href={`/accounts/ledger?t=customer&id=${c.id}`}>كارته</Link>
               <a className="btn" href={`https://wa.me/2${c.phone.replace(/^2/, "")}`} target="_blank" rel="noreferrer">واتساب</a>
             </div>
           </div>

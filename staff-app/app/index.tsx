@@ -78,6 +78,7 @@ export default function Home() {
           <Tile ic="document-attach-outline" t="أوراقي" s="شهادة مرتب وغيرها" onPress={() => router.push("/docs")} />
           <Tile ic="star-outline" t="تقييمي" s="تقييم الأداء" onPress={() => router.push("/appraisal")} />
           <Tile ic="alert-circle-outline" t="جزاءاتي" s="حسب اللايحة" onPress={() => router.push("/penalties")} />
+          <Tile ic="receipt-outline" t="كشف حسابي" s="ليك وعليك" onPress={() => router.push("/ledger")} />
           {h.is_manager && <Tile ic="people-outline" t="فريقي" s="ساعاتهم والأذون" onPress={() => router.push("/team")} />}
           <Tile ic="chatbubbles-outline" t="رسايل الإدارة" s={h.unread ? `${h.unread} جديدة` : "مفيش جديد"} badge={h.unread} onPress={() => router.push("/messages")} />
           {h.is_driver && <Tile ic="car-outline" t="رحلاتي" s="التحميل والفروع" onPress={() => router.push("/trips")} />}

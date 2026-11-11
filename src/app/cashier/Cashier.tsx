@@ -11,8 +11,8 @@ import OrdersPanel, { useOrders } from "./Orders";
 
 type Item = { id: number; name: string; unit: string; sold_by: string; arm: string; kind: string; fams?: number[]; plu: string | null; price: number };
 type Promo = { id: number; name: string; kind: string; value: number; max_off: number | null; auto: boolean; code: string | null; min_order: number; families: number[] | null; stackable: boolean; ends_at: string | null };
-type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number }[]; promos?: Promo[] };
-type Line = { item_id: number; name: string; unit: string; box_sn: number | null; qty: number; unit_price: number };
+type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number }[]; promos?: Promo[]; unknown_item?: number | null; can_unknown?: boolean };
+type Line = { item_id: number; name: string; unit: string; box_sn: number | null; qty: number; unit_price: number; unknown_code?: string };
 type Sale = { client_id: string; shift: string; at: string; local_no: string; lines: Line[]; discount: number; cash: number; card: number; offline: boolean; promo_code?: string | null };
 type Done = Sale & { no?: number; conflicts?: string[]; total: number; change: number };
 type Shift = { client_id: string; loc: string; loc_name: string; opening_cash: number; opened_at: string; server_id?: number; closing?: { counted: number; closed_at: string } };
@@ -40,6 +40,13 @@ export default function Cashier() {
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [disc, setDisc] = useState("");
   const [pcode, setPcode] = useState("");
+  const [unk, setUnk] = useState<{ code: string; price: string } | null>(null);
+  const addUnk = () => {
+    const p = Number(unk?.price.replace(",", "."));
+    if (!unk || !(p > 0) || !snap?.unknown_item) return bad("اكتب السعر");
+    setLines((L) => [...L, { item_id: snap.unknown_item!, name: `صنف مش معروف ${unk.code}`, unit: "قطعة", box_sn: null, qty: 1, unit_price: p, unknown_code: unk.code }]);
+    setMsg({ ok: true, t: `✓ ${unk.code} بسعر ${p} — هيتراجع ويتربط بصنف` }); setUnk(null);
+  };
   const [cash, setCash] = useState("");
   const [card, setCard] = useState("");
   // على حساب موظف (بيتخصم من مرتبه)
@@ -132,7 +139,7 @@ export default function Cashier() {
     try {
       const batch = ob.slice(0, 50);
       const shPayload = [{ client_id: sh.client_id, opening_cash: sh.opening_cash, opened_at: sh.opened_at, ...(sh.closing && batch.length === ob.length ? { counted: sh.closing.counted, closed_at: sh.closing.closed_at } : {}) }];
-      const { data, error } = await sb.rpc("pos_sync", { p_loc: sh.loc, p_shifts: shPayload, p_sales: batch.map(({ lines, ...s }) => ({ ...s, lines: lines.map(({ item_id, box_sn, qty, unit_price }) => ({ item_id, box_sn, qty, unit_price })) })) });
+      const { data, error } = await sb.rpc("pos_sync", { p_loc: sh.loc, p_shifts: shPayload, p_sales: batch.map(({ lines, ...s }) => ({ ...s, lines: lines.map(({ item_id, box_sn, qty, unit_price, unknown_code }) => ({ item_id, box_sn, qty, unit_price, unknown_code })) })) });
       if (error) throw new Error(error.message);
       const r = data as { shifts: { client_id: string; id: number }[]; sales: { client_id: string; no: number; conflicts?: string[] }[] };
       const ok = new Map(r.sales.map((x) => [x.client_id, x]));
@@ -215,6 +222,11 @@ export default function Cashier() {
     else {
       const { data, error } = await sb.rpc("pos_lookup", { p_loc: shift.loc, p_code: code });
       const r = (Array.isArray(data) ? data[0] : data) as { item_id: number; item_name: string; unit: string; box_sn: number | null; qty: number; unit_price: number } | undefined;
+      if (!error && !r && snap?.unknown_item && /^\d{6,14}$/.test(code.trim())) {
+        // باركود مش معروف: يتباع بسعر يدوي (بصلاحية) ويتسجّل عشان يتربط بصنف بعدين
+        if (!snap.can_unknown) return bad(`الباركود ${code} مش متسجّل — نادي المدير أو حطه على جنب`);
+        setUnk({ code: code.trim(), price: "" }); return;
+      }
       if (error || !r) l = error ? errText(error) : "الكود ده مش متسجّل";
       else if (r.box_sn && lines.some((x) => x.box_sn === r.box_sn)) l = `العلبة #${r.box_sn} في الفاتورة قبل كده`;
       else l = { item_id: r.item_id, name: r.item_name, unit: r.unit, box_sn: r.box_sn, qty: Number(r.qty), unit_price: Number(r.unit_price) };
@@ -269,7 +281,7 @@ export default function Cashier() {
     const s: Sale = { client_id: uuid(), shift: shift.client_id, at: new Date().toISOString(), local_no: "", lines, discount: d, cash: c, card: k, offline: false, promo_code: pcode.trim().toUpperCase() || null };
     setWorking(true);
     const { data, error } = await sb.rpc("pos_sync", { p_loc: shift.loc, p_shifts: [{ client_id: shift.client_id, opening_cash: shift.opening_cash, opened_at: shift.opened_at }],
-      p_sales: [{ ...s, staff: st, staff_id: stInfo?.id ?? null, lines: lines.map(({ item_id, box_sn, qty, unit_price }) => ({ item_id, box_sn, qty, unit_price })) }] });
+      p_sales: [{ ...s, staff: st, staff_id: stInfo?.id ?? null, lines: lines.map(({ item_id, box_sn, qty, unit_price, unknown_code }) => ({ item_id, box_sn, qty, unit_price, unknown_code })) }] });
     setWorking(false);
     if (error) return bad(`الفاتورة ماتسجلتش: ${errText(error)}`);
     const r = (data as { sales: { no: number; conflicts?: string[] }[] }).sales[0];
@@ -365,6 +377,13 @@ export default function Cashier() {
         <div className="pos noprint" style={{ padding: "0 16px 16px" }}>
           <div className="card" style={{ border: "2px solid var(--y)" }}>
             <ScanInput onScan={onScan} placeholder="امسح QR العلبة أو باركود الصنف أو ملصق الميزان" />
+            {unk && (
+              <div className="row" style={{ gap: 6, marginTop: 6, alignItems: "center", background: "#FFF7E6", padding: 8, borderRadius: 10 }}>
+                <span>الباركود <b dir="ltr">{unk.code}</b> مش متسجّل — بيعه بسعر:</span>
+                <input autoFocus inputMode="decimal" dir="ltr" value={unk.price} onChange={(e) => setUnk({ ...unk, price: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") addUnk(); }} style={{ width: 90 }} />
+                <button className="btn pri" onClick={addUnk}>ضيف</button><button className="btn" onClick={() => setUnk(null)}>لا</button>
+              </div>
+            )}
             {msg && <div className={msg.ok ? "okmsg" : "badmsg"}>{msg.t}</div>}
             <table>
               <thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th></th></tr></thead>

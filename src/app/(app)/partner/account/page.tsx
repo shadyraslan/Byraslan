@@ -38,6 +38,7 @@ export default async function Account({ searchParams }: { searchParams: Promise<
         <label className="fld">من<input type="date" name="from" defaultValue={from} /></label>
         <label className="fld">لحد<input type="date" name="to" defaultValue={to} /></label>
         <button className="btn">اعرض</button>
+        {pid > 0 && <a className="btn" href={`/accounts/ledger?t=partner&id=${pid}`}>كارت الحساب بالتفاصيل</a>}
       </form>
       {S && (
         <div className="card" style={{ overflowX: "auto" }}>
