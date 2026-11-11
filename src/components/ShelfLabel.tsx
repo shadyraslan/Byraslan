@@ -8,6 +8,7 @@ const kg = (u?: string | null) => (u === "كجم" ? " / كجم" : "");
 /** ستايل الملصقات (مرة واحدة في الصفحة) — مقاسات بالمللي عشان الطباعة تطلع مظبوطة */
 export function LabelStyles() {
   return <style>{`
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@700;900&display=swap');
   .lbl{box-sizing:border-box;border:.2mm solid #ddd;break-inside:avoid;page-break-inside:avoid;font-family:inherit;color:#0D0D0D;background:#fff;overflow:hidden;position:relative;direction:rtl;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .lbl.shelf{width:70mm;height:38mm;display:grid;grid-template-rows:9mm 1fr 11mm}
   .lbl.sticker{width:40mm;height:26mm;display:grid;grid-template-rows:1fr 9mm;padding:1mm}
@@ -34,6 +35,24 @@ export function LabelStyles() {
   .lbl.sticker .top{display:grid;justify-items:center;align-content:center;gap:.6mm}
   .lbl.sticker .bc{padding:0;justify-content:center;flex-direction:column}
   .lbl.sticker .bc svg{height:6mm}
+  .ofr{box-sizing:border-box;width:96mm;height:32mm;position:relative;border-radius:3mm;border:.8mm solid #F5C800;background:#FFD21F;overflow:hidden;direction:rtl;font-family:Cairo,inherit;color:#0D0D0D;break-inside:avoid;page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .ofr .lp{position:absolute;inset:0 auto 0 0;width:21mm;background:#000;clip-path:polygon(0 0,100% 0,82% 100%,0 100%);display:grid;place-items:center;padding-right:3mm}
+  .ofr .lp img{width:15.5mm;height:auto;display:block}
+  .ofr .rb{position:absolute;left:20mm;top:-1.5mm;width:13.5mm;height:19mm;background:var(--oc);clip-path:polygon(0 0,100% 0,100% 100%,50% 84%,0 100%);transform:rotate(-5deg);display:grid;align-content:center;justify-items:center;color:#fff;line-height:1}
+  .ofr .rb i{position:absolute;inset:1mm 1mm 3.5mm;border:.25mm dashed rgba(255,255,255,.75);font-style:normal}
+  .ofr .rb b{font-size:3.6mm;font-weight:900}.ofr .rb strong{font-size:6.2mm;font-weight:900;direction:ltr}
+  .ofr .nm2{position:absolute;left:35mm;right:33mm;top:2mm;text-align:center;font-weight:900;font-size:5.2mm;line-height:1.1;max-height:11.6mm;overflow:hidden}
+  .ofr .sz{position:absolute;left:35mm;right:33mm;top:15mm;white-space:nowrap;overflow:hidden;display:flex;align-items:center;gap:1.5mm;font-weight:700;font-size:3mm;justify-content:center}
+  .ofr .sz::before,.ofr .sz::after{content:"";flex:0 1 6mm;height:.35mm;background:#7a1010}
+  .ofr .op{position:absolute;right:4mm;top:2.3mm;background:#0D0D0D;color:#fff;transform:skewX(-12deg);padding:.6mm 3mm;font-weight:900;font-size:4.6mm;line-height:1.1;white-space:nowrap}
+  .ofr .op::after{content:"";position:absolute;left:1.5mm;right:1.5mm;top:50%;height:.5mm;background:var(--oc);transform:rotate(-12deg)}
+  .ofr .op small{font-size:2.6mm}
+  .ofr .np{position:absolute;right:2.5mm;top:9.5mm;width:29mm;height:15.5mm;background:var(--oc);border:.7mm solid #fff;border-radius:3mm;transform:rotate(-4deg);display:flex;align-items:center;justify-content:center;gap:1.2mm;color:#fff;box-shadow:0 .6mm 0 rgba(0,0,0,.25)}
+  .ofr .np b{font-size:12mm;font-weight:900;line-height:1;direction:ltr}.ofr .np span{font-size:3.6mm;font-weight:900}
+  .ofr .sp{position:absolute;right:30.5mm;top:7mm;width:3mm;height:3mm}
+  .ofr .sp i{position:absolute;width:.6mm;height:2.6mm;background:var(--oc);border-radius:.3mm}
+  .ofr .bt{position:absolute;left:0;right:0;bottom:0;height:6.2mm;background:#0D0D0D;display:flex;align-items:center;gap:2mm;padding-right:33mm;padding-left:22mm;color:#fff;font-weight:700;font-size:2.9mm;white-space:nowrap}
+  .ofr .bt em{font-style:normal;color:#F5C800}.ofr .bt .sep{width:.25mm;height:3.5mm;background:#888}
   `}</style>;
 }
 
@@ -78,6 +97,23 @@ export function StickerLabel({ d, offer }: { d: LabelData; offer?: OfferInfo | n
         {d.code && <span dangerouslySetInnerHTML={{ __html: barcodeSvg(d.code, 40, 1) }} />}
         <span className="c">{d.code ?? ""}</span>
       </div>
+    </div>
+  );
+}
+
+/** ملصق العرض (تصميم المهرجان): لوجو باي رسلان، شريطة "وفّر %"، اسم الصنف، السعر القديم متشطّب والجديد كبير بلون المهرجان، وتحت اسم المهرجان ولحد إمتى */
+export function OfferLabel({ d, offer }: { d: LabelData; offer: OfferInfo }) {
+  const pct = d.old && d.price != null && d.old > d.price ? Math.round((1 - d.price / d.old) * 100) : 0;
+  return (
+    <div className="ofr" style={{ ["--oc" as string]: offer.color }}>
+      <div className="lp"><img src="/logo-label.png" alt="By Raslan" /></div>
+      <div className="bt"><span>{offer.name} 🔥</span>{offer.until && <><span className="sep" /><span><em>حتى</em> {offer.until} 📅</span></>}</div>
+      {pct > 0 && <div className="rb"><i /><b>وفّر</b><strong>{pct}%</strong></div>}
+      <div className="nm2">{d.name}</div>
+      {(d.size || d.maker) && <div className="sz">{[d.size ? `عبوة ${d.size}` : null, d.maker].filter(Boolean).join(" · ")}</div>}
+      {d.old && d.old !== d.price ? <div className="op">{m(d.old)} <small>جنيه</small></div> : null}
+      <div className="sp"><i style={{ right: 0, top: 0, transform: "rotate(35deg)" }} /><i style={{ right: "1.6mm", top: ".6mm", transform: "rotate(60deg)" }} /><i style={{ right: "-1.2mm", top: "1.8mm", transform: "rotate(10deg)" }} /></div>
+      <div className="np"><b>{m(d.price)}</b><span>جنيه{kg(d.unit) ? " / كجم" : ""}</span></div>
     </div>
   );
 }

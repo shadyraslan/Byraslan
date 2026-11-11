@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
-import { LabelStyles, ShelfLabel, StickerLabel } from "@/components/ShelfLabel";
+import { LabelStyles, OfferLabel, StickerLabel } from "@/components/ShelfLabel";
 import PrintBtn from "./PrintBtn";
 
 type It = { item_id: number; name: string; size: string | null; maker: string | null; unit: string; price: number; old: number | null; code: string | null };
@@ -25,7 +25,7 @@ export default async function PrintCampaign({ params, searchParams }: { params: 
       <form className="noprint" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end", marginBottom: 12, fontFamily: "inherit" }}>
         <b style={{ fontSize: 18 }}>ملصقات: {c.name}</b>
         <label>الفرع <select name="loc" defaultValue={v.loc}>{L.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
-        <label>الشكل <select name="kind" defaultValue={kind}><option value="shelf">ملصق رف</option><option value="sticker">ملصق منتج</option></select></label>
+        <label>الشكل <select name="kind" defaultValue={kind}><option value="shelf">ملصق رف (96×32)</option><option value="sticker">ملصق منتج</option></select></label>
         <label>نسخ لكل صنف <input name="n" type="number" min={1} defaultValue={n} style={{ width: 60 }} /></label>
         <button>اعرض</button>
         <PrintBtn />
@@ -34,7 +34,7 @@ export default async function PrintCampaign({ params, searchParams }: { params: 
       <div className="sheet">
         {v.items.flatMap((it) => Array.from({ length: n }, (_, k) => {
           const d = { ...it, price: Number(it.price), old: it.old != null ? Number(it.old) : null };
-          return kind === "shelf" ? <ShelfLabel key={`${it.item_id}-${k}`} d={d} offer={{ name: c.name, color: c.color, until }} /> : <StickerLabel key={`${it.item_id}-${k}`} d={d} offer={{ name: c.name, color: c.color, until }} />;
+          return kind === "shelf" ? <OfferLabel key={`${it.item_id}-${k}`} d={d} offer={{ name: c.name, color: c.color, until }} /> : <StickerLabel key={`${it.item_id}-${k}`} d={d} offer={{ name: c.name, color: c.color, until }} />;
         }))}
       </div>
     </div>

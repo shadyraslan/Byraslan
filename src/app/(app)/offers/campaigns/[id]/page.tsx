@@ -5,7 +5,7 @@ import { getMe, can } from "@/lib/perms";
 import { money } from "@/lib/time";
 import { saveCampaign, addItems, removeItem, campaignAct } from "../actions";
 import CampaignForm from "../CampaignForm";
-import { LabelStyles, ShelfLabel } from "@/components/ShelfLabel";
+import { LabelStyles, OfferLabel } from "@/components/ShelfLabel";
 
 type It = { item_id: number; name: string; size: string | null; maker: string | null; unit: string; price: number; app_price: number | null; old: number | null; code: string | null };
 type V = { campaign: { id: number; name: string; subtitle: string | null; color: string; starts_at: string; ends_at: string; status: string; locations: string[] | null; channels: string[]; note: string | null };
@@ -106,7 +106,7 @@ export default async function Campaign({ params, searchParams }: { params: Promi
         <div className="card">
           <h2 style={{ marginTop: 0 }}>شكل الملصق</h2>
           <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-            {v.items.slice(0, 2).map((it) => <ShelfLabel key={it.item_id} d={{ ...it, price: Number(it.price), old: it.old != null ? Number(it.old) : null }} offer={{ name: c.name, color: c.color, until }} />)}
+            {v.items.slice(0, 2).map((it) => <OfferLabel key={it.item_id} d={{ ...it, price: Number(it.price), old: it.old != null ? Number(it.old) : null }} offer={{ name: c.name, color: c.color, until }} />)}
           </div>
         </div>
       )}
