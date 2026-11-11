@@ -63,6 +63,9 @@ export default async function Section({ params }: { params: Promise<{ id: string
           <K href="/sales" label="مبيعات الشهر" v={`${money(n("month"))} ج`} />
           <K href="/sales" label="ورديات مفتوحة" v={n("open_shifts")} />
           <K href="/offers" label="عروض شغالة" v={n("promos")} />
+          <K href="/offers/campaigns" label="مهرجانات شغالة" v={n("campaigns_live")} />
+          <K href="/offers/campaigns" label="مهرجانات مستنية اعتماد" v={n("campaigns_pending")} warn />
+          <K href="/offers/campaigns" label="ملصقات تتعلّق أو تتشال" v={n("labels_todo")} warn />
         </>}
         {id === "factory" && <>
           <K href="/pack" label="علب اتغلّفت النهارده" v={n("packed")} />

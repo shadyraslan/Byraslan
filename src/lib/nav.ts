@@ -21,6 +21,7 @@ export const NAV: NavGroup[] = [
     { href: "/sales", label: "المبيعات والورديات", icon: "reports", color: "#4f46e5", perms: ["pos.shift", "acc.view"] },
     { href: "/prices", label: "الأسعار", icon: "tag", color: "#059669", perms: ["prices.edit"] },
     { href: "/offers", label: "العروض والبروموكود", icon: "star", color: "#e11d48", perms: ["promo.edit", "prices.edit"] },
+    { href: "/offers/campaigns", label: "مهرجانات التخفيضات", icon: "tag", color: "#ea580c", perms: ["promo.edit", "promo.approve", "labels.hang", "pos.shift", "prices.edit"] },
   ] },
   { id: "factory", title: "المصنع والمخزون", icon: "factory", color: "#dc2626", links: [
     { href: "/production", label: "أوامر الإنتاج", icon: "orders", color: "#b91c1c", perms: ["prod.orders"] },

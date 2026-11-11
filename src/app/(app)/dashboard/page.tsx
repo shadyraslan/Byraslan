@@ -14,7 +14,7 @@ export default async function Home() {
   const start = cairoDayStart();
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo" }).format(new Date());
   const c = (q: PromiseLike<{ count: number | null }>, ok: boolean) => (ok ? q : Promise.resolve({ count: null }));
-  const [{ data: locs }, { data: sales }, orders, books, tickets, exps, leaves, runs, counts, pups, farPins, docs] = await Promise.all([
+  const [{ data: locs }, { data: sales }, orders, books, tickets, exps, leaves, runs, counts, pups, farPins, docs, camps, labels] = await Promise.all([
     sb.from("locations").select("id,name,type,city,active").eq("active", true).order("sort"),
     can(me, "acc.view") || can(me, "pos.shift") ? sb.from("sales").select("location_id,total").gte("at", start) : Promise.resolve({ data: [] as { location_id: string; total: number }[] }),
     c(sb.from("online_orders").select("id", { count: "exact", head: true }).in("status", ["new", "accepted", "preparing", "ready", "out"]).or(`is_booking.eq.false,release_at.lte.${new Date().toISOString()}`), can(me, "orders.handle")),
@@ -26,6 +26,8 @@ export default async function Home() {
     c(sb.from("stock_counts").select("id", { count: "exact", head: true }).eq("status", "submitted"), can(me, "stock.adjust")),
     c(sb.from("partner_uploads").select("id", { count: "exact", head: true }).eq("status", "draft"), can(me, "partner.upload")),
     c(sb.from("online_orders").select("id", { count: "exact", head: true }).eq("pin_far", true).in("status", ["new", "accepted", "preparing", "ready"]), can(me, "cs.agent") || can(me, "orders.handle")),
+    c(sb.from("campaigns").select("id", { count: "exact", head: true }).eq("status", "pending"), can(me, "promo.approve")),
+    can(me, "labels.hang") || can(me, "pos.shift") ? sb.from("campaign_branches").select("location_id,hung_at,removed_at,campaigns!inner(status)").then(({ data }) => ({ count: ((data ?? []) as unknown as { location_id: string; hung_at: string | null; removed_at: string | null; campaigns: { status: string } }[]).filter((b) => (!me?.home || b.location_id === me.home) && ((["approved", "live"].includes(b.campaigns.status) && !b.hung_at) || (["ended", "cancelled"].includes(b.campaigns.status) && b.hung_at && !b.removed_at))).length })) : Promise.resolve({ count: null }),
     can(me, "hr.staffdocs") ? sb.rpc("docs_status", { p_user: null }).then(({ data }) => ({ count: ((data ?? []) as { state: string }[]).filter((d) => d.state === "expired" || d.state === "soon").length })) : Promise.resolve({ count: null }),
   ]);
   const byLoc: Record<string, { t: number; n: number }> = {};
@@ -55,6 +57,8 @@ export default async function Home() {
         <K href="/partner" label="ملف شريك مستني اعتماد" n={pups.count} warn />
         <K href="/cs/orders" label="عناوين بعيدة عن الفرع" n={farPins.count} warn />
         <K href="/hr/staffdocs" label="شهادات خلصت أو قرّبت" n={docs.count} warn />
+        <K href="/offers/campaigns" label="مهرجان تخفيضات مستني اعتمادك" n={camps.count} warn />
+        <K href="/offers/campaigns" label="ملصقات عروض تتعلّق أو تتشال" n={labels.count} warn />
       </div>
 
       {!!(branches.length + sites.length) && (

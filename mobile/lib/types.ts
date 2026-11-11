@@ -2,7 +2,7 @@ export type District = { id: number; name: string; city: string; branch: string 
 export type Banner = { title: string; subtitle: string | null; badge: string | null; cta: string | null; icon: string | null; bg: string | null; family: string | null };
 export type Config = {
   brands: Record<string, string>; note: string | null; test_mode: boolean; open: boolean; min_order: number; first_free: boolean;
-  support: { whatsapp?: string; phone?: string; faq?: [string, string][] }; banners: Banner[]; districts: District[];
+  support: { whatsapp?: string; phone?: string; faq?: [string, string][] }; banners: Banner[]; districts: District[]; campaigns?: { id: number; name: string; subtitle: string | null; color: string; ends_at: string }[];
   welcome: { on: boolean; ver: number; title: string; body: string } | null;
 };
 export type MenuItem = { item_id: number; name: string; unit: string; sold_by: string; price: number; old_price: number | null; pct: number; family: string | null; brand: string; available: number; photo: string | null; icon: string | null; color: string | null };

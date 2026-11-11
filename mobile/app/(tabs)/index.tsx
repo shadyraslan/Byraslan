@@ -92,6 +92,13 @@ export default function Home() {
           </ScrollView>
         )}
 
+        {!fam && (config?.campaigns ?? []).map((c) => (
+          <Pressable key={c.id} onPress={() => router.push("/offers")} style={{ marginHorizontal: 18, marginTop: 14, backgroundColor: c.color, borderRadius: 18, padding: 16 }}>
+            <T w="x" style={{ color: "#fff", fontSize: 18 }}>🔥 {c.name}</T>
+            {!!c.subtitle && <T style={{ color: "#fff" }}>{c.subtitle}</T>}
+            <T style={{ color: "#fff", fontSize: 12 }}>لحد {new Date(c.ends_at).toLocaleDateString("ar-EG", { day: "numeric", month: "long" })} — شوف العروض ←</T>
+          </Pressable>
+        ))}
         {!fam && !!banners.length && (
           <View style={{ paddingTop: 14 }}>
             <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} snapToInterval={bw + 12} decelerationRate="fast" contentContainerStyle={{ paddingHorizontal: 18, gap: 12 }}
