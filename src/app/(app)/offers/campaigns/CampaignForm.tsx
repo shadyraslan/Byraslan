@@ -1,4 +1,5 @@
-const COLORS = ["#E11D48", "#EA580C", "#16A34A", "#7C3AED", "#0D0D0D"];
+/** كل لون ليه معنى ثابت عشان الزبون يتعود عليه */
+const COLORS: [string, string][] = [["#E11D48", "مهرجان كبير"], ["#16A34A", "عرض الأسبوع"], ["#EA580C", "تصفية"], ["#7C3AED", "مواسم"], ["#0D0D0D", "بلاك فرايداي"]];
 const local = (s?: string | null) => (s ? new Date(s).toLocaleString("sv-SE", { timeZone: "Africa/Cairo" }).slice(0, 16).replace(" ", "T") : "");
 type C = { id: number; name: string; subtitle: string | null; color: string; starts_at: string; ends_at: string; locations: string[] | null; channels: string[] };
 
@@ -15,9 +16,10 @@ export default function CampaignForm({ action, locs, c }: { action: (fd: FormDat
       <div className="row">
         <label className="fld">من<input type="datetime-local" name="starts" required defaultValue={local(c?.starts_at)} /></label>
         <label className="fld">لحد<input type="datetime-local" name="ends" required defaultValue={local(c?.ends_at)} /></label>
-        <div className="fld">لون الملصق<div className="row" style={{ gap: 6 }}>{COLORS.map((x, i) => (
-          <label key={x} style={{ display: "inline-grid", placeItems: "center", width: 30, height: 30, borderRadius: 8, background: x, cursor: "pointer" }}>
-            <input type="radio" name="color" value={x} defaultChecked={c ? c.color === x : i === 0} style={{ accentColor: "#fff" }} />
+        <div className="fld">لون الملصق<div className="row" style={{ gap: 6 }}>{COLORS.map(([x, t], i) => (
+          <label key={x} title={t} style={{ display: "inline-grid", justifyItems: "center", gap: 2, fontSize: 11, cursor: "pointer" }}>
+            <span style={{ display: "inline-grid", placeItems: "center", width: 30, height: 30, borderRadius: 8, background: x }}>
+              <input type="radio" name="color" value={x} defaultChecked={c ? c.color === x : i === 0} style={{ accentColor: "#fff" }} /></span>{t}
           </label>))}</div></div>
       </div>
       <div><b>القنوات: </b>

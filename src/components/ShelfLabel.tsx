@@ -36,8 +36,8 @@ export function LabelStyles() {
   .lbl.sticker .bc{padding:0;justify-content:center;flex-direction:column}
   .lbl.sticker .bc svg{height:6mm}
   .ofr{box-sizing:border-box;width:96mm;height:32mm;position:relative;background:#FFD21F;overflow:hidden;direction:rtl;font-family:'El Messiri',inherit;color:#0D0D0D;break-inside:avoid;page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .ofr .lg2{position:absolute;left:2mm;top:1.8mm;width:19mm;height:auto;display:block}
-  .ofr .rb{position:absolute;left:2mm;top:17.6mm;width:19mm;height:6.4mm;background:var(--oc);border-radius:1.4mm;transform:rotate(-3deg);display:flex;align-items:center;justify-content:center;gap:1.2mm;color:#fff;line-height:1}
+  .ofr .lg2{position:absolute;left:2mm;top:1.6mm;width:19mm;height:15mm;background:#000;border-radius:1.6mm;display:grid;place-items:center;overflow:hidden}.ofr .lg2 img{width:17.5mm;height:auto;display:block}
+  .ofr .rb{position:absolute;left:2mm;top:18mm;width:19mm;height:6.4mm;background:var(--oc);border-radius:1.4mm;transform:rotate(-3deg);display:flex;align-items:center;justify-content:center;gap:1.2mm;color:#fff;line-height:1}
   .ofr .rb b{font-size:3.4mm;font-weight:700}.ofr .rb strong{font-family:Cairo,inherit;font-size:4.8mm;font-weight:900;direction:ltr}
   .ofr .nm2{position:absolute;left:23mm;right:34mm;top:2.2mm;text-align:center;font-weight:700;font-size:5.8mm;line-height:1.15;max-height:13.4mm;overflow:hidden}
   .ofr .sz{position:absolute;left:23mm;right:34mm;top:16.6mm;white-space:nowrap;overflow:hidden;display:flex;align-items:center;gap:1.5mm;font-weight:700;font-size:3.8mm;justify-content:center}
@@ -104,7 +104,7 @@ export function OfferLabel({ d, offer }: { d: LabelData; offer: OfferInfo }) {
   const pct = d.old && d.price != null && d.old > d.price ? Math.round((1 - d.price / d.old) * 100) : 0;
   return (
     <div className="ofr" style={{ ["--oc" as string]: offer.color }}>
-      <img className="lg2" src="/logo-ink.png" alt="By Raslan" />
+      <div className="lg2"><img src="/logo-label.png" alt="By Raslan" /></div>
       <div className="bt"><span>{offer.name} 🔥</span>{offer.until && <><span className="sep" /><span><em>حتى</em> {offer.until}</span></>}</div>
       {pct > 0 && <div className="rb"><b>وفّر</b><strong>{pct}%</strong></div>}
       <div className="nm2">{d.name}</div>
