@@ -35,7 +35,7 @@ export function LabelStyles() {
   .lbl.sticker .top{display:grid;justify-items:center;align-content:center;gap:.6mm}
   .lbl.sticker .bc{padding:0;justify-content:center;flex-direction:column}
   .lbl.sticker .bc svg{height:6mm}
-  .ofr{box-sizing:border-box;width:96mm;height:32mm;position:relative;border-radius:3mm;border:.8mm solid #F5C800;background:#FFD21F;overflow:hidden;direction:rtl;font-family:Cairo,inherit;color:#0D0D0D;break-inside:avoid;page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .ofr{box-sizing:border-box;width:96mm;height:32mm;position:relative;background:#FFD21F;overflow:hidden;direction:rtl;font-family:Cairo,inherit;color:#0D0D0D;break-inside:avoid;page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .ofr .lp{position:absolute;inset:0 auto 0 0;width:21mm;background:#000;clip-path:polygon(0 0,100% 0,82% 100%,0 100%);display:grid;place-items:center;padding-right:3mm}
   .ofr .lp img{width:15.5mm;height:auto;display:block}
   .ofr .rb{position:absolute;left:20mm;top:-1.5mm;width:13.5mm;height:19mm;background:var(--oc);clip-path:polygon(0 0,100% 0,100% 100%,50% 84%,0 100%);transform:rotate(-5deg);display:grid;align-content:center;justify-items:center;color:#fff;line-height:1}
@@ -107,7 +107,7 @@ export function OfferLabel({ d, offer }: { d: LabelData; offer: OfferInfo }) {
   return (
     <div className="ofr" style={{ ["--oc" as string]: offer.color }}>
       <div className="lp"><img src="/logo-label.png" alt="By Raslan" /></div>
-      <div className="bt"><span>{offer.name} 🔥</span>{offer.until && <><span className="sep" /><span><em>حتى</em> {offer.until} 📅</span></>}</div>
+      <div className="bt"><span>{offer.name} 🔥</span>{offer.until && <><span className="sep" /><span><em>حتى</em> {offer.until}</span></>}</div>
       {pct > 0 && <div className="rb"><i /><b>وفّر</b><strong>{pct}%</strong></div>}
       <div className="nm2">{d.name}</div>
       {(d.size || d.maker) && <div className="sz">{[d.size ? `عبوة ${d.size}` : null, d.maker].filter(Boolean).join(" · ")}</div>}

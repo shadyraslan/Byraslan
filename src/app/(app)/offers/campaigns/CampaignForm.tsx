@@ -1,4 +1,4 @@
-const COLORS = ["#E11D48", "#EA580C", "#16A34A", "#2563EB", "#7C3AED", "#0D0D0D"];
+const COLORS = ["#E11D48", "#EA580C", "#16A34A", "#7C3AED", "#0D0D0D"];
 const local = (s?: string | null) => (s ? new Date(s).toLocaleString("sv-SE", { timeZone: "Africa/Cairo" }).slice(0, 16).replace(" ", "T") : "");
 type C = { id: number; name: string; subtitle: string | null; color: string; starts_at: string; ends_at: string; locations: string[] | null; channels: string[] };
 
