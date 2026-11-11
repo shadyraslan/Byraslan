@@ -6,7 +6,7 @@ import Refresh from "@/app/t/[token]/Refresh";
 
 type O = { id: number; no: number; status: string; created_at: string; est_total: number; total: number | null; delivery_fee: number; location_id: string; pay_method: string; channel: string; driver: string | null; customers: { name: string; area: string | null } | null; online_order_lines: { qty: number }[] };
 const COLS: [string, string[]][] = [["جديد", ["new"]], ["بيتحضّر", ["accepted", "preparing"]], ["جاهز", ["ready"]], ["مع الطيار", ["out"]]];
-const PAY: Record<string, string> = { cash: "كاش", card: "فيزا", instapay: "إنستاباي" };
+const PAY: Record<string, string> = { cash: "كاش", card: "فيزا", instapay: "إنستاباي", credit: "آجل" };
 
 export default async function Orders({ searchParams }: { searchParams: Promise<{ loc?: string }> }) {
   const me = await getMe();

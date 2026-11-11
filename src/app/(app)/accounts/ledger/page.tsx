@@ -14,7 +14,7 @@ export default async function Ledger({ searchParams }: { searchParams: Promise<{
   const sp = await searchParams;
   const me = await getMe();
   const ok = (t: string) => t === "supplier" ? can(me, "acc.view") || can(me, "purchase.edit") || can(me, "acc.pay")
-    : t === "employee" ? can(me, "hr.pay") || can(me, "acc.view") : t === "partner" ? can(me, "partner.settle") || can(me, "acc.view") : can(me, "cs.agent") || can(me, "orders.handle") || can(me, "acc.view");
+    : t === "employee" ? can(me, "hr.pay") || can(me, "acc.view") : t === "partner" ? can(me, "partner.settle") || can(me, "acc.view") : can(me, "cs.agent") || can(me, "orders.handle") || can(me, "acc.view") || can(me, "credit.view") || can(me, "credit.collect");
   const types = Object.keys(T).filter(ok);
   if (!types.length) redirect("/dashboard");
   const t = sp.t && types.includes(sp.t) ? sp.t : types[0];

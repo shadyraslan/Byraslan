@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Linking, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Alert, Linking, RefreshControl, ScrollView, Text, View } from "react-native";
 import { webUrl } from "@/lib/cs";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { hhmm, orderTotal, useTrack } from "@/lib/track";
+import { errMsg, sb } from "@/lib/supabase";
 import { BlackHead, Btn, Card, T } from "@/lib/ui";
 import { C, STATUS, money } from "@/lib/theme";
 
@@ -20,6 +21,8 @@ export default function Track() {
   const ins = useSafeAreaInsets();
   const { o, load } = useTrack(token);
   const [refreshing, setRefreshing] = useState(false);
+  const [subBusy, setSubBusy] = useState<number | null>(null);
+  const answer = async (line: number, ok: boolean) => { setSubBusy(line); const { error } = await sb.rpc("app_sub_answer", { p_token: token, p_line: line, p_accept: ok }); setSubBusy(null); if (error) Alert.alert("", errMsg(error)); load(); };
   if (!o) return <View style={{ flex: 1 }}><BlackHead title="تتبع الطلب" /><T style={{ padding: 20, color: C.mid }}>بيحمّل…</T></View>;
   const idx = idxOf(o.status);
   return (
@@ -32,6 +35,16 @@ export default function Track() {
           {o.status === "cancelled" ? <T style={{ color: C.red }}>{o.cancel_reason}</T>
             : o.status !== "delivered" ? <T style={{ color: C.mid }}>الوصول المتوقع خلال <T w="x">{o.status === "out" ? "15-20" : "35-45"} دقيقة</T></T> : null}
         </View>
+        {(o.subs ?? []).filter((s) => s.status === "offered" && (!s.deadline || new Date(s.deadline).getTime() > Date.now())).map((s) => (
+          <Card key={s.line} title="🔄 صنف مش موجود — فيه بديل">
+            <T style={{ fontSize: 13.5 }}><T w="x">{s.name}</T> مش موجود في الماركت. نبعتلك بداله <T w="x">{s.sub_name}</T> ({s.sub_qty} {s.unit ?? ""}) بـ {money(s.sub_price)} للوحدة؟</T>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Btn y title="وافق" busy={subBusy === s.line} onPress={() => answer(s.line, true)} style={{ flex: 1 }} />
+              <Btn outline title="لا، شيله" onPress={() => answer(s.line, false)} style={{ flex: 1 }} />
+            </View>
+            <T style={{ color: C.mid, fontSize: 11 }}>لو ماردّتش بسرعة {o.sub_pref === "replace" ? "هنبعت البديل" : "هنشيله من الطلب"}.</T>
+          </Card>))}
+        {!!o.points_earned && <Card><T style={{ color: C.green }}>⭐ كسبت {o.points_earned} نقطة من الطلب ده</T></Card>}
         {o.booking && o.scheduled_for && o.status !== "cancelled" && (
           <Card title="📅 حجز">
             <T w="x">{new Date(o.scheduled_for).toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long" })} — الساعة {o.slot}</T>

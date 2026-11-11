@@ -10,5 +10,6 @@ export type Address = { id: string; label: string; district_id: number; address:
 export type Profile = { name: string; phone: string; addresses: Address[] };
 export type OrderLine = { item_id: number; name: string; qty: number; unit: string; icon: string | null; prepared?: number; price?: number };
 export type MyOrder = { no: number; token: string; status: string; created_at: string; branch: string; district_id: number | null; total: number; lines: OrderLine[] };
-export type Quote = { sub: number; fee: number; discount: number; total: number; offers?: { name: string; amount: number }[]; code_ok: boolean; code_msg: string | null; first_free: boolean; min_order: number; error?: string };
+export type Quote = { sub: number; fee: number; discount: number; total: number; offers?: { name: string; amount: number }[]; code_ok: boolean; code_msg: string | null; first_free: boolean; min_order: number; error?: string; points_used?: number; points_off?: number; points_msg?: string | null; points_balance?: number | null; points_earn?: number };
+export type Points = { on: boolean; known?: boolean; balance?: number; value?: number; tier?: string; earn_per?: number; point_value?: number; min_redeem?: number; max_pct?: number; vip_mult?: number; expire_months?: number; expiring_30?: number; no_points?: boolean; history?: { kind: string; points: number; at: string; note: string | null }[] };
 export type Notice = { id: number; title: string; body: string; at: string };

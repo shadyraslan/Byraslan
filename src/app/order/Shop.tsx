@@ -127,7 +127,7 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
             )}
           </div>
         )}
-        <div className="row">{[["cash", "كاش عند الاستلام"], ["card", "فيزا عند الاستلام"], ["instapay", "إنستاباي"]].map(([k, l]) => <button key={k} className={info.pay === k ? "btn pri" : "btn"} onClick={() => setInfo({ ...info, pay: k })}>{l}</button>)}</div>
+        <div className="row">{[["cash", "كاش عند الاستلام"], ["card", "فيزا عند الاستلام"], ["instapay", "إنستاباي"], ...(staff ? [["credit", "آجل على حساب الشركة"]] : [])].map(([k, l]) => <button key={k} className={info.pay === k ? "btn pri" : "btn"} onClick={() => setInfo({ ...info, pay: k })}>{l}</button>)}</div>
       </div>
       <div className="card" style={{ marginTop: 12 }}>
         <div className="row" style={{ justifyContent: "space-between" }}><span>الأصناف (تقريبي)</span><b className="num">{f(sub)}</b></div>

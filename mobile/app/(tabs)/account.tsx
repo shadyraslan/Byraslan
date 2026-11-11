@@ -12,7 +12,7 @@ export default function Account() {
   const ins = useSafeAreaInsets();
   const { profile, tokens, district } = useApp();
   const groups: [string, R[]][] = [
-    ["الطلبات", [["📋", "طلباتي", `${tokens.length} طلب`, () => router.push("/orders")], ["🗺", "تتبع طلب", "آخر طلب", () => (tokens[0] ? router.push(`/order/${tokens[0]}`) : router.push("/orders"))], ["🔥", "العروض", "", () => router.push("/offers")]]],
+    ["الطلبات", [["📋", "طلباتي", `${tokens.length} طلب`, () => router.push("/orders")], ["🗺", "تتبع طلب", "آخر طلب", () => (tokens[0] ? router.push(`/order/${tokens[0]}`) : router.push("/orders"))], ["🔥", "العروض", "", () => router.push("/offers")], ["⭐", "نقاطي", "اجمع واستبدل", () => router.push("/points")]]],
     ["الحساب", [["👤", "بياناتي", profile.name || "الاسم والموبايل", () => router.push("/profile")], ["📍", "عناويني", `${profile.addresses.length} عنوان · ${district?.name ?? "اختار منطقتك"}`, () => router.push("/loc")], ["🔔", "الإشعارات", "رسايل باي رسلان ليك", () => router.push("/notices")]]],
     ["الدعم", [["💬", "خدمة العملاء", "", () => router.push("/support")], ["📄", "الشروط والأحكام", "", () => router.push({ pathname: "/legal", params: { k: "terms" } })], ["🔒", "سياسة الخصوصية", "", () => router.push({ pathname: "/legal", params: { k: "privacy" } })]]],
   ];

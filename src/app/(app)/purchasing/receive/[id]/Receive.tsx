@@ -3,10 +3,12 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { receivePo, requestOverride, type RecvLine } from "../../actions";
 import { uploadPhoto } from "@/lib/img";
+import ScanInput from "@/components/ScanInput";
+import { supabaseBrowser } from "@/lib/supabase/client";
 
-export type RLine = { line: number; item: string; unit: string; qty: number; left: number; price: number; ver: number | null; checks: string[]; certs: string[]; temp_max: number | null; min_days: number };
+export type RLine = { line: number; item_id: number; item: string; unit: string; qty: number; left: number; price: number; ver: number | null; checks: string[]; certs: string[]; temp_max: number | null; min_days: number };
 
-export default function Receive({ po, poNo, lines, approved }: { po: number; poNo: number; lines: RLine[]; approved: { id: number; reason: string }[] }) {
+export default function Receive({ po, poNo, lines, approved, codes, canLink }: { po: number; poNo: number; lines: RLine[]; approved: { id: number; reason: string }[]; codes: [string, number][]; canLink: boolean }) {
   const router = useRouter();
   const [L, setL] = useState<RecvLine[]>(lines.map((l) => ({ line: l.line, weighed: 0, rejected: 0, price: l.price, temp: null, expires: null, note: "", checks: l.checks.map((t) => ({ t, ok: undefined as unknown as boolean })), docs: l.certs.map((n) => ({ n })) })));
   const [inv, setInv] = useState("");
@@ -17,6 +19,30 @@ export default function Receive({ po, poNo, lines, approved }: { po: number; poN
   const [busy, setBusy] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const set = (i: number, p: Partial<RecvLine>) => setL((X) => X.map((x, j) => (j === i ? { ...x, ...p } : x)));
+  // المسح: كل مسحة لصنف بالقطعة = +1، والباركود المش معروف يتربط بصنف من الأمر
+  const [C, setC] = useState(() => new Map(codes));
+  const [unk, setUnk] = useState<string | null>(null);
+  const [hit, setHit] = useState<number | null>(null);
+  const bump = (i: number) => {
+    const d = lines[i];
+    setHit(i); setTimeout(() => setHit(null), 700);
+    if (d.unit === "كجم") return setMsg({ ok: true, t: `${d.item} — اكتب الوزن من الميزان` });
+    setL((X) => X.map((x, j) => (j === i ? { ...x, weighed: (x.weighed || 0) + 1 } : x)));
+    setMsg({ ok: true, t: `✓ ${d.item} — ${(L[i].weighed || 0) + 1} من ${d.left}` });
+  };
+  const onScan = (raw: string) => {
+    const code = raw.trim(), it = C.get(code);
+    const i = it != null ? lines.findIndex((d) => d.item_id === it) : -1;
+    if (i >= 0) { setUnk(null); return bump(i); }
+    if (it != null) return setMsg({ ok: false, t: "الصنف ده مش في أمر التوريد ده" });
+    setUnk(code); setMsg(null);
+  };
+  const link = async (i: number) => {
+    if (!unk) return;
+    const { error } = await supabaseBrowser().rpc("barcode_link", { p_code: unk, p_item: lines[i].item_id });
+    if (error) return setMsg({ ok: false, t: error.message.replace(/^.*?ERROR:\s*/, "") });
+    setC((m) => new Map(m).set(unk, lines[i].item_id)); setUnk(null); bump(i);
+  };
 
   const ready = () => {
     for (const [i, l] of L.entries()) {
@@ -46,10 +72,19 @@ export default function Receive({ po, poNo, lines, approved }: { po: number; poN
 
   return (
     <>
+      <div className="card" style={{ display: "grid", gap: 6 }}>
+        <ScanInput onScan={onScan} placeholder="امسح باركود الصنف (كل مسحة = قطعة)…" />
+        {unk && (
+          <div className="badmsg" style={{ display: "grid", gap: 6 }}>
+            <div>الباركود <b dir="ltr">{unk}</b> مش متسجّل على أي صنف.</div>
+            {canLink ? <div className="row" style={{ gap: 4 }}>{lines.map((d, i) => <button key={d.line} className="btn" onClick={() => link(i)}>ده {d.item}</button>)}<button className="btn" onClick={() => setUnk(null)}>تجاهل</button></div>
+              : <div>اطلب من حد معاه صلاحية «ربط الباركود» يربطه، أو اكتب العدد بإيدك.</div>}
+          </div>)}
+      </div>
       {lines.map((d, i) => {
         const l = L[i];
         return (
-          <div key={d.line} className="card">
+          <div key={d.line} className="card" style={hit === i ? { outline: "3px solid #16a34a" } : undefined}>
             <h2>{d.item} <span className="muted num" style={{ fontSize: 13 }}>المطلوب {d.left} {d.unit} · {d.ver ? `مواصفة v${d.ver}` : "⚠️ المواصفة مش معتمدة"}</span></h2>
             <div className="row">
               <label className="fld">الوزن على الميزان<input value={l.weighed || ""} onChange={(e) => set(i, { weighed: Number(e.target.value) || 0 })} inputMode="decimal" dir="ltr" /></label>

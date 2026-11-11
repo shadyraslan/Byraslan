@@ -9,20 +9,26 @@ import { useQuote } from "@/lib/quote";
 import { errMsg, sb } from "@/lib/supabase";
 import { BlackHead, BottomBar, Btn, Card, Chip, Err, Input, Ln, Radio, T } from "@/lib/ui";
 import { C, money } from "@/lib/theme";
+import type { Points } from "@/lib/types";
 
 const PAY: [string, string, string][] = [["cash", "💵", "كاش عند الاستلام"], ["card", "💳", "بطاقة بنكية عند الاستلام"], ["instapay", "📱", "محفظة إلكترونية / إنستاباي"]];
 
 export default function Checkout() {
   const ins = useSafeAreaInsets();
   const { code } = useLocalSearchParams<{ code?: string }>();
-  const { profile, saveProfile, saveAddress, district, menu, cart, clearCart, addToken, config } = useApp();
+  const { profile, saveProfile, saveAddress, district, menu, cart, clearCart, addToken, config, tokens } = useApp();
+  const [pts, setPts] = useState<Points | null>(null);
+  const [usePts, setUsePts] = useState(false);
+  const [subPref, setSubPref] = useState<"replace" | "ask" | "remove">("ask");
+  useEffect(() => { if (profile.phone) sb.rpc("app_points", { p_phone: profile.phone, p_tokens: tokens }).then(({ data }) => setPts((data ?? null) as Points | null)); }, [profile.phone, tokens]);
+  const canRedeem = !!pts?.known && (pts.balance ?? 0) >= (pts.min_redeem ?? 0) && (pts.balance ?? 0) > 0;
   const [pay, setPay] = useState("cash");
   const [note, setNote] = useState("");
   const [name, setName] = useState(profile.name);
   const [phone, setPhone] = useState(profile.phone);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const q = useQuote(code ?? "");
+  const q = useQuote(code ?? "", usePts && canRedeem ? pts?.balance ?? 0 : 0);
   // اطلب دلوقتي ولا احجز لميعاد
   const [mode, setMode] = useState<"now" | "book">("now");
   const [bdate, setBdate] = useState("");
@@ -59,6 +65,7 @@ export default function Checkout() {
     const { data, error } = await sb.rpc("app_order", {
       p_district: a.district_id, p_phone: d, p_name: nm, p_address: a.address, p_note: note, p_pay: pay,
       p_lines: lines.map((m) => ({ item_id: m.item_id, qty: cart[m.item_id] })), p_code: code || null,
+      p_points: usePts && canRedeem ? pts?.balance ?? 0 : 0, p_tokens: tokens, p_sub_pref: subPref,
     });
     setBusy(false);
     if (error) return setErr(errMsg(error));
@@ -109,6 +116,17 @@ export default function Checkout() {
         <Card title="طريقة الدفع" icon="💳">
           {PAY.map(([k, ic, l]) => <Radio key={k} icon={ic} on={pay === k} onPress={() => setPay(k)}><T w="x" style={{ fontSize: 13.5 }}>{l}</T></Radio>)}
         </Card>
+        {pts?.on && pts.known && !pts.no_points && (
+          <Card title="نقاطك" icon="⭐">
+            <T style={{ fontSize: 13 }}>معاك <T w="x">{pts.balance}</T> نقطة = {money(pts.value ?? 0)}</T>
+            {canRedeem ? <Radio icon="⭐" on={usePts} onPress={() => setUsePts(!usePts)}><T w="x" style={{ fontSize: 13.5 }}>استخدم نقاطك في الطلب ده{q?.points_off ? ` — خصم ${money(q.points_off)}` : ""}</T></Radio>
+              : <T style={{ color: C.mid, fontSize: 12 }}>تقدر تستبدل من أول {pts.min_redeem} نقطة</T>}
+            {!!q?.points_msg && usePts && <T style={{ color: C.mid, fontSize: 12 }}>{q.points_msg}</T>}
+            {!!q?.points_earn && <T style={{ color: C.green, fontSize: 12 }}>هتكسب {q.points_earn} نقطة لما الطلب يوصلك</T>}
+          </Card>)}
+        <Card title="لو صنف من الماركت مش موجود" icon="🔄">
+          {([["replace", "بدّله بأقرب بديل على طول"], ["ask", "ابعتلي البديل أوافق عليه"], ["remove", "شيله من الطلب"]] as const).map(([k, l]) => <Radio key={k} on={subPref === k} onPress={() => setSubPref(k)}><T w="x" style={{ fontSize: 13.5 }}>{l}</T></Radio>)}
+        </Card>
         <Card title="ملاحظات للمندوب" icon="📝">
           <Input value={note} onChangeText={setNote} placeholder="أي تعليمات خاصة للتوصيل..." multiline style={{ minHeight: 80, textAlignVertical: "top", paddingTop: 12 }} />
         </Card>
@@ -117,6 +135,7 @@ export default function Checkout() {
           <View style={{ height: 1, backgroundColor: C.border }} />
           <Ln l="المجموع" v={money(q?.sub ?? 0)} />
           {!!q?.discount && <Ln l={`الخصم (${(q.offers ?? []).map((o) => o.name).join(" + ") || code})`} v={`- ${money(q.discount)}`} color={C.green} />}
+          {!!q?.points_off && <Ln l={`خصم النقاط (${q.points_used} نقطة)`} v={`- ${money(q.points_off)}`} color={C.green} />}
           <Ln l="التوصيل" v={q ? (q.fee ? money(q.fee) : "مجاني") : "…"} color={q && !q.fee ? C.green : undefined} />
           <Ln l="الإجمالي" v={money(q?.total ?? 0)} big />
           <T style={{ color: C.mid, fontSize: 11 }}>{config?.note || "السعر النهائي بيتحسب بالوزن الفعلي للعلبة"}</T>

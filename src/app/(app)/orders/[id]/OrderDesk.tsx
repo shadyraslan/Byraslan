@@ -11,7 +11,7 @@ type O = {
   online_order_boxes: { box_sn: number; line: number; qty: number }[];
 };
 const ST: Record<string, string> = { new: "جديد", accepted: "اتقبل", preparing: "بيتحضّر", ready: "جاهز", out: "مع الطيار", delivered: "اتسلّم", cancelled: "اتلغى" };
-const PAY: Record<string, string> = { cash: "كاش", card: "فيزا", instapay: "إنستاباي" };
+const PAY: Record<string, string> = { cash: "كاش", card: "فيزا", instapay: "إنستاباي", credit: "آجل" };
 
 export default function OrderDesk({ o, canCancel }: { o: O; canCancel: boolean }) {
   const router = useRouter();

@@ -8,6 +8,8 @@ export const NAV: NavGroup[] = [
     { href: "/cs/new", label: "طلب أو حجز جديد", icon: "phone", color: "#059669", perms: ["cs.agent", "orders.handle"] },
     { href: "/cs/orders", label: "متابعة الطلبات وتعديل الحجوزات", icon: "search", color: "#0ea5e9", perms: ["cs.agent", "orders.handle"] },
     { href: "/cs/customers", label: "العملاء", icon: "hr", color: "#7c3aed", perms: ["cs.agent", "orders.handle"] },
+    { href: "/credit", label: "حسابات الآجل (جملة وشركات)", icon: "wallet", color: "#2563eb", perms: ["credit.view", "credit.open", "credit.collect"] },
+    { href: "/loyalty", label: "نقاط العملاء", icon: "star", color: "#ca8a04", perms: ["loyalty.edit", "loyalty.adjust", "cs.agent"] },
     { href: "/complaints", label: "الشكاوى والتعويضات", icon: "warning", color: "#e11d48", perms: ["orders.handle", "cs.agent"] },
   ] },
   { id: "orders", title: "الطلبات والتوصيل", icon: "app", color: "#0ea5e9", links: [
@@ -50,7 +52,8 @@ export const NAV: NavGroup[] = [
     { href: "/accounts", label: "الملخص اليومي", icon: "reports", color: "#2563eb", perms: ["acc.view"] },
     { href: "/accounts/expenses", label: "المصروفات", icon: "wallet", color: "#1d4ed8", perms: ["acc.view", "acc.post", "acc.approve"] },
     { href: "/accounts/suppliers", label: "حسابات الموردين", icon: "partner", color: "#0f766e", perms: ["acc.view", "acc.pay"] },
-    { href: "/accounts/ledger", label: "كارت الحساب (مورد/موظف/شريك/عميل)", icon: "scroll", color: "#7c3aed", perms: ["acc.view", "hr.pay", "partner.settle", "purchase.edit", "acc.pay", "cs.agent"] },
+    { href: "/accounts/ledger", label: "كارت الحساب (مورد/موظف/شريك/عميل)", icon: "scroll", color: "#7c3aed", perms: ["acc.view", "hr.pay", "partner.settle", "purchase.edit", "acc.pay", "cs.agent", "credit.view", "credit.collect"] },
+    { href: "/credit", label: "حسابات الآجل والمتأخرات", icon: "wallet", color: "#2563eb", perms: ["credit.view", "credit.open", "credit.collect"] },
     { href: "/accounts/pnl", label: "الأرباح والخسائر وتقارير الفروع", icon: "reports", color: "#16a34a", perms: ["acc.view", "acc.pnl"] },
   ] },
   { id: "items", title: "الأصناف", icon: "items", color: "#ca8a04", links: [

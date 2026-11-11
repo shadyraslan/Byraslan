@@ -7,6 +7,8 @@ export type Track = {
   driver: string | null; address: string | null; pay: string; cancel_reason: string | null;
   booking?: boolean; scheduled_for?: string | null; slot?: string | null; deposit?: number; deposit_paid?: boolean; can_edit?: boolean;
   lines: { item_id: number; name: string; unit: string; qty: number; prepared: number; price: number; icon: string | null }[];
+  points_used?: number; points_off?: number; points_earned?: number | null; sub_pref?: string;
+  subs?: { line: number; name: string; sub_name: string | null; sub_qty: number; sub_price: number; status: string; deadline: string | null; unit: string | null }[] | null;
 };
 export function useTrack(token: string, every = 15000) {
   const [o, setO] = useState<Track | null>(null);

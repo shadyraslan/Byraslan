@@ -11,9 +11,9 @@ import OrdersPanel, { useOrders } from "./Orders";
 
 type Item = { id: number; name: string; unit: string; sold_by: string; arm: string; kind: string; fams?: number[]; plu: string | null; price: number };
 type Promo = { id: number; name: string; kind: string; value: number; max_off: number | null; auto: boolean; code: string | null; min_order: number; families: number[] | null; stackable: boolean; ends_at: string | null };
-type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number }[]; promos?: Promo[]; unknown_item?: number | null; can_unknown?: boolean };
+type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number }[]; promos?: Promo[]; unknown_item?: number | null; can_unknown?: boolean; can_credit?: boolean };
 type Line = { item_id: number; name: string; unit: string; box_sn: number | null; qty: number; unit_price: number; unknown_code?: string };
-type Sale = { client_id: string; shift: string; at: string; local_no: string; lines: Line[]; discount: number; cash: number; card: number; offline: boolean; promo_code?: string | null };
+type Sale = { client_id: string; shift: string; at: string; local_no: string; lines: Line[]; discount: number; cash: number; card: number; offline: boolean; promo_code?: string | null; credit?: number; credit_customer?: number | null; credit_name?: string | null };
 type Done = Sale & { no?: number; conflicts?: string[]; total: number; change: number };
 type Shift = { client_id: string; loc: string; loc_name: string; opening_cash: number; opened_at: string; server_id?: number; closing?: { counted: number; closed_at: string } };
 type Me = { id: string; name: string; home: string | null };
@@ -60,6 +60,19 @@ export default function Cashier() {
     const { data, error } = await sb.rpc("staff_credit_check", { p_phone: stPhone });
     if (error) return setStErr(errText(error));
     setStInfo(data as { id: string; name: string; available: number; discount_pct: number });
+  };
+  // آجل لعميل جملة/شركة
+  type CrInfo = { customer_id: number; name: string | null; company: string | null; available: number; balance: number; overdue: number; blocked: string | null };
+  const [crPhone, setCrPhone] = useState("");
+  const [crAmt, setCrAmt] = useState("");
+  const [crInfo, setCrInfo] = useState<CrInfo | null>(null);
+  const [crErr, setCrErr] = useState<string | null>(null);
+  const findCredit = async () => {
+    setCrInfo(null); setCrErr(null);
+    if (crPhone.replace(/\D/g, "").length < 10) return;
+    const { data, error } = await sb.rpc("credit_check", { p_phone: crPhone });
+    if (error) return setCrErr(errText(error));
+    setCrInfo(data as CrInfo);
   };
   const [rec, setRec] = useState<Done | null>(null);
   const [view, setView] = useState<"sell" | "orders" | "list" | "close">("sell");
@@ -267,7 +280,8 @@ export default function Cashier() {
   const d = Math.min((Number(disc) || 0) + stDisc + promo.amt, sub);
   const total = Math.max(r2(sub - d), 0);
   const st = stInfo ? Number(stAmt) || 0 : 0;
-  const paid = (Number(cash) || 0) + (Number(card) || 0) + st;
+  const cr = crInfo ? (crAmt === "" ? Math.max(total - (Number(card) || 0) - st - (Number(cash) || 0), 0) : Number(crAmt) || 0) : 0;
+  const paid = (Number(cash) || 0) + (Number(card) || 0) + st + cr;
   const pay = async () => {
     if (!shift || !lines.length) return bad("الفاتورة فاضية");
     if (!navigator.onLine) return bad(OFF);
@@ -275,19 +289,23 @@ export default function Cashier() {
     if (stAmt && !stInfo) return bad("دوّر على الموظف برقم موبايله الأول");
     if (st > total - k) return bad("المبلغ على حساب الموظف أكبر من الباقي من الفاتورة");
     if (stInfo && st > stInfo.available) return bad(`المتاح للموظف ${f2(stInfo.available)} ج بس`);
-    const c = cash ? Number(cash) || 0 : Math.max(total - k - st, 0);
-    if (c + k + st < total) return bad(`المدفوع أقل من الإجمالي (${f2(total)} ج)`);
+    if (crPhone && !crInfo) return bad("دوّر على عميل الآجل برقمه الأول");
+    if (crInfo?.blocked) return bad(`مينفعش آجل: ${crInfo.blocked}`);
+    if (crInfo && cr > crInfo.available) return bad(`المتاح آجل للعميل ${f2(crInfo.available)} ج بس`);
+    if (cr + st > total - k) return bad("الآجل أكبر من الباقي من الفاتورة");
+    const c = cash ? Number(cash) || 0 : Math.max(total - k - st - cr, 0);
+    if (c + k + st + cr < total) return bad(`المدفوع أقل من الإجمالي (${f2(total)} ج)`);
     if (k > total) return bad("الفيزا أكتر من الإجمالي");
-    const s: Sale = { client_id: uuid(), shift: shift.client_id, at: new Date().toISOString(), local_no: "", lines, discount: d, cash: c, card: k, offline: false, promo_code: pcode.trim().toUpperCase() || null };
+    const s: Sale = { client_id: uuid(), shift: shift.client_id, at: new Date().toISOString(), local_no: "", lines, discount: d, cash: c, card: k, offline: false, promo_code: pcode.trim().toUpperCase() || null, credit: cr, credit_customer: crInfo?.customer_id ?? null, credit_name: crInfo ? crInfo.company ?? crInfo.name : null };
     setWorking(true);
     const { data, error } = await sb.rpc("pos_sync", { p_loc: shift.loc, p_shifts: [{ client_id: shift.client_id, opening_cash: shift.opening_cash, opened_at: shift.opened_at }],
       p_sales: [{ ...s, staff: st, staff_id: stInfo?.id ?? null, lines: lines.map(({ item_id, box_sn, qty, unit_price, unknown_code }) => ({ item_id, box_sn, qty, unit_price, unknown_code })) }] });
     setWorking(false);
     if (error) return bad(`الفاتورة ماتسجلتش: ${errText(error)}`);
     const r = (data as { sales: { no: number; conflicts?: string[] }[] }).sales[0];
-    const dn: Done = { ...s, no: r?.no, conflicts: r?.conflicts ?? [], total: totalOf(s), change: r2(Math.max(c + k + st - totalOf(s), 0)) };
+    const dn: Done = { ...s, no: r?.no, conflicts: r?.conflicts ?? [], total: totalOf(s), change: r2(Math.max(c + k + st + cr - totalOf(s), 0)) };
     const all = [dn, ...((await kv.get<Done[]>("done")) ?? [])].slice(0, 300); await kv.set("done", all); setDone(all);
-    setRec(dn); setLines([]); setDisc(""); setPcode(""); setCash(""); setCard(""); setStPhone(""); setStAmt(""); setStInfo(null); setMsg(null);
+    setRec(dn); setLines([]); setDisc(""); setPcode(""); setCash(""); setCard(""); setStPhone(""); setStAmt(""); setStInfo(null); setCrPhone(""); setCrAmt(""); setCrInfo(null); setMsg(null);
     setTimeout(() => window.print(), 80);
   };
 
@@ -430,6 +448,18 @@ export default function Cashier() {
               <div className="muted" style={{ fontSize: 12 }}>اكتب موبايل الموظف حتى لو دافع كاش عشان ياخد خصم الموظفين — والمبلغ بس لو على حسابه.</div>
               {stErr && <div className="badmsg">{stErr}</div>}
             </details>
+            {snap?.can_credit && (
+              <details open={!!crPhone}>
+                <summary style={{ cursor: "pointer" }}>آجل لعميل جملة/شركة {crInfo ? `— ${crInfo.company ?? crInfo.name}` : ""}</summary>
+                <div className="row" style={{ gap: 6, marginTop: 6 }}>
+                  <input value={crPhone} onChange={(e) => { setCrPhone(e.target.value); setCrInfo(null); }} onBlur={findCredit} placeholder="موبايل العميل" inputMode="tel" dir="ltr" style={{ flex: 1 }} />
+                  <input value={crAmt} onChange={(e) => setCrAmt(e.target.value)} placeholder={crInfo ? f2(cr) : "المبلغ"} inputMode="decimal" dir="ltr" style={{ width: 90 }} />
+                </div>
+                {crInfo && (crInfo.blocked ? <div className="badmsg">{crInfo.blocked}</div>
+                  : <div className="muted">رصيده {f2(crInfo.balance)} ج — المتاح {f2(crInfo.available)} ج{crInfo.overdue > 0 ? ` · متأخر ${f2(crInfo.overdue)} ج` : ""}</div>)}
+                <div className="muted" style={{ fontSize: 12 }}>لو سبت المبلغ فاضي، الباقي كله بيتسجّل آجل.</div>
+                {crErr && <div className="badmsg">{crErr}</div>}
+              </details>)}
             {paid > total && <div className="okmsg">الباقي للعميل: {f2(paid - total)} ج</div>}
             <button className="btn pri" onClick={pay} disabled={!lines.length || !online || working} style={{ height: 56, fontSize: 18 }}>{working ? "بيسجّل…" : `ادفع ${f2(total)} ج`}</button>
           </div>
@@ -473,6 +503,8 @@ export default function Cashier() {
           <div className="rrow" style={{ fontWeight: 800, fontSize: "12pt" }}><span>الإجمالي</span><span>{f2(rec.total)}</span></div>
           {rec.cash > 0 && <div className="rrow"><span>كاش</span><span>{f2(rec.cash)}</span></div>}
           {rec.card > 0 && <div className="rrow"><span>فيزا</span><span>{f2(rec.card)}</span></div>}
+          {!!rec.credit && <div className="rrow"><span>آجل على {rec.credit_name ?? "حساب العميل"}</span><span>{f2(rec.credit)}</span></div>}
+          {!!rec.credit && <div style={{ marginTop: 10, borderTop: "1px dashed #000", paddingTop: 14, textAlign: "center", fontSize: 12 }}>توقيع المستلم: ..................</div>}
           {rec.change > 0 && <div className="rrow"><span>الباقي</span><span>{f2(rec.change)}</span></div>}
           <div style={{ textAlign: "center", marginTop: 6 }}>شكرًا لزيارتك — {me.name}</div>
         </div>
