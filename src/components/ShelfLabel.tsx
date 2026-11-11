@@ -8,8 +8,8 @@ const kg = (u?: string | null) => (u === "كجم" ? " / كجم" : "");
 /** ستايل الملصقات (مرة واحدة في الصفحة) — مقاسات بالمللي عشان الطباعة تطلع مظبوطة */
 export function LabelStyles() {
   return <style>{`
-  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@700;900&display=swap');
-  .lbl{box-sizing:border-box;border:.2mm solid #ddd;break-inside:avoid;page-break-inside:avoid;font-family:inherit;color:#0D0D0D;background:#fff;overflow:hidden;position:relative;direction:rtl;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@800;900&family=El+Messiri:wght@600;700&display=swap');
+  .lbl{box-sizing:border-box;border:.2mm solid #ddd;break-inside:avoid;page-break-inside:avoid;font-family:'El Messiri',inherit;color:#0D0D0D;background:#fff;overflow:hidden;position:relative;direction:rtl;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .lbl.shelf{width:70mm;height:38mm;display:grid;grid-template-rows:9mm 1fr 11mm}
   .lbl.sticker{width:40mm;height:26mm;display:grid;grid-template-rows:1fr 9mm;padding:1mm}
   .lbl .bar{background:#0D0D0D;color:#F5C800;display:flex;align-items:center;justify-content:space-between;padding:0 2mm;font-size:2.6mm;font-weight:700}
@@ -19,7 +19,7 @@ export function LabelStyles() {
   .lbl .mid{display:flex;justify-content:space-between;align-items:center;padding:1mm 2.5mm;gap:2mm}
   .lbl .nm{font-weight:800;font-size:3.6mm;line-height:1.15;max-height:8.4mm;overflow:hidden}
   .lbl .sub{font-size:2.5mm;color:#666;margin-top:.6mm}
-  .lbl .pr{font-weight:900;font-size:9mm;line-height:1;white-space:nowrap;background:#F5C800;padding:1mm 2mm;border-radius:1.5mm}
+  .lbl .pr{font-family:Cairo,inherit;font-weight:900;font-size:9mm;line-height:1;white-space:nowrap;background:#F5C800;padding:1mm 2mm;border-radius:1.5mm}
   .lbl .pr small{font-size:3mm;font-weight:700}
   .lbl .bc{display:flex;align-items:center;justify-content:space-between;padding:0 2.5mm 1mm}
   .lbl .bc svg{height:9mm;width:auto;max-width:42mm}
@@ -35,20 +35,20 @@ export function LabelStyles() {
   .lbl.sticker .top{display:grid;justify-items:center;align-content:center;gap:.6mm}
   .lbl.sticker .bc{padding:0;justify-content:center;flex-direction:column}
   .lbl.sticker .bc svg{height:6mm}
-  .ofr{box-sizing:border-box;width:96mm;height:32mm;position:relative;background:#FFD21F;overflow:hidden;direction:rtl;font-family:Cairo,inherit;color:#0D0D0D;break-inside:avoid;page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .ofr{box-sizing:border-box;width:96mm;height:32mm;position:relative;background:#FFD21F;overflow:hidden;direction:rtl;font-family:'El Messiri',inherit;color:#0D0D0D;break-inside:avoid;page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .ofr .lp{position:absolute;inset:0 auto 0 0;width:21mm;background:#000;clip-path:polygon(0 0,100% 0,82% 100%,0 100%);display:grid;place-items:center;padding-right:3mm}
   .ofr .lp img{width:15.5mm;height:auto;display:block}
   .ofr .rb{position:absolute;left:20mm;top:-1.5mm;width:13.5mm;height:19mm;background:var(--oc);clip-path:polygon(0 0,100% 0,100% 100%,50% 84%,0 100%);transform:rotate(-5deg);display:grid;align-content:center;justify-items:center;color:#fff;line-height:1}
   .ofr .rb i{position:absolute;inset:1mm 1mm 3.5mm;border:.25mm dashed rgba(255,255,255,.75);font-style:normal}
-  .ofr .rb b{font-size:3.6mm;font-weight:900}.ofr .rb strong{font-size:6.2mm;font-weight:900;direction:ltr}
-  .ofr .nm2{position:absolute;left:35mm;right:33mm;top:2mm;text-align:center;font-weight:900;font-size:5.2mm;line-height:1.1;max-height:11.6mm;overflow:hidden}
+  .ofr .rb b{font-size:3.6mm;font-weight:700}.ofr .rb strong{font-family:Cairo,inherit;font-size:6.2mm;font-weight:900;direction:ltr}
+  .ofr .nm2{position:absolute;left:35mm;right:33mm;top:2mm;text-align:center;font-weight:700;font-size:5.4mm;line-height:1.15;max-height:12.4mm;overflow:hidden}
   .ofr .sz{position:absolute;left:35mm;right:33mm;top:15mm;white-space:nowrap;overflow:hidden;display:flex;align-items:center;gap:1.5mm;font-weight:700;font-size:3mm;justify-content:center}
   .ofr .sz::before,.ofr .sz::after{content:"";flex:0 1 6mm;height:.35mm;background:#7a1010}
-  .ofr .op{position:absolute;right:4mm;top:2.3mm;background:#0D0D0D;color:#fff;transform:skewX(-12deg);padding:.6mm 3mm;font-weight:900;font-size:4.6mm;line-height:1.1;white-space:nowrap}
+  .ofr .op{position:absolute;right:4mm;top:2.3mm;background:#0D0D0D;color:#fff;transform:skewX(-12deg);padding:.6mm 3mm;font-family:Cairo,inherit;font-weight:800;font-size:4.6mm;line-height:1.1;white-space:nowrap}
   .ofr .op::after{content:"";position:absolute;left:1.5mm;right:1.5mm;top:50%;height:.5mm;background:var(--oc);transform:rotate(-12deg)}
   .ofr .op small{font-size:2.6mm}
   .ofr .np{position:absolute;right:2.5mm;top:9.5mm;width:29mm;height:15.5mm;background:var(--oc);border:.7mm solid #fff;border-radius:3mm;transform:rotate(-4deg);display:flex;align-items:center;justify-content:center;gap:1.2mm;color:#fff;box-shadow:0 .6mm 0 rgba(0,0,0,.25)}
-  .ofr .np b{font-size:12mm;font-weight:900;line-height:1;direction:ltr}.ofr .np span{font-size:3.6mm;font-weight:900}
+  .ofr .np b{font-family:Cairo,inherit;font-size:12.5mm;font-weight:900;line-height:1;direction:ltr;letter-spacing:-.3mm;text-shadow:0 .5mm 0 rgba(0,0,0,.28)}.ofr .np span{font-family:Cairo,inherit;font-size:3.8mm;font-weight:900;color:#FFD21F}
   .ofr .sp{position:absolute;right:30.5mm;top:7mm;width:3mm;height:3mm}
   .ofr .sp i{position:absolute;width:.6mm;height:2.6mm;background:var(--oc);border-radius:.3mm}
   .ofr .bt{position:absolute;left:0;right:0;bottom:0;height:6.2mm;background:#0D0D0D;display:flex;align-items:center;gap:2mm;padding-right:33mm;padding-left:22mm;color:#fff;font-weight:700;font-size:2.9mm;white-space:nowrap}
