@@ -3,7 +3,7 @@ import { RefreshControl, ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/lib/store";
-import { sb } from "@/lib/supabase";
+import { errMsg, sb } from "@/lib/supabase";
 import { BlackHead, Btn, Card, T } from "@/lib/ui";
 import { C, money } from "@/lib/theme";
 import type { Points } from "@/lib/types";
@@ -16,6 +16,17 @@ export default function PointsScreen() {
   const { profile, tokens } = useApp();
   const [p, setP] = useState<Points | null>(null);
   const [busy, setBusy] = useState(false);
+  const [code, setCode] = useState<{ code: string; expires_at: string } | null>(null);
+  const [cerr, setCerr] = useState<string | null>(null);
+  const [, tick] = useState(0);
+  useEffect(() => { if (!code) return; const i = setInterval(() => tick((x) => x + 1), 1000); return () => clearInterval(i); }, [code]);
+  const getCode = async () => {
+    setCerr(null);
+    const { data, error } = await sb.rpc("app_points_code", { p_phone: profile.phone, p_tokens: tokens });
+    if (error) return setCerr(errMsg(error));
+    setCode(data as { code: string; expires_at: string });
+  };
+  const left = code ? Math.max(0, Math.round((new Date(code.expires_at).getTime() - Date.now()) / 1000)) : 0;
   const load = async () => { const { data } = await sb.rpc("app_points", { p_phone: profile.phone, p_tokens: tokens }); setP((data ?? null) as Points | null); };
   useEffect(() => { load(); }, [profile.phone, tokens.length]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
@@ -38,6 +49,23 @@ export default function PointsScreen() {
                 <T style={{ color: C.white }}>نقطة = {money(p.value ?? 0)}</T>
                 {!!p.expiring_30 && <T style={{ color: "#F59E0B", fontSize: 12 }}>⏳ {p.expiring_30} نقطة هتخلص خلال 30 يوم</T>}
               </View>
+              {!p.no_points && (
+                <Card title="في الفرع 🏪">
+                  {code && left > 0 ? (
+                    <View style={{ alignItems: "center", gap: 6 }}>
+                      <T style={{ color: C.mid, fontSize: 12 }}>ورّي الكود ده للكاشير</T>
+                      <T w="x" style={{ fontSize: 42, letterSpacing: 8 }}>{code.code}</T>
+                      <T style={{ color: C.mid, fontSize: 12 }}>شغال {Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")} — بيكسّبك نقاط على الفاتورة وتقدر تستبدل بيه</T>
+                      <Btn outline title="كود جديد" onPress={getCode} />
+                    </View>
+                  ) : (
+                    <>
+                      <T style={{ fontSize: 13 }}>اشتري من أي فرع واكسب نقاط أو استبدلها: اطلّع الكود وورّيه للكاشير.</T>
+                      <Btn y title="اطلّع كود الفرع" onPress={getCode} />
+                    </>
+                  )}
+                  {cerr && <T style={{ color: C.red, fontSize: 12 }}>{cerr}</T>}
+                </Card>)}
               {p.no_points && <Card><T style={{ color: C.mid }}>حسابات الجملة مابتكسبش نقاط.</T></Card>}
               <Card title="إزاي بتشتغل">
                 <T style={{ fontSize: 13 }}>• كل {p.earn_per} ج = نقطة{p.tier === "vip" ? ` (وإنت VIP × ${p.vip_mult})` : ""} — بتنزل لما الطلب يوصلك</T>

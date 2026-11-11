@@ -1,0 +1,6 @@
+-- ============ 0056 النقاط في الفروع — قرار شادي: "مافيش تطبيق مافيش points"
+-- العميل بيطلّع كود 6 أرقام من "نقاطي" في التطبيق (مدته loyalty.code_minutes، افتراضي 5 د) ← الكاشير يكتبه ← يكسب على الفاتورة و/أو يستبدل.
+-- جداول: points_codes؛ أعمدة: points_moves.sale_id، sales.paid_points/points_used/points_customer.
+-- دوال: app_points_code(phone, tokens) للتطبيق، pos_points_check(code) للكاشير، و pos_sync بقت بتقبل points_code + points.
+-- القناة 'store' اتضافت لـ loyalty.channels. الكود بيتستخدم مرة واحدة. الفاتورة الآجل مابتكسبش نقاط.
+-- (اتطبّقت على الداتابيز بنفس محتوى الـ migration "0056_points_store" عن طريق apply_migration)

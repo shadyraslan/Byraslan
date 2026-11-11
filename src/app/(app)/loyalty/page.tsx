@@ -6,11 +6,11 @@ import { getMe, can, need } from "@/lib/perms";
 
 type C = { id: number; name: string | null; phone: string; tier: string; company: string | null; balance: number; earned: number; redeemed: number; expiring_30: number; last: string | null };
 type H = { kind: string; points: number; at: string; note: string | null; expires_at: string | null; who: string | null; order_no: number | null; token: string | null };
-type Cfg = { on?: boolean; earn_per?: number; point_value?: number; min_redeem?: number; expire_months?: number; vip_mult?: number; wholesale?: boolean; max_pct?: number; channels?: string[] };
+type Cfg = { on?: boolean; earn_per?: number; point_value?: number; min_redeem?: number; expire_months?: number; vip_mult?: number; wholesale?: boolean; max_pct?: number; channels?: string[]; code_minutes?: number };
 export const dynamic = "force-dynamic";
 const TIER: Record<string, string> = { normal: "عادي", vip: "VIP", wholesale: "جملة" };
 const KIND: Record<string, string> = { earn: "كسب من طلب", redeem: "استبدال", refund: "رجوع نقاط طلب اتلغى", reverse: "طلب رجع", expire: "انتهت مدتها", adjust: "تعديل يدوي" };
-const CH: [string, string][] = [["app", "التطبيق"], ["web", "الموقع"], ["phone", "تليفون"], ["whatsapp", "واتساب"]];
+const CH: [string, string][] = [["app", "التطبيق"], ["store", "الفروع (الكاشير بكود التطبيق)"], ["web", "الموقع"], ["phone", "تليفون"], ["whatsapp", "واتساب"]];
 const msg = (e: { message?: string } | null) => (e?.message ?? "").replace(/^.*?ERROR:\s*/, "");
 const S = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 function back(q: string, error: { message?: string } | null, ok: string): never {
@@ -24,7 +24,7 @@ async function saveCfg(fd: FormData) {
   const sb = await supabaseServer();
   const { error } = await sb.rpc("loyalty_save", { p: {
     on: fd.get("on") === "on", earn_per: Number(S(fd, "earn_per")), point_value: Number(S(fd, "point_value")), min_redeem: Number(S(fd, "min_redeem")),
-    expire_months: Number(S(fd, "expire_months")), vip_mult: Number(S(fd, "vip_mult")), wholesale: fd.get("wholesale") === "on", max_pct: Number(S(fd, "max_pct")),
+    expire_months: Number(S(fd, "expire_months")), vip_mult: Number(S(fd, "vip_mult")), wholesale: fd.get("wholesale") === "on", max_pct: Number(S(fd, "max_pct")), code_minutes: Number(S(fd, "code_minutes")),
     channels: fd.getAll("ch").map(String) } });
   back("", error, "اتحفظت إعدادات النقاط");
 }
@@ -130,6 +130,7 @@ export default async function Loyalty({ searchParams }: { searchParams: Promise<
             <label className="fld">أقل استبدال (نقطة)<input name="min_redeem" type="number" min={0} defaultValue={cfg.min_redeem ?? 200} style={{ width: 90 }} /></label>
             <label className="fld">أقصى استبدال % من الطلب<input name="max_pct" type="number" min={0} max={100} defaultValue={cfg.max_pct ?? 50} style={{ width: 90 }} /></label>
             <label className="fld">بتنتهي بعد (شهور)<input name="expire_months" type="number" min={1} defaultValue={cfg.expire_months ?? 6} style={{ width: 90 }} /></label>
+            <label className="fld">كود الفرع شغال (دقايق)<input name="code_minutes" type="number" min={1} max={60} defaultValue={cfg.code_minutes ?? 5} style={{ width: 90 }} /></label>
             <label className="fld">مضاعف VIP<input name="vip_mult" inputMode="decimal" dir="ltr" defaultValue={cfg.vip_mult ?? 1.5} style={{ width: 90 }} /></label>
           </div>
           <label className="row" style={{ gap: 6 }}><input type="checkbox" name="wholesale" defaultChecked={!!cfg.wholesale} /> عملاء الجملة ياخدوا نقاط (الطلبات الآجل مابتاخدش نقاط)</label>
