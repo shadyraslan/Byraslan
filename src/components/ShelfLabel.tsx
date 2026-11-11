@@ -9,10 +9,12 @@ const kg = (u?: string | null) => (u === "كجم" ? " / كجم" : "");
 export function LabelStyles() {
   return <style>{`
   .lbl{box-sizing:border-box;border:.2mm solid #ddd;break-inside:avoid;page-break-inside:avoid;font-family:inherit;color:#0D0D0D;background:#fff;overflow:hidden;position:relative;direction:rtl;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .lbl.shelf{width:70mm;height:38mm;display:grid;grid-template-rows:6mm 1fr 12mm}
+  .lbl.shelf{width:70mm;height:38mm;display:grid;grid-template-rows:9mm 1fr 11mm}
   .lbl.sticker{width:40mm;height:26mm;display:grid;grid-template-rows:1fr 9mm;padding:1mm}
   .lbl .bar{background:#0D0D0D;color:#F5C800;display:flex;align-items:center;justify-content:space-between;padding:0 2mm;font-size:2.6mm;font-weight:700}
-  .lbl .logo{display:inline-grid;place-items:center;width:4mm;height:4mm;background:#F5C800;color:#0D0D0D;border-radius:1mm;font-size:2.8mm;font-weight:900;margin-inline-start:1mm}
+  .lbl .lg{height:7.6mm;width:auto;display:block}
+  .lbl .lgbox{background:#0D0D0D;border-radius:1mm;padding:.3mm .8mm;display:inline-flex}
+  .lbl .lgbox .lg{height:5.6mm}
   .lbl .mid{display:flex;justify-content:space-between;align-items:center;padding:1mm 2.5mm;gap:2mm}
   .lbl .nm{font-weight:800;font-size:3.6mm;line-height:1.15;max-height:8.4mm;overflow:hidden}
   .lbl .sub{font-size:2.5mm;color:#666;margin-top:.6mm}
@@ -41,8 +43,8 @@ export function ShelfLabel({ d, branch, offer }: { d: LabelData; branch?: string
   return (
     <div className={`lbl shelf${offer ? " offer" : ""}`} style={offer ? ({ ["--oc" as string]: offer.color }) : undefined}>
       <div className="bar">
-        {offer ? <><span className="tag">عرض</span><span>{offer.name}</span>{offer.until && <span style={{ fontWeight: 600 }}>لحد {offer.until}</span>}</>
-          : <><span><span className="logo">ر</span> باي رسلان</span><span style={{ color: "#fff", fontWeight: 500 }}>{branch}</span></>}
+        {offer ? <><span className="tag">عرض</span><span>{offer.name}{offer.until ? ` · لحد ${offer.until}` : ""}</span><span className="lgbox"><img className="lg" src="/logo-label.png" alt="By Raslan" /></span></>
+          : <><img className="lg" src="/logo-label.png" alt="By Raslan" /><span style={{ color: "#fff", fontWeight: 500, fontSize: "2.8mm" }}>{branch}</span></>}
       </div>
       <div className="mid">
         <div style={{ minWidth: 0 }}>
