@@ -5,7 +5,7 @@ import { getMe, can } from "@/lib/perms";
 import { cancelBooking, toggleDeposit } from "../actions";
 
 type O = { id: number; no: number; token: string; status: string; channel: string; created_at: string; branch: string; district: string | null; customer: string | null; phone: string;
-  total: number; booking: boolean; scheduled_for: string | null; slot: string | null; deposit: number; deposit_paid: boolean; driver: string | null; cancel_reason: string | null; modified: number;
+  total: number; booking: boolean; scheduled_for: string | null; slot: string | null; deposit: number; deposit_paid: boolean; driver: string | null; cancel_reason: string | null; modified: number; lat?: number | null; lng?: number | null; pin_far?: boolean; pin_km?: number | null;
   lines: string | null; ticket: number | null; complaint: string | null };
 const ST: Record<string, string> = { new: "جديد", accepted: "اتقبل", preparing: "بيتجهّز", ready: "جاهز", out: "مع الطيار", delivered: "اتسلّم", cancelled: "اتلغى" };
 const CH: Record<string, string> = { app: "📱 تطبيق", web: "🌐 ويب", whatsapp: "🟢 واتساب", phone: "☎️ تليفون" };
@@ -43,7 +43,7 @@ export default async function CsOrders({ searchParams }: { searchParams: Promise
             {o.booking && o.scheduled_for && <div style={{ color: "#7A6200", fontWeight: 700 }}>📅 {dt(o.scheduled_for)} — الساعة {o.slot}{o.modified ? ` · اتعدّل ${o.modified} مرة` : ""}</div>}
             <div className="muted" style={{ fontSize: 13 }}>{o.lines}</div>
             <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-              <span><b className="num">{Math.round(Number(o.total))} ج</b> · اتطلب {dt(o.created_at)}{o.driver ? ` · الطيار ${o.driver}` : ""}{o.cancel_reason ? ` · ${o.cancel_reason}` : ""}</span>
+              <span><b className="num">{Math.round(Number(o.total))} ج</b> · اتطلب {dt(o.created_at)}{o.driver ? ` · الطيار ${o.driver}` : ""}{o.cancel_reason ? ` · ${o.cancel_reason}` : ""}{o.lat != null && <> · <a href={`https://maps.google.com/?q=${o.lat},${o.lng}`} target="_blank" rel="noreferrer">📍 الخريطة</a></>}{o.pin_far && <b style={{ color: "var(--bad)" }}> · ⚠️ العنوان بعيد {o.pin_km} كم عن الفرع</b>}</span>
             </div>
             <div className="row" style={{ gap: 6 }}>
               <a className="btn" href={`/t/${o.token}`} target="_blank" rel="noreferrer">صفحة المتابعة</a>

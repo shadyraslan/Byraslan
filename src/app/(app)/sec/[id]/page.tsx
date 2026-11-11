@@ -31,7 +31,7 @@ export default async function Section({ params }: { params: Promise<{ id: string
   const series = (s.series ?? []).map((x) => ({ label: dl(x.d), v: Number(x.v) }));
   const chart: Record<string, [string, string]> = {
     orders: ["الطلبات في آخر 14 يوم", " طلب"], cs: ["التذاكر الجديدة في آخر 14 يوم", " تذكرة"], branches: ["مبيعات الفروع في آخر 14 يوم", " ج"], factory: ["العلب اللي اتغلّفت في آخر 14 يوم", " علبة"],
-    purchasing: ["قيمة الاستلامات في آخر 14 يوم", " ج"], accounts: ["المصروفات في آخر 14 يوم", " ج"], hr: ["الحضور في آخر 14 يوم", " موظف"],
+    purchasing: ["قيمة الاستلامات في آخر 14 يوم", " ج"], accounts: ["المصروفات في آخر 14 يوم", " ج"], hr: ["الحضور في آخر 14 يوم", " موظف"], partner: ["أصناف الشريك اللي اتاخدت (بالتكلفة) آخر 14 يوم", " ج"],
   };
   return (
     <>
@@ -48,6 +48,7 @@ export default async function Section({ params }: { params: Promise<{ id: string
           <K href="/cs/orders?scope=bookings" label="حجوزات النهارده" v={n("bookings_today")} />
           <K href="/complaints" label="شكاوى مفتوحة" v={n("complaints")} warn />
           <K href="/cs/orders?scope=all" label="طلبات واتساب وتليفون النهارده" v={n("phone_orders")} />
+          <K href="/cs/orders" label="عناوين بعيدة عن الفرع" v={n("pin_far")} warn />
           {s.rating != null && <K label="تقييم الخدمة الشهر ده" v={`${s.rating} ★`} />}
         </>}
         {id === "orders" && <>
@@ -61,12 +62,15 @@ export default async function Section({ params }: { params: Promise<{ id: string
           <K href="/sales" label="مبيعات النهارده" v={`${money(n("today"))} ج`} sub={`${n("invoices")} فاتورة`} />
           <K href="/sales" label="مبيعات الشهر" v={`${money(n("month"))} ج`} />
           <K href="/sales" label="ورديات مفتوحة" v={n("open_shifts")} />
+          <K href="/offers" label="عروض شغالة" v={n("promos")} />
         </>}
         {id === "factory" && <>
           <K href="/pack" label="علب اتغلّفت النهارده" v={n("packed")} />
           <K href="/production" label="أوامر إنتاج مفتوحة" v={n("prod_open")} />
           <K href="/transfers" label="تحويلات في الطريق" v={n("transit")} />
           <K href="/trips" label="رحلات مفتوحة" v={n("trips")} />
+          <K href="/stock/count?s=submitted" label="جرد مستني اعتماد" v={n("counts_pending")} warn />
+          <K href="/stock/count?s=open" label="جرد شغال" v={n("counts_open")} />
         </>}
         {id === "purchasing" && <>
           <K href="/purchasing" label="أوامر توريد مفتوحة" v={n("po_open")} />
@@ -93,6 +97,17 @@ export default async function Section({ params }: { params: Promise<{ id: string
           <K href="/hr/leaves" label="إجازات وسلف مستنية" v={n("leaves_pending")} warn />
           <K href="/hr/shifts" label="أذون مستنية" v={n("permits_pending")} warn />
           <K href="/hr/requests" label="أوراق واعتراضات مستنية" v={n("docs_pending") + n("disputes")} warn />
+          <K href="/hr/penalties" label="جزاءات لسه ماتأكّدتش" v={n("penalties_open")} warn />
+          <K href="/hr/staffdocs" label="شهادات خلصت أو قرّبت" v={n("docs_bad")} warn />
+          <K href="/hr/presence" label="تأكيد تواجد فايت النهارده" v={n("presence_missed")} warn />
+          <K href="/hr/assets" label="عهد عينية مع الموظفين" v={n("assets_out")} />
+        </>}
+        {id === "partner" && <>
+          <K href="/partner" label="ملفات مستنية اعتماد" v={n("drafts")} warn />
+          <K href="/partner" label="أسعار محتاجة مراجعة" v={n("review")} warn />
+          <K href="/partner/dispatch" label="طلبات بتتحضّر" v={n("preparing")} />
+          <K href="/partner/dispatch" label="جاهزة للكابتن" v={n("ready")} />
+          <K href="/partner/account" label={n("owed") >= 0 ? "علينا للشركاء" : "لينا عند الشركاء"} v={`${money(Math.abs(n("owed")))} ج`} />
         </>}
         {id === "setup" && <>
           <K href="/locations" label="المواقع" v={n("locations")} />

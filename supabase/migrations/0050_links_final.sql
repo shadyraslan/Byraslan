@@ -1,0 +1,8 @@
+-- ============ 0050 ربط كل الجديد ببعضه ============
+-- اتطبّق مباشرة على قاعدة البيانات (patch بالـ replace على الدوال الموجودة):
+-- 1) section_stats: قسم "partner" (مسودات الملفات، أسعار محتاجة مراجعة، الرصيد، التحضير، رسم "له" باليوم)
+--    + factory: counts_pending/counts_open، hr: penalties_open/docs_bad/presence_missed/assets_out، cs: pin_far، branches: promos
+-- 2) pos_orders و cs_find_orders: lat/lng/pin_far/pin_km عشان لينك الخريطة وتنبيه العنوان البعيد
+-- 3) app_config: البانرات بمدتها (من/لحد)
+-- 4) count_view: قيمة الفرق بعد الاعتماد بتيجي من المتسجّل
+-- (نفس الكود اللي في apply_migration "links_final")

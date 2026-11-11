@@ -39,6 +39,12 @@ export const NAV: NavGroup[] = [
     { href: "/purchasing/suppliers", label: "الموردين", icon: "partner", color: "#0d9488" },
     { href: "/overrides", label: "التجاوزات", icon: "shield", color: "#e11d48" },
   ] },
+  { id: "partner", title: "الماركت الشريك", icon: "partner", color: "#0d9488", links: [
+    { href: "/partner", label: "الشركاء والفروع والخصومات", icon: "partner", color: "#0d9488", perms: ["partner.manage", "partner.upload", "partner.settle", "partner.dispatch"] },
+    { href: "/partner/upload", label: "رفع ملف الصبح", icon: "upload", color: "#65a30d", perms: ["partner.upload"] },
+    { href: "/partner/dispatch", label: "ديسباتشر الماركت", icon: "box", color: "#ea580c", perms: ["partner.dispatch", "partner.manage"] },
+    { href: "/partner/account", label: "الحساب الجاري والمطابقة", icon: "wallet", color: "#2563eb", perms: ["partner.settle", "acc.view"] },
+  ] },
   { id: "accounts", title: "الحسابات", icon: "accounts", color: "#2563eb", links: [
     { href: "/accounts", label: "الملخص اليومي", icon: "reports", color: "#2563eb", perms: ["acc.view"] },
     { href: "/accounts/expenses", label: "المصروفات", icon: "wallet", color: "#1d4ed8", perms: ["acc.view", "acc.post", "acc.approve"] },

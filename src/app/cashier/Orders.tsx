@@ -6,7 +6,7 @@ import ScanInput from "@/components/ScanInput";
 /* طلبات الأونلاين جوه الكاشير: بتتحدّث كل 10 ثواني، والطلب الجديد بيرن لحد ما حد يفتحه */
 
 export type OOrder = {
-  id: number; no: number; status: string; created_at: string; pay: string; address: string | null; note: string | null; fee: number; discount: number; est: number; driver: string | null; booking?: boolean; scheduled_for?: string | null; slot?: string | null; deposit?: number; deposit_paid?: boolean;
+  id: number; no: number; status: string; created_at: string; pay: string; address: string | null; note: string | null; fee: number; discount: number; est: number; driver: string | null; booking?: boolean; scheduled_for?: string | null; slot?: string | null; deposit?: number; deposit_paid?: boolean; lat?: number | null; lng?: number | null; pin_far?: boolean; pin_km?: number | null;
   customer: string; phone: string; lines: { line: number; name: string; unit: string; qty: number; prepared: number; price: number }[]; boxes: number[];
 };
 const ST: Record<string, string> = { new: "جديد", accepted: "اتقبل", preparing: "بيتحضّر", ready: "جاهز", out: "مع الطيار" };
@@ -71,7 +71,7 @@ export default function OrdersPanel({ sb, orders, ack, reload, online }: { sb: S
         {!o ? <div className="card muted">اختار طلب</div> : (
           <div className="card" style={{ display: "grid", gap: 10 }}>
             <div className="row" style={{ justifyContent: "space-between" }}><h2 style={{ margin: 0 }}>طلب #{o.no} — {ST[o.status]}</h2><span className="num">{o.phone}</span></div>
-            <div><b>{o.customer}</b> — {o.address}</div>
+            <div><b>{o.customer}</b> — {o.address}{o.lat != null && <> · <a href={`https://maps.google.com/?q=${o.lat},${o.lng}`} target="_blank" rel="noreferrer">📍 الخريطة</a></>}{o.pin_far && <b style={{ color: "var(--bad)" }}> · ⚠️ بعيد {o.pin_km} كم</b>}</div>
             {o.note && <div style={{ color: "var(--bad)", fontWeight: 700 }}>ملاحظة: {o.note}</div>}
             {["accepted", "preparing"].includes(o.status) && (
               <ScanInput placeholder="امسح العلب أو الأصناف للطلب ده" onScan={(c) => run(sb.rpc("order_scan", { p_id: o.id, p_code: c, p_qty: null }), "✓ اتضاف للطلب")} />

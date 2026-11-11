@@ -14,7 +14,7 @@ export default async function Home() {
   const start = cairoDayStart();
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo" }).format(new Date());
   const c = (q: PromiseLike<{ count: number | null }>, ok: boolean) => (ok ? q : Promise.resolve({ count: null }));
-  const [{ data: locs }, { data: sales }, orders, books, tickets, exps, leaves, runs] = await Promise.all([
+  const [{ data: locs }, { data: sales }, orders, books, tickets, exps, leaves, runs, counts, pups, farPins, docs] = await Promise.all([
     sb.from("locations").select("id,name,type,city,active").eq("active", true).order("sort"),
     can(me, "acc.view") || can(me, "pos.shift") ? sb.from("sales").select("location_id,total").gte("at", start) : Promise.resolve({ data: [] as { location_id: string; total: number }[] }),
     c(sb.from("online_orders").select("id", { count: "exact", head: true }).in("status", ["new", "accepted", "preparing", "ready", "out"]).or(`is_booking.eq.false,release_at.lte.${new Date().toISOString()}`), can(me, "orders.handle")),
@@ -23,6 +23,10 @@ export default async function Home() {
     c(sb.from("expenses").select("id", { count: "exact", head: true }).eq("status", "pending"), can(me, "acc.approve")),
     c(sb.from("leave_requests").select("id", { count: "exact", head: true }).eq("status", "pending"), can(me, "hr.leaves")),
     c(sb.from("payroll_runs").select("id", { count: "exact", head: true }).eq("status", "sent"), can(me, "hr.pay")),
+    c(sb.from("stock_counts").select("id", { count: "exact", head: true }).eq("status", "submitted"), can(me, "stock.adjust")),
+    c(sb.from("partner_uploads").select("id", { count: "exact", head: true }).eq("status", "draft"), can(me, "partner.upload")),
+    c(sb.from("online_orders").select("id", { count: "exact", head: true }).eq("pin_far", true).in("status", ["new", "accepted", "preparing", "ready"]), can(me, "cs.agent") || can(me, "orders.handle")),
+    can(me, "hr.staffdocs") ? sb.rpc("docs_status", { p_user: null }).then(({ data }) => ({ count: ((data ?? []) as { state: string }[]).filter((d) => d.state === "expired" || d.state === "soon").length })) : Promise.resolve({ count: null }),
   ]);
   const byLoc: Record<string, { t: number; n: number }> = {};
   (sales ?? []).forEach((x) => { const k = x.location_id as string; (byLoc[k] ??= { t: 0, n: 0 }).t += Number(x.total); byLoc[k].n++; });
@@ -47,6 +51,10 @@ export default async function Home() {
         <K href="/accounts/expenses" label="مصروفات مستنية موافقتك" n={exps.count} warn />
         <K href="/hr/leaves" label="إجازات وسلف مستنية" n={leaves.count} warn />
         <K href="/hr/payroll" label="مرتبات مستنية الاعتماد" n={runs.count} warn />
+        <K href="/stock/count?s=submitted" label="جرد مستني اعتمادك" n={counts.count} warn />
+        <K href="/partner" label="ملف شريك مستني اعتماد" n={pups.count} warn />
+        <K href="/cs/orders" label="عناوين بعيدة عن الفرع" n={farPins.count} warn />
+        <K href="/hr/staffdocs" label="شهادات خلصت أو قرّبت" n={docs.count} warn />
       </div>
 
       {!!(branches.length + sites.length) && (
