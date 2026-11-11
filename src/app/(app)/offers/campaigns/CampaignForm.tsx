@@ -1,10 +1,13 @@
-/** كل لون ليه معنى ثابت عشان الزبون يتعود عليه */
-const COLORS: [string, string][] = [["#E11D48", "مهرجان كبير"], ["#16A34A", "عرض الأسبوع"], ["#EA580C", "تصفية"], ["#7C3AED", "مواسم"], ["#0D0D0D", "بلاك فرايداي"]];
+export type LabelColor = { c: string; t: string };
+/** الألوان الافتراضية لحد ما صاحب صلاحية الألوان يحدد غيرها من الداشبورد */
+export const DEFAULT_COLORS: LabelColor[] = ["#E11D48", "#16A34A", "#EA580C", "#7C3AED", "#0D0D0D"].map((c) => ({ c, t: "" }));
 const local = (s?: string | null) => (s ? new Date(s).toLocaleString("sv-SE", { timeZone: "Africa/Cairo" }).slice(0, 16).replace(" ", "T") : "");
 type C = { id: number; name: string; subtitle: string | null; color: string; starts_at: string; ends_at: string; locations: string[] | null; channels: string[] };
 
 /** بيانات المهرجان: الاسم واللون والمدة والفروع والقنوات */
-export default function CampaignForm({ action, locs, c }: { action: (fd: FormData) => Promise<void>; locs: { id: string; name: string }[]; c?: C }) {
+export default function CampaignForm({ action, locs, c, colors }: { action: (fd: FormData) => Promise<void>; locs: { id: string; name: string }[]; c?: C; colors?: LabelColor[] }) {
+  const L = colors?.length ? colors : DEFAULT_COLORS;
+  const COLORS = (c && !L.some((x) => x.c.toUpperCase() === c.color.toUpperCase()) ? [...L, { c: c.color, t: "" }] : L).map((x) => [x.c, x.t] as [string, string]);
   return (
     <form action={action} className="card" style={{ display: "grid", gap: 8 }}>
       <b>{c ? "بيانات المهرجان" : "مهرجان جديد"}</b>
@@ -19,7 +22,7 @@ export default function CampaignForm({ action, locs, c }: { action: (fd: FormDat
         <div className="fld">لون الملصق<div className="row" style={{ gap: 6 }}>{COLORS.map(([x, t], i) => (
           <label key={x} title={t} style={{ display: "inline-grid", justifyItems: "center", gap: 2, fontSize: 11, cursor: "pointer" }}>
             <span style={{ display: "inline-grid", placeItems: "center", width: 30, height: 30, borderRadius: 8, background: x }}>
-              <input type="radio" name="color" value={x} defaultChecked={c ? c.color === x : i === 0} style={{ accentColor: "#fff" }} /></span>{t}
+              <input type="radio" name="color" value={x} defaultChecked={c ? c.color.toUpperCase() === x.toUpperCase() : i === 0} style={{ accentColor: "#fff" }} /></span>{t}
           </label>))}</div></div>
       </div>
       <div><b>القنوات: </b>

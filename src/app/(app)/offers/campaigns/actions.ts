@@ -66,3 +66,17 @@ export async function campaignAct(fd: FormData) {
   const ok: Record<string, string> = { submit: "اتبعت للاعتماد", approve: "اتعمد — هيبدأ في ميعاده لوحده", reject: "اترجع مسودة", cancel: "اتوقف والأسعار رجعت", hung: "اتسجّل إن الملصقات اتعلّقت", removed: "اتسجّل إن الملصقات اتشالت" };
   await back(id, r.error, ok[a] ?? "تمام");
 }
+
+/** ألوان الملصقات ومعناها — صاحب صلاحية promo.colors بس (المالك أو الماركتنج) */
+export async function saveColors(fd: FormData) {
+  await need("promo.colors");
+  const sb = await supabaseServer();
+  const c = fd.getAll("c").map(String), t = fd.getAll("t").map(String);
+  const del = new Set(fd.getAll("del").map(String));
+  const rows = c.map((x, i) => ({ c: x, t: (t[i] ?? "").trim() })).filter((x, i) => !del.has(String(i)) && /^#[0-9a-f]{6}$/i.test(x.c));
+  const nc = S(fd, "nc"), nt = S(fd, "nt");
+  if (nc && fd.get("add") === "on") rows.push({ c: nc, t: nt });
+  const { error } = await sb.rpc("campaign_colors_save", { p: rows });
+  revalidatePath("/offers/campaigns");
+  redirect(`/offers/campaigns?${error ? `err=${encodeURIComponent(msg(error))}` : "ok=1"}`);
+}

@@ -4,7 +4,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import { money } from "@/lib/time";
 import { saveCampaign, addItems, removeItem, campaignAct } from "../actions";
-import CampaignForm from "../CampaignForm";
+import CampaignForm, { type LabelColor } from "../CampaignForm";
 import { LabelStyles, OfferLabel } from "@/components/ShelfLabel";
 
 type It = { item_id: number; name: string; size: string | null; maker: string | null; unit: string; price: number; app_price: number | null; old: number | null; code: string | null };
@@ -24,11 +24,12 @@ export default async function Campaign({ params, searchParams }: { params: Promi
   if (error || !data) notFound();
   const v = data as V, c = v.campaign;
   const editable = can(me, "promo.edit") && (c.status === "draft" || c.status === "pending");
-  const [{ data: items }, { data: fams }, { data: locs }, rep] = await Promise.all([
+  const [{ data: items }, { data: fams }, { data: locs }, rep, { data: cs }] = await Promise.all([
     editable ? sb.from("items").select("id,name").eq("active", true).order("name") : Promise.resolve({ data: [] as { id: number; name: string }[] }),
     editable ? sb.from("families").select("id,name").order("sort") : Promise.resolve({ data: [] as { id: number; name: string }[] }),
     sb.from("locations").select("id,name").eq("active", true).in("type", ["dark", "shop"]).order("sort"),
     ["live", "ended"].includes(c.status) && (can(me, "promo.edit") || can(me, "promo.approve") || can(me, "acc.view")) ? sb.rpc("campaign_report", { p_id: c.id }) : Promise.resolve({ data: null }),
+    sb.from("settings").select("value").eq("key", "campaigns.colors").maybeSingle(),
   ]);
   const pct = (it: It) => (it.old ? Math.round((1 - it.price / it.old) * 100) : null);
   const until = new Date(c.ends_at).toLocaleDateString("ar-EG", { timeZone: "Africa/Cairo", day: "numeric", month: "numeric" });
@@ -122,7 +123,7 @@ export default async function Campaign({ params, searchParams }: { params: Promi
             ))}</tbody></table>
         </div>
       )}
-      {editable && <CampaignForm action={saveCampaign} locs={locs ?? []} c={c} />}
+      {editable && <CampaignForm action={saveCampaign} locs={locs ?? []} c={c} colors={(Array.isArray(cs?.value) ? cs.value : []) as LabelColor[]} />}
     </>
   );
 }

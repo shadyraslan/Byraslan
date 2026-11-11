@@ -36,7 +36,7 @@ export function LabelStyles() {
   .lbl.sticker .bc{padding:0;justify-content:center;flex-direction:column}
   .lbl.sticker .bc svg{height:6mm}
   .ofr{box-sizing:border-box;width:96mm;height:32mm;position:relative;background:#FFD21F;overflow:hidden;direction:rtl;font-family:'El Messiri',inherit;color:#0D0D0D;break-inside:avoid;page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .ofr .lg2{position:absolute;left:2mm;top:1.6mm;width:19mm;height:15mm;background:#000;border-radius:1.6mm;display:grid;place-items:center;overflow:hidden}.ofr .lg2 img{width:17.5mm;height:auto;display:block}
+  .ofr .lg2{position:absolute;left:0;top:0;width:21mm;height:15.5mm;background:#000;border-radius:0 0 3mm 0;display:flex;justify-content:center;align-items:flex-start;padding-top:.6mm;overflow:hidden}.ofr .lg2 img{width:18.5mm;height:auto;display:block}
   .ofr .rb{position:absolute;left:2mm;top:18mm;width:19mm;height:6.4mm;background:var(--oc);border-radius:1.4mm;transform:rotate(-3deg);display:flex;align-items:center;justify-content:center;gap:1.2mm;color:#fff;line-height:1}
   .ofr .rb b{font-size:3.4mm;font-weight:700}.ofr .rb strong{font-family:Cairo,inherit;font-size:4.8mm;font-weight:900;direction:ltr}
   .ofr .nm2{position:absolute;left:23mm;right:34mm;top:2.2mm;text-align:center;font-weight:700;font-size:5.8mm;line-height:1.15;max-height:13.4mm;overflow:hidden}
