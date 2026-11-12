@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ScanInput from "@/components/ScanInput";
+import ReturnBox, { type Ret } from "@/components/ReturnBox";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import * as kv from "@/lib/idb";
 import OrdersPanel, { useOrders } from "./Orders";
@@ -11,7 +12,7 @@ import OrdersPanel, { useOrders } from "./Orders";
 
 type Item = { id: number; name: string; unit: string; sold_by: string; arm: string; kind: string; fams?: number[]; plu: string | null; price: number };
 type Promo = { id: number; name: string; kind: string; value: number; max_off: number | null; auto: boolean; code: string | null; min_order: number; families: number[] | null; stackable: boolean; ends_at: string | null };
-type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number }[]; promos?: Promo[]; unknown_item?: number | null; can_unknown?: boolean; can_credit?: boolean };
+type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number }[]; promos?: Promo[]; unknown_item?: number | null; can_unknown?: boolean; can_credit?: boolean; can_return?: boolean };
 type Line = { item_id: number; name: string; unit: string; box_sn: number | null; qty: number; unit_price: number; unknown_code?: string };
 type Sale = { client_id: string; shift: string; at: string; local_no: string; lines: Line[]; discount: number; cash: number; card: number; offline: boolean; promo_code?: string | null; credit?: number; credit_customer?: number | null; credit_name?: string | null; points_code?: string | null; points?: number; points_off?: number; points_earn?: number };
 type Done = Sale & { no?: number; conflicts?: string[]; total: number; change: number };
@@ -88,7 +89,9 @@ export default function Cashier() {
     setPtInfo(data as PtInfo);
   };
   const [rec, setRec] = useState<Done | null>(null);
-  const [view, setView] = useState<"sell" | "orders" | "list" | "close">("sell");
+  const [view, setView] = useState<"sell" | "orders" | "list" | "return" | "close">("sell");
+  const [rets, setRets] = useState<Ret[]>([]);
+  const [retKey, setRetKey] = useState(0);
   const [counted, setCounted] = useState("");
   const [openLoc, setOpenLoc] = useState("");
   const [openCash, setOpenCash] = useState("0");
@@ -327,7 +330,8 @@ export default function Cashier() {
   };
 
   // ---------- قفل الوردية ----------
-  const expected = shift ? r2(shift.opening_cash + done.reduce((a, s) => a + s.cash - s.change, 0)) : 0;
+  const retCash = rets.reduce((a, r) => a + Number(r.refund_cash), 0);
+  const expected = shift ? r2(shift.opening_cash + done.reduce((a, s) => a + s.cash - s.change, 0) - retCash) : 0;
   const [closeErr, setCloseErr] = useState<string | null>(null);
   const closeShift = async () => {
     if (!shift) return;
@@ -391,7 +395,7 @@ export default function Cashier() {
     <>
       {bar}
       <div className="noprint" style={{ display: "flex", gap: 8, padding: "10px 16px", flexWrap: "wrap" }}>
-        {([["sell", "البيع"], ...(snap?.can_orders ? [["orders", `طلبات الأونلاين (${ord.orders.length})`]] : []), ["list", `فواتير الوردية (${done.length})`], ["close", "اقفل الوردية"]] as [typeof view, string][]).map(([k, l]) => <button key={k} className={view === k ? "btn pri" : "btn"} style={k === "orders" && ord.fresh.length ? { background: "var(--bad)", color: "#fff", borderColor: "var(--bad)" } : undefined} onClick={() => setView(k)}>{l}</button>)}
+        {([["sell", "البيع"], ...(snap?.can_orders ? [["orders", `طلبات الأونلاين (${ord.orders.length})`]] : []), ["list", `فواتير الوردية (${done.length})`], ...(snap?.can_return ? [["return", `مرتجع${rets.length ? ` (${rets.length})` : ""}`]] : []), ["close", "اقفل الوردية"]] as [typeof view, string][]).map(([k, l]) => <button key={k} className={view === k ? "btn pri" : "btn"} style={k === "orders" && ord.fresh.length ? { background: "var(--bad)", color: "#fff", borderColor: "var(--bad)" } : undefined} onClick={() => setView(k)}>{l}</button>)}
         <button className="btn" onClick={() => shift && refreshSnap(shift.loc)} disabled={!online}>حدّث الأسعار والعلب</button>
         {syncErr && <span className="badmsg" style={{ margin: 0 }}>الرفع وقف: {syncErr}</span>}
       </div>
@@ -401,6 +405,11 @@ export default function Cashier() {
           🔔 {ord.fresh.length === 1 ? "طلب أونلاين جديد" : `${ord.fresh.length} طلبات أونلاين جديدة`} — دوس هنا
         </button>
       )}
+      {view === "return" && (
+        <div style={{ padding: "0 16px" }}>
+          {online ? <ReturnBox key={retKey} shiftClient={shift?.client_id} onDone={(r) => setRets((x) => [...x, r])} onClose={() => setRetKey((k) => k + 1)} /> : <div className="badmsg">المرتجع محتاج نت</div>}
+          {rets.length > 0 && <div className="muted" style={{ marginTop: 8 }}>مرتجعات الوردية: {rets.map((r) => `R-${r.no} (${f2(r.total)} ج)`).join(" · ")} — الكاش اللي اترجع {f2(retCash)} ج اتخصم من المتوقع في الدرج</div>}
+        </div>)}
       {view === "orders" && <OrdersPanel sb={sb} orders={ord.orders} ack={ord.ack} reload={ord.load} online={online} />}
 
       {view === "sell" && !online && (

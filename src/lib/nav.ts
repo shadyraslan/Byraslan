@@ -21,6 +21,7 @@ export const NAV: NavGroup[] = [
   { id: "branches", title: "الفروع والكاشير", icon: "store", color: "#16a34a", links: [
     { href: "/cashier", label: "الكاشير", icon: "pos", color: "#16a34a", perms: ["pos.sell"] },
     { href: "/sales", label: "المبيعات والورديات", icon: "reports", color: "#4f46e5", perms: ["pos.shift", "acc.view"] },
+    { href: "/returns", label: "مرتجعات الكاشير", icon: "reports", color: "#e11d48", perms: ["pos.return", "pos.shift", "acc.view"] },
     { href: "/prices", label: "الأسعار", icon: "tag", color: "#059669", perms: ["prices.edit"] },
     { href: "/offers", label: "العروض والبروموكود", icon: "star", color: "#e11d48", perms: ["promo.edit", "prices.edit"] },
     { href: "/offers/campaigns", label: "مهرجانات التخفيضات", icon: "tag", color: "#ea580c", perms: ["promo.edit", "promo.approve", "promo.colors", "labels.hang", "pos.shift", "prices.edit"] },

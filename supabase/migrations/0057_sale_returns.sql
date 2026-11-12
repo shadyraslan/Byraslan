@@ -1,0 +1,7 @@
+-- ============ 0057 مرتجع فاتورة الكاشير (اتطبّقت على الداتابيز بنفس الاسم عن طريق apply_migration)
+-- صلاحية pos.return (الحد = أقصى مبلغ مرتجع في المرة، وقابلة للتفويض بتاريخ). إعداد returns.max_days (14).
+-- جداول sale_returns / sale_return_lines؛ points_moves.return_id و credit_moves.return_id.
+-- pos_sale_lookup(no) ← pos_return(sale, lines[{line,qty,restock}], reason, shift_client) ← returns_list(from,to,loc).
+-- الفلوس بترجع بنفس نسبة الدفع: آجل يتخصم من الحساب، حساب موظف يقل لو لسه ماتخصمش من المرتب (غير كده كاش)، النقاط المستبدلة ترجع واللي اتكسبت تتشال، الفيزا تترجع على الماكينة، والباقي كاش من الدرج.
+-- البضاعة: يرجع المخزن (والعلبة ترجع stock) أو تالف. الدرج: الكاش المرتجع بيتخصم من المتوقع (pos_close_shift + pos_sync). الأرباح: سطر "مرتجعات الفروع" وتكلفة اللي رجع المخزن.
+-- pos_snapshot: can_return.

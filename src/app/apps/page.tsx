@@ -1,7 +1,7 @@
 import Copy from "./Copy";
 
 export const revalidate = 600;
-export const metadata = { title: "نزّل تطبيقات باي رسلان" };
+export const metadata = { title: "تطبيقات وروابط باي رسلان" };
 
 type Rel = { tag_name: string; published_at: string; assets: { name: string; browser_download_url: string }[] };
 const REPO = "shadyraslan/Byraslan";
@@ -21,6 +21,18 @@ async function latest(): Promise<Record<string, { url: string; at: string } | un
 const APPS = [
   { key: "customer", name: "باي رسلان", tag: "للعملاء", desc: "اطلب من روستوز ورسلان ماركت وتابع طلبك لحد باب البيت." },
   { key: "staff", name: "باي رسلان — الموظفين", tag: "للموظفين والسواقين", desc: "الحضور، الورديات، المرتب، العهدة، الإجازات، والرسايل." },
+] as const;
+
+const BASE = "https://byraslan.vercel.app";
+/** روابط الشغل على الويب — كل واحد بيفتح بحساب الموظف وصلاحياته */
+const LINKS = [
+  { path: "/dashboard", name: "الداشبورد", desc: "الإدارة كلها: الأقسام، التقارير، الصلاحيات، الإعدادات", ic: "📊" },
+  { path: "/cashier", name: "الكاشير", desc: "البيع في الفرع، المرتجع، النقاط، الآجل، طلبات الأونلاين", ic: "🧾" },
+  { path: "/orders", name: "طلبات الأونلاين", desc: "تجهيز وتسليم طلبات التطبيق والموقع", ic: "🛵" },
+  { path: "/cs", name: "خدمة العملاء", desc: "التذاكر، طلبات التليفون والواتساب، بيانات العملاء", ic: "🎧" },
+  { path: "/partner/dispatch", name: "ديسباتشر الماركت", desc: "تجهيز أصناف الماركت الشريك، البدايل، وتسليم الكابتن بالكود", ic: "🛒" },
+  { path: "/order", name: "صفحة الطلب للعملاء", desc: "العميل يطلب من المتصفح من غير تطبيق", ic: "🌐" },
+  { path: "/apps", name: "الصفحة دي", desc: "ابعتها لأي حد عايز ينزّل التطبيقات", ic: "🔗" },
 ] as const;
 
 export default async function Apps() {
@@ -44,7 +56,7 @@ export default async function Apps() {
         .apps .help{max-width:640px;margin:0 auto;color:#555;font-size:14px;line-height:1.9}
       `}</style>
       <div className="bar"><b>باي</b> رسلان</div>
-      <h1>نزّل تطبيقات باي رسلان</h1>
+      <h1>تطبيقات وروابط باي رسلان</h1>
       <p className="sub">للموبايلات الأندرويد. على الآيفون قريب.</p>
       {APPS.map((a) => {
         const x = L[a.key];
@@ -58,6 +70,16 @@ export default async function Apps() {
           </div>
         );
       })}
+      <h1 style={{ fontSize: 24 }}>روابط الشغل على الكمبيوتر</h1>
+      <p className="sub">بتفتح بإيميل الموظف، وكل واحد بيشوف اللي صلاحياته تسمح بيه بس.</p>
+      {LINKS.map((l) => (
+        <div className="card" key={l.path} style={{ gap: 8 }}>
+          <div className="hd"><h2>{l.ic} {l.name}</h2><span className="meta" dir="ltr">{BASE.replace("https://", "")}{l.path}</span></div>
+          <div>{l.desc}</div>
+          <a className="dl" href={l.path} style={{ fontSize: 17, padding: 10 }}>افتح {l.name}</a>
+          <Copy url={BASE + l.path} label="انسخ اللينك" />
+        </div>
+      ))}
       <div className="help">
         <b>لو الموبايل رفض يثبّت:</b> افتح الملف من الإشعارات أو من "التنزيلات"، ولو ظهرت رسالة "مصدر غير معروف" دوس الإعدادات ← اسمح من المصدر ده ← ارجع ودوس تثبيت.
       </div>
