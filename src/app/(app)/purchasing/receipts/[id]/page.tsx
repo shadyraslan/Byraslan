@@ -1,8 +1,10 @@
-import { notFound } from "next/navigation";
+import { getMe, can } from "@/lib/perms";
+import { notFound, redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import Labels from "./Labels";
 
 export default async function ReceiptPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ by?: string }> }) {
+  { const me_ = await getMe(); if (!(can(me_, "purchase.edit") || can(me_, "qa.approve") || can(me_, "acc.view"))) redirect("/dashboard"); }
   const id = Number((await params).id);
   const byNo = (await searchParams).by === "no";
   const sb = await supabaseServer();

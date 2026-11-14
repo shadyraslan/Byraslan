@@ -1,11 +1,13 @@
+import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
-import { getMe } from "@/lib/perms";
+import { can,getMe } from "@/lib/perms";
 import Tabs from "../purchasing/Tabs";
 import { decideOverride } from "../purchasing/actions";
 
 const ST: Record<string, [string, string]> = { pending: ["مستني", "#b7791f"], approved: ["متوافق عليه", "var(--good)"], rejected: ["مرفوض", "var(--bad)"], used: ["اتنفّذ", "var(--muted)"] };
 
 export default async function Overrides() {
+  { const me_ = await getMe(); if (!(can(me_, "override.recv") || can(me_, "purchase.edit"))) redirect("/dashboard"); }
   await getMe();
   const sb = await supabaseServer();
   const [{ data: rows }, { data: people }] = await Promise.all([
@@ -14,6 +16,7 @@ export default async function Overrides() {
   ]);
   const N = new Map((people ?? []).map((p) => [p.id as string, p.name as string]));
   const R = rows ?? [];
+  const canDecide = can(await getMe(), "override.recv");
   const pend = R.filter((r) => r.status === "pending");
   const Item = ({ r }: { r: (typeof R)[number] }) => (
     <div className="card" style={{ borderInlineStart: `4px solid ${ST[r.status]?.[1]}` }}>
@@ -25,7 +28,7 @@ export default async function Overrides() {
       <div style={{ marginTop: 6 }}>السبب: {r.reason}</div>
       <div className="muted" style={{ fontSize: 12.5 }}>{N.get(r.requested_by)} · {new Date(r.requested_at).toLocaleString("ar-EG", { timeZone: "Africa/Cairo" })}
         {r.decided_by && <> — قرار {N.get(r.decided_by)}: {r.decision_note}</>}</div>
-      {r.status === "pending" && (
+      {r.status === "pending" && canDecide && (
         <form action={decideOverride} className="row" style={{ marginTop: 8 }}>
           <input type="hidden" name="id" value={r.id} />
           <input name="note" placeholder="ملاحظتك" required minLength={3} style={{ flex: "1 1 200px" }} />

@@ -1,9 +1,10 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
-import { getMe, can } from "@/lib/perms";
+import { can,getMe } from "@/lib/perms";
 import OrderDesk from "./OrderDesk";
 
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
+  { const me_ = await getMe(); if (!(can(me_, "orders.handle") || can(me_, "cs.agent"))) redirect("/dashboard"); }
   const id = Number((await params).id);
   const me = await getMe();
   const sb = await supabaseServer();

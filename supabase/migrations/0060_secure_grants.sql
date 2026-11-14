@@ -1,0 +1,5 @@
+-- ============ 0060 منح وسحب الصلاحيات بأمان (من مراجعة فرع emam — Emam Medhat) — اتطبّقت بنفس الاسم
+-- secure_grant(target, perm, until, max_amount) و secure_revoke(target, perm):
+--   ممنوع لنفسك، ممنوع على المالك، users.manage للمالك بس، ومفيش صلاحية مش معاك ولا حد أكبر من حدّك ولا تاريخ بعد تاريخ صلاحيتك.
+-- grants: الكتابة المباشرة للمالك بس (grants_owner_write) بدل grants_write؛ max_amount >= 0.
+-- فهارس: grants(user_id, perm)، stock_moves(kind, at)، sales(at)، online_orders(created_at)، boxes(status)، expenses(day).

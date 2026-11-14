@@ -1,24 +1,26 @@
+import { cache } from "react";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export type Me = { id: string; name: string; isOwner: boolean; perms: Set<string>; home: string | null };
 
-/** المستخدم الحالي وصلاحياته (المالك عنده كل حاجة) */
-export async function getMe(): Promise<Me | null> {
+/** المستخدم الحالي وصلاحياته (المالك عنده كل حاجة).
+ *  متخزّن مرة واحدة لكل طلب (cache) والبروفايل والصلاحيات بيتجابوا مع بعض — من مراجعة فرع emam (BUG-018).
+ *  المالك عمره ما يتقفل حتى لو حد علّمه موقوف (BUG-003). */
+export const getMe = cache(async (): Promise<Me | null> => {
   const sb = await supabaseServer();
   const {
     data: { user },
   } = await sb.auth.getUser();
   if (!user) return null;
-  const { data: prof } = await sb.from("profiles").select("name,is_owner,active,home_loc").eq("id", user.id).maybeSingle();
-  const { data: grants } = await sb
-    .from("grants")
-    .select("perm,until")
-    .eq("user_id", user.id);
-  if (prof && prof.active === false) return null;
+  const [{ data: prof }, { data: grants }] = await Promise.all([
+    sb.from("profiles").select("name,is_owner,active,home_loc").eq("id", user.id).maybeSingle(),
+    sb.from("grants").select("perm,until").eq("user_id", user.id),
+  ]);
+  if (prof && prof.active === false && !prof.is_owner) return null;
   const today = new Date().toISOString().slice(0, 10);
-  const perms = new Set((grants ?? []).filter((g) => !g.until || g.until >= today).map((g) => g.perm as string));
+  const perms = new Set<string>((grants ?? []).filter((g) => !g.until || g.until >= today).map((g) => g.perm as string));
   return { id: user.id, name: prof?.name ?? user.email ?? "", isOwner: !!prof?.is_owner, perms, home: (prof?.home_loc as string | null) ?? null };
-}
+});
 
 export const can = (me: Me | null, perm: string) => !!me && (me.isOwner || me.perms.has(perm));
 

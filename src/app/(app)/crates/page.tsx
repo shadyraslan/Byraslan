@@ -1,7 +1,10 @@
+import { redirect } from "next/navigation";
+import { getMe, can } from "@/lib/perms";
 import { supabaseServer } from "@/lib/supabase/server";
 import CrateLabels from "./CrateLabels";
 
 export default async function Crates() {
+  { const me_ = await getMe(); if (!(can(me_, "stock.view") || can(me_, "trips.load"))) redirect("/dashboard"); }
   const sb = await supabaseServer();
   const { data } = await sb.from("crates").select("id").eq("active", true).order("id");
   return (

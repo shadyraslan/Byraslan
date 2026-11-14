@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
-import { getMe, can } from "@/lib/perms";
+import { can,getMe } from "@/lib/perms";
 import Receive from "./Receive";
 
 type TB = { box_sn: number; state: string; boxes: { weight: number; crate: string | null; items: { name: string; unit: string } | { name: string; unit: string }[] | null } | null };
@@ -9,6 +9,7 @@ const one = <X,>(v: X | X[] | null | undefined): X | null => (Array.isArray(v) ?
 const ST: Record<string, string> = { sent: "مبعوتة", received: "اتسلّمت", missing: "ناقصة", found: "اتلقت", lost: "ضاعت" };
 
 export default async function TransferPage({ params }: { params: Promise<{ id: string }> }) {
+  { const me_ = await getMe(); if (!(can(me_, "stock.view") || can(me_, "stock.edit"))) redirect("/dashboard"); }
   const { id } = await params;
   const me = await getMe();
   const sb = await supabaseServer();

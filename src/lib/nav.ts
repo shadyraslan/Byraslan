@@ -56,6 +56,7 @@ export const NAV: NavGroup[] = [
     { href: "/accounts/ledger", label: "كارت الحساب (مورد/موظف/شريك/عميل)", icon: "scroll", color: "#7c3aed", perms: ["acc.view", "hr.pay", "partner.settle", "purchase.edit", "acc.pay", "cs.agent", "credit.view", "credit.collect"] },
     { href: "/credit", label: "حسابات الآجل والمتأخرات", icon: "wallet", color: "#2563eb", perms: ["credit.view", "credit.open", "credit.collect"] },
     { href: "/accounts/pnl", label: "الأرباح والخسائر وتقارير الفروع", icon: "reports", color: "#16a34a", perms: ["acc.view", "acc.pnl"] },
+    { href: "/statistics", label: "تقارير وإحصائيات النظام (رسوم + تصدير)", icon: "reports", color: "#0ea5e9", perms: ["acc.view", "pos.shift", "orders.handle", "stock.view", "prod.orders", "prod.pack", "trips.load", "purchase.edit", "stock.edit"] },
   ] },
   { id: "items", title: "الأصناف", icon: "items", color: "#ca8a04", links: [
     { href: "/items", label: "الأصناف والعائلات", icon: "items", color: "#ca8a04", perms: ["items.edit"] },

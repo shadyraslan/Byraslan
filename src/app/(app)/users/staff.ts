@@ -40,7 +40,9 @@ export async function createStaff(_: unknown, fd: FormData): Promise<Result<{ na
   const home = String(fd.get("home_loc") || "") || null;
   await admin.from("profiles").update({ active: true, name, phone, login: phone, job: String(fd.get("job") || "") || null, home_loc: home }).eq("id", id);
   const role = ROLES.find((r) => r.id === fd.get("role"));
-  if (role) await admin.from("grants").insert(role.perms.map((perm) => ({ user_id: id, perm, granted_by: me!.id })));
+  // المدير مايقدرش يدّي الموظف الجديد صلاحيات مش معاه (المالك بيدّي أي حاجة) — من مراجعة فرع emam
+  const perms = role ? role.perms.filter((perm) => me!.isOwner || (perm !== "users.manage" && can(me, perm))) : [];
+  if (perms.length) await admin.from("grants").insert(perms.map((perm) => ({ user_id: id, perm, granted_by: me!.id })));
   revalidatePath("/users");
   return { ok: true, name };
 }

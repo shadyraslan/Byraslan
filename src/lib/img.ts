@@ -3,6 +3,8 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 
 /** يصغّر الصورة ويرفعها على Storage (docs) ويرجّع المسار */
 export async function uploadPhoto(file: File, folder: string, max = 1400): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new Error("الملف ده مش صورة");
+  if (file.size > 25 * 1024 * 1024) throw new Error("الصورة أكبر من 25 ميجا");
   const url = URL.createObjectURL(file);
   const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
   const k = Math.min(1, max / Math.max(img.width, img.height));
