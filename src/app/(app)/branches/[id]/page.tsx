@@ -10,9 +10,11 @@ export default async function Branch({ params }: { params: Promise<{ id: string 
   const { id } = await params;
   const me = await getMe();
   const sb = await supabaseServer();
-  const { data: loc } = await sb.from("locations").select("id,name,type,city").eq("id", id).maybeSingle();
+  const [{ data: loc }, { data: subs }] = await Promise.all([
+    sb.from("locations").select("id,name,type,city").eq("id", id).maybeSingle(),
+    sb.from("locations").select("id,name,type").eq("parent", id).eq("active", true).order("sort"),
+  ]);
   if (!loc) notFound();
-  const { data: subs } = await sb.from("locations").select("id,name,type").eq("parent", id).eq("active", true).order("sort");
   const isShop = ["dark", "shop"].includes(loc.type);
   const apps = BRANCH_APPS.filter((a) => (!a.perm || can(me, a.perm)) && (isShop || !["pos", "orders", "partner", "receive"].includes(a.id)));
   return (

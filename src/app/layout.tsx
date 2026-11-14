@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "باي رسلان — ERP", descript
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ar" dir="rtl" className={cairo.variable}>
+    <html lang="ar" dir="rtl" className={cairo.variable} suppressHydrationWarning>
       <body>
         <script
           dangerouslySetInnerHTML={{

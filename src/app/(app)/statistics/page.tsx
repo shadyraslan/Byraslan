@@ -43,7 +43,7 @@ type StatRow = { label: string; count: number | string; value: number | string }
 type ExportRow = { section: string; label: string; count: number | string; value: number | string };
 
 const PAGE_SIZE = 1000;
-const MAX_PAGES = 1000;
+const MAX_PAGES = 50;
 const scopes: { id: Scope; label: string }[] = [
   { id: "all", label: "كامل النظام" },
   { id: "sales", label: "المبيعات" },
