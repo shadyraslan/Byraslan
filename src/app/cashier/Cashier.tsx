@@ -193,15 +193,33 @@ export default function Cashier() {
 
   // ---------- فتح الوردية (لازم نت) ----------
   const [openErr, setOpenErr] = useState<string | null>(null);
+  // وردية مفتوحة لنفس الكاشير على جهاز تاني (أو اتنسيت مفتوحة)
+  const [stale, setStale] = useState<Shift | null>(null);
+  const findOpen = async (): Promise<Shift | null> => {
+    if (!me) return null;
+    const { data } = await sb.from("shifts").select("id,client_id,location_id,opening_cash,opened_at").eq("cashier", me.id).eq("status", "open").order("opened_at", { ascending: false }).limit(1).maybeSingle();
+    if (!data) return null;
+    return { client_id: data.client_id, loc: data.location_id, loc_name: locs.find((l) => l.id === data.location_id)?.name ?? data.location_id, opening_cash: Number(data.opening_cash) || 0, opened_at: data.opened_at, server_id: data.id };
+  };
+  useEffect(() => { if (booted && me && !shift && online) findOpen().then(setStale); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [booted, me?.id, shift, online, locs.length]);
+  const resumeShift = async (sh: Shift) => {
+    await kv.set("shift", sh); await kv.set("done", []); setShift(sh); setDone([]); setOpenErr(null); setStale(null);
+    await refreshSnap(sh.loc);
+  };
   const openShift = async () => {
     const loc = openLoc || me?.home || locs[0]?.id;
     if (!loc) return;
     if (!navigator.onLine) return setOpenErr(OFF);
+    const old = await findOpen();
+    if (old) { setStale(old); return setOpenErr(null); }
     const sh: Shift = { client_id: uuid(), loc, loc_name: locs.find((l) => l.id === loc)?.name ?? loc, opening_cash: Number(openCash) || 0, opened_at: new Date().toISOString() };
     setWorking(true);
     const { data, error } = await sb.rpc("pos_sync", { p_loc: loc, p_shifts: [{ client_id: sh.client_id, opening_cash: sh.opening_cash, opened_at: sh.opened_at }], p_sales: [] });
     setWorking(false);
-    if (error) return setOpenErr(errText(error));
+    if (error) {
+      if (/one_open_shift/.test(error.message ?? "")) { const o = await findOpen(); if (o) { setStale(o); return setOpenErr(null); } }
+      return setOpenErr(errText(error));
+    }
     sh.server_id = (data as { shifts: { id: number }[] }).shifts[0]?.id;
     await kv.set("shift", sh); await kv.set("done", []); setShift(sh); setDone([]); setOpenErr(null);
     await refreshSnap(loc);
@@ -367,6 +385,14 @@ export default function Cashier() {
     <>{bar}
       <div style={{ padding: 20, display: "grid", gap: 14, maxWidth: 560 }}>
         <h1 style={{ margin: 0 }}>افتح الوردية</h1>
+        {stale && (
+          <div className="card" style={{ display: "grid", gap: 10, borderColor: "#FFD21F" }}>
+            <b>عندك وردية لسه مفتوحة في {stale.loc_name}</b>
+            <div style={{ opacity: 0.8 }}>اتفتحت {new Date(stale.opened_at).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" })} — الكاش أولها {f2(stale.opening_cash)}. مينفعش تفتح وردية جديدة قبل ما تقفلها.</div>
+            <button className="btn pri" style={{ height: 48 }} onClick={() => resumeShift(stale)}>كمّل في الوردية دي</button>
+            <div style={{ fontSize: 13, opacity: 0.7 }}>لو عايز تشتغل في فرع تاني: كمّل فيها، اقفلها من «قفل الوردية»، وبعدين افتح الجديدة.</div>
+          </div>
+        )}
         <div className="card" style={{ display: "grid", gap: 12 }}>
           <label className="fld">الفرع<select value={openLoc} onChange={(e) => setOpenLoc(e.target.value)}>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
           <label className="fld">الكاش في الدرج أول الوردية<input value={openCash} onChange={(e) => setOpenCash(e.target.value)} inputMode="decimal" dir="ltr" /></label>
