@@ -20,6 +20,7 @@ export default async function Assets({ searchParams }: { searchParams: Promise<{
   return (
     <>
       <div className="top"><h1>العهد العينية</h1></div>
+      <div className="muted" style={{ marginTop: -6 }}>حاجات (مش فلوس) مسلّمة للموظف ومسؤول عنها: موبايل، تابلت، ميزان، يونيفورم، مفتاح الفرع… بترجع وقت ما يسيب الشغل. الفلوس الكاش اللي بيصرف منها في «العهد النقدية».</div>
       {sp.err && <div className="badmsg">{sp.err}</div>}
       {sp.ok && <div className="okmsg">{sp.ok}</div>}
       {can(me, "hr.assets") && (

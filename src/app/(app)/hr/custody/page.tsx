@@ -37,7 +37,8 @@ export default async function Custody({ searchParams }: { searchParams: Promise<
   const rets = M.filter((m) => m.kind === "return" && m.status === "pending");
   return (
     <>
-      <div className="top"><h1>العهد</h1></div>
+      <div className="top"><h1>العهد النقدية</h1></div>
+      <div className="muted" style={{ marginTop: -6 }}>فلوس كاش بتتسلّم لموظف يصرف منها (مشتريات، مشاوير، مصاريف فرع) — بيرجّع الباقي ويسلّم الفواتير. للحاجات اللي بتتسلّم ومترجعش فلوس (موبايل، تابلت، يونيفورم…) شوف «العهد العينية».</div>
       <Tabs cur="/hr/custody" />
       <Flash sp={sp} />
       {can(me, "col.adv") && (

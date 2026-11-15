@@ -1,9 +1,18 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { stepStart, stepFinish } from "../production/actions";
 
-export type Job = { order: number; no: number; step: number; item: string; unit: string; qty: number; status: string; in_weight: number | null; prev_out: number | null; last: boolean };
+export type Job = { order: number; no: number; step: number; item: string; unit: string; qty: number; status: string; in_weight: number | null; prev_out: number | null; last: boolean; started?: string | null };
+
+function Timer({ from }: { from: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+  const sec = Math.max(0, Math.floor((now - new Date(from).getTime()) / 1000));
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), x = sec % 60;
+  const p = (n: number) => String(n).padStart(2, "0");
+  return <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0d0d0d", color: "#f5c800", borderRadius: 12, padding: "8px 14px" }}><span style={{ color: "#fff", fontWeight: 700 }}>⏱ شغال من</span><b className="num" dir="ltr" style={{ fontSize: 28 }}>{h ? `${h}:` : ""}{p(m)}:{p(x)}</b></div>;
+}
 
 export default function Station({ jobs }: { jobs: Job[] }) {
   const router = useRouter();
@@ -41,6 +50,7 @@ export default function Station({ jobs }: { jobs: Job[] }) {
                 </>
               ) : (
                 <>
+                  {j.started && <Timer from={j.started} />}
                   <div className="grid2">
                     <label className="fld">الوزن الطالع (كجم)<input value={v(k).a} onChange={(e) => set(k, { a: e.target.value })} inputMode="decimal" dir="ltr" style={{ height: 52, fontSize: 20 }} /></label>
                     <label className="fld">الهالك (كجم)<input value={v(k).b} onChange={(e) => set(k, { b: e.target.value })} inputMode="decimal" dir="ltr" style={{ height: 52, fontSize: 20 }} /></label>

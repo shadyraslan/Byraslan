@@ -370,7 +370,8 @@ export default function Cashier() {
     <div className="noprint" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", background: "#0d0d0d", color: "#fff", padding: "10px 16px" }}>
       <img src="/logo.png" alt="" style={{ height: 26 }} />
       <b style={{ color: "#f5c800" }}>الكاشير</b>
-      {shift && <span>{shift.loc_name} · {me?.name} · وردية من {hhmm(shift.opened_at)}</span>}
+      {me && <span style={{ fontWeight: 700 }}>👤 {me.name}</span>}
+      {shift && <span style={{ background: "#f5c800", color: "#0d0d0d", borderRadius: 99, padding: "2px 12px", fontWeight: 800 }}>فرع {shift.loc_name} · وردية من {new Date(shift.opened_at).toDateString() === new Date().toDateString() ? hhmm(shift.opened_at) : new Date(shift.opened_at).toLocaleString("ar-EG", { day: "numeric", month: "numeric", hour: "numeric", minute: "2-digit" })}</span>}
       <span style={{ marginInlineStart: "auto", padding: "3px 12px", borderRadius: 99, fontWeight: 700, fontSize: 13, background: online ? "#16a34a" : "#dc2626" }}>{online ? "متصل" : "النت قاطع — البيع واقف"}</span>
       {!!outbox.length && <span style={{ fontSize: 13, color: "#f5c800" }}>{syncing ? "بيرفع…" : `${outbox.length} فاتورة قديمة مستنية ترتفع`}</span>}
       {snap && <span style={{ fontSize: 12, color: "#888" }}>الأسعار والعلب: {hhmm(snap.at)}</span>}
