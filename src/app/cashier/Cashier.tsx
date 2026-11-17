@@ -19,6 +19,11 @@ type Done = Sale & { no?: number; conflicts?: string[]; total: number; change: n
 type Shift = { client_id: string; loc: string; loc_name: string; opening_cash: number; opened_at: string; server_id?: number; closing?: { counted: number; closed_at: string } };
 type Me = { id: string; name: string; home: string | null };
 
+// ملصق الميزان: البادئة + كود الصنف + الوزن، وبعدها رقم تحقق أو من غيره (بعض الموازين بتطبع 12 رقم)
+const isScale = (v: string, sc: { prefix: string; plu_digits: number; weight_digits: number }) => {
+  const n = sc.prefix.length + sc.plu_digits + sc.weight_digits;
+  return /^\d+$/.test(v) && (v.length === n || v.length === n + 1) && v.startsWith(sc.prefix);
+};
 const f2 = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const hhmm = (s?: string) => (s ? new Date(s).toLocaleTimeString("ar-EG", { hour: "numeric", minute: "2-digit" }) : "—");
@@ -234,7 +239,7 @@ export default function Cashier() {
     const v = code.toUpperCase();
     const item = (id: number) => snap.items.find((i) => i.id === id);
     const sc = snap.scale;
-    if (sc && /^\d{13}$/.test(v) && v.startsWith(sc.prefix)) {
+    if (sc && isScale(v, sc)) {
       const plu = v.substr(sc.prefix.length, sc.plu_digits);
       const w = Number(v.substr(sc.prefix.length + sc.plu_digits, sc.weight_digits)) / 10 ** sc.decimals;
       const it = snap.items.find((i) => (i.plu ?? "").padStart(sc.plu_digits, "0") === plu);
@@ -265,7 +270,7 @@ export default function Cashier() {
     if (!shift) return;
     let l: Line | string;
     const sc = snap?.scale;
-    if (sc && /^\d{13}$/.test(code.trim()) && code.trim().startsWith(sc.prefix)) l = lookup(code); // ملصق الميزان
+    if (sc && isScale(code.trim(), sc)) l = lookup(code); // ملصق الميزان
     else {
       const { data, error } = await sb.rpc("pos_lookup", { p_loc: shift.loc, p_code: code });
       const r = (Array.isArray(data) ? data[0] : data) as { item_id: number; item_name: string; unit: string; box_sn: number | null; qty: number; unit_price: number } | undefined;

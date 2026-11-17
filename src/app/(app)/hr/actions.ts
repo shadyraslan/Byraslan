@@ -6,6 +6,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 export async function decideAttendance(fd: FormData) {
   await need("hr.attendance");
   const sb = await supabaseServer();
+  if (!["0", "1"].includes(String(fd.get("ok")))) return; // مفيش قرار وصل — منعملش رفض بالغلط
   await sb.rpc("decide_attendance", { p_id: Number(fd.get("id")), p_ok: fd.get("ok") === "1", p_note: String(fd.get("note") || "") });
   revalidatePath("/hr");
 }
@@ -18,6 +19,7 @@ export async function resetDevice(fd: FormData) {
 export async function decideLeave(fd: FormData) {
   await need();
   const sb = await supabaseServer();
+  if (!["0", "1"].includes(String(fd.get("ok")))) return; // مفيش قرار وصل — منعملش رفض بالغلط
   await sb.rpc("decide_leave", { p_id: Number(fd.get("id")), p_ok: fd.get("ok") === "1", p_note: String(fd.get("note") || "") });
   revalidatePath("/hr/leaves");
 }

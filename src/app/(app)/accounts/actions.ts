@@ -18,6 +18,7 @@ export async function addExpense(loc: string, cat: number, amount: number, from:
 export async function decideExpense(fd: FormData) {
   await need("acc.approve");
   const sb = await supabaseServer();
+  if (!["0", "1"].includes(String(fd.get("approve")))) return; // مفيش قرار وصل — منعملش رفض بالغلط
   await sb.rpc("decide_expense", { p_id: Number(fd.get("id")), p_approve: fd.get("approve") === "1", p_note: String(fd.get("note") || "") });
   revalidatePath("/accounts/expenses");
 }

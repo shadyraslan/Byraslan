@@ -1,4 +1,5 @@
 "use client";
+import Choice from "@/components/Choice";
 import { useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { docDecide } from "../pay-actions";
@@ -26,8 +27,7 @@ export default function DocReady({ id, user }: { id: number; user: string }) {
         {busy ? "بيترفع…" : file ? "✓ اترفعت" : "📎 ارفع نسخة"}
         <input type="file" accept="application/pdf,image/*" hidden onChange={(e) => up(e.target.files?.[0])} />
       </label>
-      <button name="status" value="ready" className="btn pri" style={{ height: 32 }} disabled={busy}>جاهزة</button>
-      <button name="status" value="rejected" className="btn" style={{ height: 32 }} disabled={busy}>ارفض</button>
+      <Choice name="status" style={{ height: 32 }} opts={[{ v: "ready", label: "جاهزة", pri: true }, { v: "rejected", label: "ارفض" }]} />
       {err && <span style={{ color: "var(--bad)" }}>{err}</span>}
     </form>
   );

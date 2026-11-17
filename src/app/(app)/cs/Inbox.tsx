@@ -69,7 +69,7 @@ export default function Inbox({ me, canned, sla, agents, manage, openId }: { me:
           {([["open", "المفتوحة"], ["mine", "بتاعتي"], ["late", "متأخرة"], ["all", "الكل"]] as const).map(([k, l]) => <button key={k} className={filter === k ? "btn pri" : "btn"} style={{ height: 30 }} onClick={() => setFilter(k)}>{l}</button>)}
         </div>
         {list.map((x) => (
-          <div key={x.id} onClick={() => setCur(x.id)} style={{ cursor: "pointer", padding: 8, borderRadius: 10, background: x.id === cur ? "#FFF7CF" : undefined, borderInlineStart: late(x) ? "4px solid var(--bad)" : x.last_from === "customer" ? "4px solid var(--y, #F5C800)" : "4px solid transparent" }}>
+          <div key={x.id} onClick={() => setCur(x.id)} style={{ cursor: "pointer", padding: 8, borderRadius: 10, background: x.id === cur ? "#FFF7CF" : undefined, color: x.id === cur ? "#111" : undefined, borderInlineStart: late(x) ? "4px solid var(--bad)" : x.last_from === "customer" ? "4px solid var(--y, #F5C800)" : "4px solid transparent" }}>
             <div className="row" style={{ justifyContent: "space-between" }}><b>{x.name || x.phone}</b><span className="muted" style={{ fontSize: 12 }}>{ago(x.last_msg_at)}</span></div>
             <div className="muted" style={{ fontSize: 12 }}>#{x.no} · {TOP[x.topic]} · {CH[x.channel]} · {ST[x.status]}{x.assigned_to ? ` · ${AN.get(x.assigned_to) ?? ""}` : ""}</div>
           </div>
@@ -89,7 +89,7 @@ export default function Inbox({ me, canned, sla, agents, manage, openId }: { me:
             </div>
             <div style={{ display: "grid", gap: 6, maxHeight: "52vh", overflow: "auto", padding: 4 }}>
               {msgs.map((m) => (
-                <div key={m.id} style={{ justifySelf: m.sender === "customer" ? "start" : "end", maxWidth: "80%", background: m.sender === "customer" ? "#FFF3C4" : m.sender === "note" ? "#FDECEC" : m.sender === "bot" ? "#F1F0EA" : "#E6F6EC", borderRadius: 12, padding: "6px 10px" }}>
+                <div key={m.id} style={{ justifySelf: m.sender === "customer" ? "start" : "end", maxWidth: "80%", background: m.sender === "customer" ? "#FFF3C4" : m.sender === "note" ? "#FDECEC" : m.sender === "bot" ? "#F1F0EA" : "#E6F6EC", color: "#111", borderRadius: 12, padding: "6px 10px" }}>
                   <div className="muted" style={{ fontSize: 11 }}>{m.sender === "customer" ? "العميل" : m.sender === "bot" ? "تلقائي" : m.sender === "note" ? `ملاحظة داخلية — ${AN.get(m.staff_id ?? "") ?? ""}` : AN.get(m.staff_id ?? "") ?? "موظف"} · {ago(m.at)}</div>
                   {m.body && <div style={{ whiteSpace: "pre-wrap" }}>{m.body}</div>}
                   {m.photo && <button className="btn" style={{ height: 28 }} onClick={() => openPhoto(m.photo!)}>📷 الصورة</button>}
@@ -97,7 +97,7 @@ export default function Inbox({ me, canned, sla, agents, manage, openId }: { me:
               ))}
             </div>
             <div className="row" style={{ gap: 4 }}>{canned.map((c, i) => <button key={i} className="btn" style={{ height: 28, fontSize: 12 }} onClick={() => setText(c)}>{c.slice(0, 28)}{c.length > 28 ? "…" : ""}</button>)}</div>
-            <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder={note ? "ملاحظة داخلية (العميل مش هيشوفها)" : "ردك على العميل — هيوصله إشعار"} style={{ background: note ? "#FDECEC" : undefined }} />
+            <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder={note ? "ملاحظة داخلية (العميل مش هيشوفها)" : "ردك على العميل — هيوصله إشعار"} style={{ background: note ? "#FDECEC" : undefined, color: note ? "#111" : undefined }} />
             <div className="row" style={{ gap: 6, alignItems: "center" }}>
               <button className="btn pri" onClick={() => reply()}>ابعت</button>
               <button className="btn" onClick={() => reply("waiting")}>ابعت ومستني العميل</button>

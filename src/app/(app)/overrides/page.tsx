@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Choice from "@/components/Choice";
 import { supabaseServer } from "@/lib/supabase/server";
 import { can,getMe } from "@/lib/perms";
 import Tabs from "../purchasing/Tabs";
@@ -32,8 +33,7 @@ export default async function Overrides() {
         <form action={decideOverride} className="row" style={{ marginTop: 8 }}>
           <input type="hidden" name="id" value={r.id} />
           <input name="note" placeholder="ملاحظتك" required minLength={3} style={{ flex: "1 1 200px" }} />
-          <button name="approve" value="1" className="btn pri">وافق</button>
-          <button name="approve" value="0" className="btn">ارفض</button>
+          <Choice name="approve" opts={[{ v: "1", label: "وافق", pri: true }, { v: "0", label: "ارفض" }]} />
         </form>
       )}
     </div>

@@ -13,3 +13,18 @@ export async function savePrice(item: number, loc: string, price: string, channe
   if (error) return { ok: false, error: dbMsg(error.message) };
   return { ok: true, v };
 }
+
+// كل صنف ليه سعر فرع ومالوش سعر أونلاين في نفس الفرع: ياخد سعر الفرع (عشان يظهر في التطبيق والحجوزات)
+export async function copyDirectToApp(): Promise<void> {
+  { const g = await deny("prices.edit"); if (g) return; }
+  const sb = await supabaseServer();
+  const [{ data: d }, { data: a }] = await Promise.all([
+    sb.from("prices").select("item_id,location_id,price").eq("channel", "direct"),
+    sb.from("prices").select("item_id,location_id").eq("channel", "app"),
+  ]);
+  const has = new Set((a ?? []).map((x) => `${x.item_id}|${x.location_id}`));
+  const rows = (d ?? []).filter((x) => !has.has(`${x.item_id}|${x.location_id}`)).map((x) => ({ item_id: x.item_id, location_id: x.location_id, channel: "app", price: x.price }));
+  if (rows.length) await sb.from("prices").upsert(rows);
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath("/prices");
+}

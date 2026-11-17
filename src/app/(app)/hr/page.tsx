@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Choice from "@/components/Choice";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import { cairoDayStart } from "@/lib/time";
@@ -57,8 +58,7 @@ export default async function Hr() {
                 <form action={decideAttendance} className="row" style={{ gap: 6 }}>
                   <input type="hidden" name="id" value={a.id} />
                   <input name="note" placeholder="ملاحظة" style={{ width: 140, height: 34 }} />
-                  <button name="ok" value="1" className="btn pri" style={{ height: 34 }}>وافق</button>
-                  <button name="ok" value="0" className="btn" style={{ height: 34 }}>ارفض = غياب</button>
+                  <Choice name="ok" style={{ height: 34 }} opts={[{ v: "1", label: "وافق", pri: true }, { v: "0", label: "ارفض = غياب" }]} />
                 </form>
               )}
             </div>

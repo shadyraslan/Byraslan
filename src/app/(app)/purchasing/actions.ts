@@ -118,6 +118,7 @@ export async function requestOverride(po: number, poNo: number, violations: stri
 export async function decideOverride(fd: FormData) {
   await need();
   const sb = await supabaseServer();
+  if (!["0", "1"].includes(String(fd.get("approve")))) return; // مفيش قرار وصل — منعملش رفض بالغلط
   await sb.rpc("decide_override", { p_id: Number(fd.get("id")), p_approve: fd.get("approve") === "1", p_note: String(fd.get("note") || "") });
   revalidatePath("/overrides");
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Choice from "@/components/Choice";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
@@ -44,8 +45,7 @@ export default async function Requests({ searchParams }: { searchParams: Promise
                   <input type="hidden" name="id" value={x.id} />
                   <input name="reply" placeholder="الرد (إجباري)" required style={{ width: 180, height: 32 }} />
                   <input name="amount" placeholder="تسوية ج" inputMode="decimal" dir="ltr" style={{ width: 80, height: 32 }} />
-                  <button name="ok" value="1" className="btn pri" style={{ height: 32 }}>اقبل</button>
-                  <button name="ok" value="0" className="btn" style={{ height: 32 }}>ارفض</button>
+                  <Choice name="ok" style={{ height: 32 }} opts={[{ v: "1", label: "اقبل", pri: true }, { v: "0", label: "ارفض" }]} />
                 </form>
               ) : <span>{x.status === "accepted" ? `اتقبل${x.amount ? ` · تسوية ${x.amount} ج الشهر الجاي` : ""}` : "اترفض"}<div className="muted">{x.reply}</div></span>}</td>
             </tr>

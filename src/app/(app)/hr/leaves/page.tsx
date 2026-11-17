@@ -1,4 +1,5 @@
 import { supabaseServer } from "@/lib/supabase/server";
+import Choice from "@/components/Choice";
 import { getMe, can } from "@/lib/perms";
 import Tabs from "../Tabs";
 import { decideLeave } from "../actions";
@@ -25,7 +26,7 @@ export default async function Leaves() {
       <td>{r.status === "pending" && can2 ? (
         <form action={decideLeave} className="row" style={{ gap: 4, flexWrap: "nowrap" }}>
           <input type="hidden" name="id" value={r.id} /><input name="note" placeholder="رد" style={{ width: 110, height: 32 }} />
-          <button name="ok" value="1" className="btn pri" style={{ height: 32 }}>وافق</button><button name="ok" value="0" className="btn" style={{ height: 32 }}>ارفض</button>
+          <Choice name="ok" style={{ height: 32 }} opts={[{ v: "1", label: "وافق", pri: true }, { v: "0", label: "ارفض" }]} />
         </form>) : S[r.status]}</td>
     </tr>
   );

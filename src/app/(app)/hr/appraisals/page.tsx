@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Choice from "@/components/Choice";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
@@ -55,7 +56,7 @@ export default async function Appraisals({ searchParams }: { searchParams: Promi
               <td style={{ whiteSpace: "normal", maxWidth: 300 }}>{a.items.map((i) => `${i.name}: ${i.actual ?? "—"}/${i.target}${i.unit ? ` ${i.unit}` : ""} (${i.pct ?? "—"}%)`).join(" · ")}{a.mgr_comment ? <div className="muted">{a.mgr_comment}</div> : null}</td>
               <td><form action={decideAppraisal} className="row" style={{ gap: 4, flexWrap: "nowrap" }}><input type="hidden" name="m" value={m} /><input type="hidden" name="id" value={a.id} />
                 <input name="note" placeholder="ملاحظة للرجوع" style={{ width: 120, height: 32 }} />
-                <button name="ok" value="1" className="btn pri" style={{ height: 32 }}>اعتمد</button><button name="ok" value="0" className="btn" style={{ height: 32 }}>رجّعه</button></form></td>
+                <Choice name="ok" style={{ height: 32 }} opts={[{ v: "1", label: "اعتمد", pri: true }, { v: "0", label: "رجّعه" }]} /></form></td>
             </tr>
           ))}</tbody></table>
         </div>
@@ -94,7 +95,7 @@ export default async function Appraisals({ searchParams }: { searchParams: Promi
                   ))}</tbody>
                 </table>
                 <label className="fld">تعليق المدير<input name="comment" defaultValue={a?.mgr_comment ?? ""} disabled={!editable} /></label>
-                {editable && <div className="row" style={{ marginTop: 6 }}><button name="submit" value="0" className="btn">احفظ مسودة</button><button name="submit" value="1" className="btn pri">ابعت للاعتماد</button></div>}
+                {editable && <div className="row" style={{ marginTop: 6 }}><Choice name="submit" opts={[{ v: "0", label: "احفظ مسودة" }, { v: "1", label: "ابعت للاعتماد", pri: true }]} /></div>}
               </form>
             </details>
           );

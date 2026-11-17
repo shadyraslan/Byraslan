@@ -1,4 +1,5 @@
 import { supabaseServer } from "@/lib/supabase/server";
+import Choice from "@/components/Choice";
 import { getMe, can } from "@/lib/perms";
 import { cairoDate } from "@/lib/time";
 import Tabs from "../Tabs";
@@ -54,7 +55,7 @@ export default async function Expenses({ searchParams }: { searchParams: Promise
                   {r.photo && <Receipt path={r.photo} />}
                   {r.status === "pending" && can(me, "acc.approve") && <form action={decideExpense} className="row" style={{ gap: 4, flexWrap: "nowrap" }}>
                     <input type="hidden" name="id" value={r.id} /><input name="note" placeholder="ملاحظة" style={{ width: 110, height: 32 }} />
-                    <button name="approve" value="1" className="btn pri" style={{ height: 32 }}>وافق</button><button name="approve" value="0" className="btn" style={{ height: 32 }}>ارفض</button></form>}
+                    <Choice name="approve" style={{ height: 32 }} opts={[{ v: "1", label: "وافق", pri: true }, { v: "0", label: "ارفض" }]} /></form>}
                 </td>
               </tr>
             ))}

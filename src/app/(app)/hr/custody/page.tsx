@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Choice from "@/components/Choice";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import Tabs, { Flash } from "../Tabs";
@@ -58,7 +59,7 @@ export default async function Custody({ searchParams }: { searchParams: Promise<
             <td className="num"><b>{f(m.amount)} ج</b></td><td>{CN.get(m.category_id ?? 0)} · {LN.get(m.location_id ?? "")}</td>
             <td style={{ whiteSpace: "normal" }}>{m.note}</td><td>{m.photo && <Selfie path={m.photo} label="🧾 الفاتورة" />}</td>
             <td>{can(me, "col.approve") && <form action={custodyDecide} className="row" style={{ gap: 4, flexWrap: "nowrap" }}><input type="hidden" name="id" value={m.id} /><input name="note" placeholder="رد" style={{ width: 100, height: 32 }} />
-              <button name="ok" value="1" className="btn pri" style={{ height: 32 }}>وافق</button><button name="ok" value="0" className="btn" style={{ height: 32 }}>ارفض</button></form>}</td>
+              <Choice name="ok" style={{ height: 32 }} opts={[{ v: "1", label: "وافق", pri: true }, { v: "0", label: "ارفض" }]} /></form>}</td>
           </tr>
         ))}</tbody></table>
         {!spends.length && <div className="muted">مفيش</div>}

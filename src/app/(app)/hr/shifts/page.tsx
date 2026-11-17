@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Choice from "@/components/Choice";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
@@ -93,7 +94,7 @@ export default async function Shifts({ searchParams }: { searchParams: Promise<{
               <form action={decidePermit} className="row" style={{ gap: 4, flexWrap: "nowrap" }}>
                 <input type="hidden" name="w" value={w} /><input type="hidden" name="id" value={x.id} />
                 <label className="row" style={{ gap: 4 }}><input type="checkbox" name="paid" defaultChecked /> مدفوع</label>
-                <button name="ok" value="1" className="btn pri" style={{ height: 30 }}>وافق</button><button name="ok" value="0" className="btn" style={{ height: 30 }}>ارفض</button>
+                <Choice name="ok" style={{ height: 30 }} opts={[{ v: "1", label: "وافق", pri: true }, { v: "0", label: "ارفض" }]} />
               </form>
             ) : x.status === "approved" ? (x.paid ? "✓ مدفوع" : "✓ بيتخصم وقته") : x.status === "rejected" ? "اترفض" : "اتلغى"}</td>
           </tr>
