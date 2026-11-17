@@ -11,7 +11,7 @@ import OrdersPanel, { useOrders } from "./Orders";
    المسح بيسأل السيستم على طول (pos_lookup)، وملصق الميزان بيتقري من نسخة الفرع اللي بتتحدّث كل دقيقة. */
 
 type Item = { id: number; name: string; unit: string; sold_by: string; arm: string; kind: string; fams?: number[]; plu: string | null; price: number };
-type Promo = { id: number; name: string; kind: string; value: number; max_off: number | null; auto: boolean; code: string | null; min_order: number; families: number[] | null; stackable: boolean; ends_at: string | null };
+type Promo = { id: number; name: string; kind: string; value: number; max_off: number | null; auto: boolean; code: string | null; min_order: number; families: number[] | null; stackable: boolean; ends_at: string | null; bundle?: { item_id: number; qty: number }[] | null };
 type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number }[]; promos?: Promo[]; unknown_item?: number | null; can_unknown?: boolean; can_credit?: boolean; can_return?: boolean };
 type Line = { item_id: number; name: string; unit: string; box_sn: number | null; qty: number; unit_price: number; unknown_code?: string };
 type Sale = { client_id: string; shift: string; at: string; local_no: string; lines: Line[]; discount: number; cash: number; card: number; offline: boolean; promo_code?: string | null; credit?: number; credit_customer?: number | null; credit_name?: string | null; points_code?: string | null; points?: number; points_off?: number; points_earn?: number };
@@ -54,6 +54,8 @@ export default function Cashier() {
     setMsg({ ok: true, t: `✓ ${unk.code} بسعر ${p} — هيتراجع ويتربط بصنف` }); setUnk(null);
   };
   const [cash, setCash] = useState("");
+  // تبديل: قيمة المرتجع بتتحط في الكاش بدل ما تتدفع للعميل
+  const [exch, setExch] = useState<{ no: number; amount: number } | null>(null);
   const [card, setCard] = useState("");
   // على حساب موظف (بيتخصم من مرتبه)
   const [stPhone, setStPhone] = useState("");
@@ -308,6 +310,20 @@ export default function Cashier() {
       if (!p.auto && (!code || p.code !== code)) continue;
       if (p.ends_at && new Date(p.ends_at).getTime() < Date.now()) continue;
       if (sub < Number(p.min_order)) continue;
+      if (p.kind === "bundle") {
+        // باقة: كام باقة كاملة × (سعر أصنافها - سعر الباقة)
+        const B = p.bundle ?? []; if (!B.length) continue;
+        const q = (id: number) => lines.filter((l) => l.item_id === id).reduce((a, l) => a + l.qty, 0);
+        const pr = (id: number) => Math.max(0, ...lines.filter((l) => l.item_id === id).map((l) => l.unit_price));
+        const sets = Math.min(...B.map((b) => Math.floor(q(b.item_id) / Number(b.qty))));
+        if (!(sets >= 1)) continue;
+        let amt = Math.max(r2(sets * (B.reduce((a, b) => a + Number(b.qty) * pr(b.item_id), 0) - Number(p.value))), 0);
+        if (p.max_off != null) amt = Math.min(amt, Number(p.max_off));
+        if (amt <= 0) continue;
+        if (p.stackable) { stack += amt; names.push(p.name); if (!p.auto) codeOk = true; }
+        else if (amt > best) { best = amt; bestN = p.name; codeOk = !p.auto || codeOk; }
+        continue;
+      }
       const base = p.families?.length ? lines.reduce((a, l) => { const it = snap?.items.find((i) => i.id === l.item_id); return a + ((it?.fams ?? []).some((f) => p.families!.includes(f)) ? r2(l.qty * l.unit_price) : 0); }, 0) : sub;
       if (base <= 0) continue;
       let amt = p.kind === "pct" ? r2(base * Number(p.value) / 100) : Math.min(Number(p.value), base);
@@ -350,7 +366,7 @@ export default function Cashier() {
     const r = (data as { sales: { no: number; conflicts?: string[] }[] }).sales[0];
     const dn: Done = { ...s, no: r?.no, conflicts: r?.conflicts ?? [], total: totalOf(s), change: r2(Math.max(c + k + st + cr + ptOff - totalOf(s), 0)) };
     const all = [dn, ...((await kv.get<Done[]>("done")) ?? [])].slice(0, 300); await kv.set("done", all); setDone(all);
-    setRec(dn); setLines([]); setDisc(""); setPcode(""); setCash(""); setCard(""); setStPhone(""); setStAmt(""); setStInfo(null); setCrPhone(""); setCrAmt(""); setCrInfo(null); setPtCode(""); setPtInfo(null); setPtUse(false); setMsg(null);
+    setRec(dn); setLines([]); setDisc(""); setPcode(""); setCash(""); setExch(null); setCard(""); setStPhone(""); setStAmt(""); setStInfo(null); setCrPhone(""); setCrAmt(""); setCrInfo(null); setPtCode(""); setPtInfo(null); setPtUse(false); setMsg(null);
     setTimeout(() => window.print(), 80);
   };
 
@@ -447,7 +463,7 @@ export default function Cashier() {
       )}
       {view === "return" && (
         <div style={{ padding: "0 16px" }}>
-          {online ? <ReturnBox key={retKey} shiftClient={shift?.client_id} onDone={(r) => setRets((x) => [...x, r])} onClose={() => setRetKey((k) => k + 1)} /> : <div className="badmsg">المرتجع محتاج نت</div>}
+          {online ? <ReturnBox key={retKey} shiftClient={shift?.client_id} onDone={(r) => setRets((x) => [...x, r])} onClose={() => setRetKey((k) => k + 1)} onExchange={(r) => { setExch({ no: r.no, amount: Number(r.refund_cash) }); setCash(String(r.refund_cash)); setRetKey((k) => k + 1); setView("sell"); }} /> : <div className="badmsg">المرتجع محتاج نت</div>}
           {riderIn > 0 && <div className="muted" style={{ marginTop: 8 }}>كاش استلمته من الطيارين في الوردية دي: {f2(riderIn)} ج — اتضاف للمتوقع في الدرج</div>}
           {rets.length > 0 && <div className="muted" style={{ marginTop: 8 }}>مرتجعات الوردية: {rets.map((r) => `R-${r.no} (${f2(r.total)} ج)`).join(" · ")} — الكاش اللي اترجع {f2(retCash)} ج اتخصم من المتوقع في الدرج</div>}
         </div>)}
@@ -457,6 +473,9 @@ export default function Cashier() {
         <div className="noprint" style={{ margin: "0 16px 10px", padding: 18, borderRadius: 12, background: "var(--bad)", color: "#fff", fontSize: 19, fontWeight: 800, textAlign: "center" }}>
           {OFF}
         </div>
+      )}
+      {view === "sell" && exch && (
+        <div className="okmsg" style={{ margin: "0 16px 8px" }}>🔁 تبديل من مرتجع R-{exch.no}: {f2(exch.amount)} ج اتحطوا في خانة الكاش — امسح الصنف الجديد، والعميل يدفع الفرق بس (أو ياخد الباقي). <button className="btn" style={{ height: 28 }} onClick={() => { setExch(null); setCash(""); }}>إلغاء التبديل</button></div>
       )}
       {view === "sell" && (
         <div className="pos noprint" style={{ padding: "0 16px 16px" }}>

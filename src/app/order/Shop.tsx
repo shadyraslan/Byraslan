@@ -29,6 +29,8 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
   const loc = dd?.branch ?? null;
   const [menu, setMenu] = useState<Menu[] | null>(null);
   const [cart, setCart] = useState<Record<number, number>>({});
+  // تعليمات خاصة لكل صنف (تقطيع، تتبيلة…) — بتظهر لوحدها في تقرير الحجوزات والفاتورة
+  const [notes, setNotes] = useState<Record<number, string>>({});
   const [step, setStep] = useState<"menu" | "info">("menu");
   const [info, setInfo] = useState({ name: "", phone: "", address: "", floor: "", apt: "", landmark: "", note: "", pay: "cash" });
   const [pin, setPinXY] = useState<{ lat: number; lng: number } | null>(null);
@@ -61,7 +63,7 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
   const dayName = (s: string) => new Date(`${s}T12:00:00`).toLocaleDateString("ar-EG", { weekday: "short", day: "numeric", month: "short" });
   const site = typeof window !== "undefined" ? window.location.origin : "";
   const copy = async (t: string) => { try { await navigator.clipboard.writeText(t); } catch { prompt("انسخ:", t); } setCopied(true); setTimeout(() => setCopied(false), 1500); };
-  const lines = () => Object.entries(cart).map(([id, q]) => ({ item_id: Number(id), qty: q }));
+  const lines = () => Object.entries(cart).map(([id, q]) => ({ item_id: Number(id), qty: q, ...(notes[Number(id)]?.trim() ? { note: notes[Number(id)].trim() } : {}) }));
 
   const fams = useMemo(() => [...new Set((menu ?? []).map((m) => m.family ?? "أصناف"))], [menu]);
   const step1 = (m: Menu) => (m.sold_by === "piece" || m.unit === "قطعة" ? 1 : 0.5);
@@ -119,7 +121,15 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
           ? <input placeholder="لينك اللوكيشن من الواتساب (اختياري)" dir="ltr" onChange={(e) => { const x = parseLoc(e.target.value); setPinXY(x); setPinMsg(x ? "📍 اتحدد المكان من اللينك" : e.target.value ? "اللينك ده مافيهوش مكان" : ""); }} />
           : <button type="button" className="btn" onClick={locate}>📍 حدّد مكاني بالظبط (أسرع في التوصيل)</button>}
         {pinMsg && <div className="muted" style={{ fontSize: 13 }}>{pinMsg}</div>}
-        <input placeholder="ملاحظة (مثلًا: تقطيع معيّن)" value={info.note} onChange={(e) => setInfo({ ...info, note: e.target.value })} />
+        <details>
+          <summary className="muted">✂️ تعليمات خاصة لصنف (تقطيع، تتبيلة…)</summary>
+          <div style={{ display: "grid", gap: 6, marginTop: 6 }}>
+            {(menu ?? []).filter((m) => cart[m.item_id]).map((m) => (
+              <label key={m.item_id} className="fld">{m.name} ({cart[m.item_id]} {m.unit})<input value={notes[m.item_id] ?? ""} onChange={(e) => setNotes({ ...notes, [m.item_id]: e.target.value })} placeholder="مثلاً: مكعبات صغيرة، من غير دهن" maxLength={200} /></label>
+            ))}
+          </div>
+        </details>
+        <input placeholder="ملاحظة على الطلب كله" value={info.note} onChange={(e) => setInfo({ ...info, note: e.target.value })} />
         {(booking?.on || edit) && (
           <div className="card" style={{ display: "grid", gap: 8 }}>
             {!edit && <div className="row">{([["now", "🚚 وصّله دلوقتي"], ["book", "📅 احجز لميعاد"]] as const).map(([k, l]) => <button key={k} className={mode === k ? "btn pri" : "btn"} onClick={() => setMode(k)}>{l}</button>)}</div>}

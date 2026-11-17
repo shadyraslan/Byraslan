@@ -8,13 +8,13 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const id = Number((await params).id);
   const me = await getMe();
   const sb = await supabaseServer();
-  const { data } = await sb.from("online_orders").select("*,customers(name,phone,area),locations(name),online_order_lines(line,qty,unit_price,prepared,sub_status,items!online_order_lines_item_id_fkey(name,unit)),online_order_boxes(box_sn,line,qty,removed)").eq("id", id).single();
+  const { data } = await sb.from("online_orders").select("*,customers(name,phone,area),locations(name),online_order_lines(line,qty,unit_price,prepared,sub_status,note,items!online_order_lines_item_id_fkey(name,unit)),online_order_boxes(box_sn,line,qty,removed)").eq("id", id).single();
   if (!data) notFound();
   const o = data as unknown as {
     id: number; no: number; status: string; address: string | null; note: string | null; pay_method: string; est_total: number; total: number | null; delivery_fee: number; discount: number; promo_code: string | null; driver: string | null; cancel_reason: string | null; created_at: string; token: string; channel: string;
     location_id: string; fee_orig: number | null; branch_discount: number; branch_discount_note: string | null; rider_note: string | null; rider_id: number | null; floor: string | null; apt: string | null; landmark: string | null;
     customers: { name: string; phone: string; area: string | null } | null; locations: { name: string } | null;
-    online_order_lines: { line: number; qty: number; unit_price: number; prepared: number; items: { name: string; unit: string } | null }[];
+    online_order_lines: { line: number; qty: number; unit_price: number; prepared: number; note?: string | null; items: { name: string; unit: string } | null }[];
     online_order_boxes: { box_sn: number; line: number; qty: number; removed: boolean }[];
   };
   return <OrderDesk o={{ ...o, online_order_lines: o.online_order_lines.sort((a, b) => a.line - b.line), online_order_boxes: o.online_order_boxes.filter((b) => !b.removed) }} canCancel={can(me, "orders.cancel")} />;

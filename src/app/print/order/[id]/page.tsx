@@ -3,7 +3,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { barcodeSvg } from "@/lib/barcode";
 import PrintBtn from "../../campaign/[id]/PrintBtn";
 
-type L = { name: string; unit: string; sold_by: string; qty: number; prepared: number; price: number; boxes: number };
+type L = { name: string; unit: string; sold_by: string; qty: number; prepared: number; price: number; boxes: number; note?: string | null };
 type R = {
   id: number; no: number; status: string; created_at: string; delivered_at: string | null; pay_method: string;
   address: string | null; floor: string | null; apt: string | null; landmark: string | null; note: string | null; rider_note: string | null;
@@ -85,7 +85,7 @@ export default async function OrderReceipt({ params }: { params: Promise<{ id: s
           <thead><tr><th style={{ textAlign: "right" }}>الصنف</th><th>الوزن</th><th>كمية</th><th>السعر</th><th>إجمالي</th></tr></thead>
           <tbody>{lines.map((l, i) => (
             <tr key={i}>
-              <td className="b">{l.name}</td>
+              <td className="b">{l.name}{l.note && <div style={{ fontWeight: 600, fontSize: 10 }}>✂ {l.note}</div>}</td>
               <td className="num">{l.sold_by === "piece" ? "—" : `${n2(l.w)} ${l.unit}`}</td>
               <td className="num">{l.sold_by === "piece" ? l.w : Math.max(Number(l.boxes), 1)}</td>
               <td className="num">{n2(l.price)}</td>

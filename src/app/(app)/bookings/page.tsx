@@ -8,7 +8,7 @@ import { saveBookingCfg, setDeposit } from "./actions";
 type B = { id: number; no: number; token: string; created_at: string; scheduled_for: string; day: string; slot: string; status: string; channel: string; pay_method: string;
   location_id: string; branch: string; district_id: number | null; district: string | null; phone: string; customer: string | null; address: string | null; note: string | null;
   est_total: number; delivery_fee: number; total: number | null; discount: number; deposit: number; deposit_paid: boolean; cancel_reason: string | null; modified_count: number;
-  booked_by: string | null; booked_by_name: string | null; lines: { item_id: number; name: string; family_id: number | null; qty: number; price: number }[] | null };
+  booked_by: string | null; booked_by_name: string | null; lines: { item_id: number; name: string; family_id: number | null; qty: number; price: number; unit?: string; note?: string | null }[] | null };
 type Sp = Record<string, string | undefined>;
 
 const ST: Record<string, string> = { new: "مأكّد", accepted: "اتقبل", preparing: "بيتجهّز", ready: "جاهز", out: "مع الطيار", delivered: "اتسلّم", cancelled: "اتلغى" };
@@ -70,6 +70,13 @@ export default async function Bookings({ searchParams }: { searchParams: Promise
     if (g === "item") x.qty += (b.lines ?? []).filter((l) => l.name === k && b.status !== "cancelled").reduce((a, l) => a + Number(l.qty), 0);
     groups.set(k, x);
   }
+  // ملخص التجهيز: إجمالي كل صنف (من غير السطور اللي ليها تعليمات خاصة) + السطور الخاصة كل واحد لوحده
+  const totals = new Map<string, { qty: number; unit: string; n: number }>();
+  const special: { b: B; l: NonNullable<B["lines"]>[number] }[] = [];
+  for (const b of active) for (const l of b.lines ?? []) {
+    if (l.note?.trim()) { special.push({ b, l }); continue; }
+    const x = totals.get(l.name) ?? { qty: 0, unit: l.unit ?? "", n: 0 }; x.qty += Number(l.qty); x.n++; totals.set(l.name, x);
+  }
   // المطلوب تجهيزه: كميات كل صنف لكل يوم وفرع (الحجوزات اللي مش ملغية)
   const demand = new Map<string, number>();
   for (const b of active) for (const l of b.lines ?? []) { const k = `${b.day}|${b.branch}|${l.name}`; demand.set(k, (demand.get(k) ?? 0) + Number(l.qty)); }
@@ -80,7 +87,7 @@ export default async function Bookings({ searchParams }: { searchParams: Promise
   const CK: Record<string, string> = { create: "اتحجز", lines: "الأصناف اتعدّلت", reschedule: "الميعاد اتغيّر", address: "العنوان اتغيّر", note: "الملاحظة اتغيّرت", cancel: "اتلغى", deposit: "العربون" };
   const exportRows = R.map((b) => ({ "رقم": b.no, "يوم التسليم": b.day, "الميعاد": b.slot, "اتحجز في": new Date(b.created_at).toLocaleString("ar-EG", { timeZone: "Africa/Cairo" }), "الحالة": ST[b.status],
     "الفرع": b.branch, "المنطقة": b.district ?? "", "القناة": CH[b.channel] ?? b.channel, "العميل": b.customer ?? "", "الموبايل": b.phone, "العنوان": b.address ?? "",
-    "الأصناف": (b.lines ?? []).map((l) => `${l.name} × ${l.qty}`).join("، "), "القيمة": Math.round(val(b)), "العربون": b.deposit, "العربون اتدفع": b.deposit_paid ? "أيوه" : "لا",
+    "الأصناف": (b.lines ?? []).map((l) => `${l.name} × ${l.qty}${l.note ? ` (${l.note})` : ""}`).join("، "), "القيمة": Math.round(val(b)), "العربون": b.deposit, "العربون اتدفع": b.deposit_paid ? "أيوه" : "لا",
     "الدفع": PAY[b.pay_method], "الموظف": b.booked_by_name ?? "العميل", "عدد التعديلات": b.modified_count, "سبب الإلغاء": b.cancel_reason ?? "" }));
   const sel = (name: string, opts: [string, string][], label: string) => (
     <label className="fld">{label}<select name={name} defaultValue={sp[name] ?? ""}><option value="">الكل</option>{opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
@@ -121,6 +128,23 @@ export default async function Bookings({ searchParams }: { searchParams: Promise
         <div className="kpi"><span>اتعدّلت</span><b className="num">{active.filter((b) => b.modified_count > 0).length}</b></div>
         <div className="kpi"><span>عربون اتدفع</span><b className="num">{f(active.filter((b) => b.deposit_paid).reduce((a, b) => a + Number(b.deposit), 0))}</b></div>
         <div className="kpi"><span>متوسط الحجز</span><b className="num">{f(active.length ? active.reduce((a, b) => a + val(b), 0) / active.length : 0)}</b></div>
+      </div>
+
+      <div className="card" style={{ overflowX: "auto" }}>
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <h2 style={{ margin: 0 }}>ملخص التجهيز — {sp.branch ? (locs ?? []).find((l) => l.id === sp.branch)?.name : "كل الفروع"} · {active.length} حجز</h2>
+          <div className="row" style={{ gap: 6 }}>{[["", "كل الفروع"], ...(locs ?? []).map((l) => [l.id as string, l.name as string])].map(([id, n]) => <Link key={id} className={(sp.branch ?? "") === id ? "btn pri" : "btn"} style={{ height: 30, display: "inline-grid", placeItems: "center" }} href={`/bookings?${new URLSearchParams({ ...Object.fromEntries(Object.entries(sp).filter(([, v]) => v != null) as [string, string][]), branch: id })}`}>{n}</Link>)}</div>
+        </div>
+        <table style={{ marginTop: 8 }}><thead><tr><th>الصنف</th><th>إجمالي الكمية</th><th>في كام حجز</th></tr></thead>
+          <tbody>{[...totals.entries()].sort((a, b) => b[1].qty - a[1].qty).map(([n, x]) => <tr key={n}><td><b>{n}</b></td><td className="num"><b>{Math.round(x.qty * 100) / 100}</b> {x.unit}</td><td className="num">{x.n}</td></tr>)}
+            {!totals.size && <tr><td colSpan={3} className="muted">مفيش</td></tr>}</tbody></table>
+        {!!special.length && (
+          <>
+            <h3 style={{ marginBottom: 4 }}>✂️ أصناف بتعليمات خاصة — كل واحد لوحده ({special.length})</h3>
+            <table><thead><tr><th>الحجز</th><th>اليوم والميعاد</th><th>العميل</th><th>الصنف</th><th>الكمية</th><th>التعليمات</th></tr></thead>
+              <tbody>{special.map(({ b, l }, i) => <tr key={i}><td className="num">#{b.no}</td><td className="num">{b.day} · {b.slot}</td><td>{b.customer ?? b.phone}</td><td><b>{l.name}</b></td><td className="num">{l.qty} {l.unit ?? ""}</td><td style={{ color: "var(--bad)", fontWeight: 700 }}>{l.note}</td></tr>)}</tbody></table>
+          </>
+        )}
       </div>
 
       {g && (

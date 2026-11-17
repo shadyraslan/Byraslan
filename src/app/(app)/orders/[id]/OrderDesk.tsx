@@ -9,7 +9,7 @@ type O = {
   id: number; no: number; status: string; address: string | null; note: string | null; pay_method: string; est_total: number; total: number | null; delivery_fee: number; discount: number; promo_code: string | null; driver: string | null; cancel_reason: string | null; created_at: string; channel: string;
   location_id: string; fee_orig: number | null; branch_discount: number; branch_discount_note: string | null; rider_note: string | null; rider_id: number | null; floor: string | null; apt: string | null; landmark: string | null;
   customers: { name: string; phone: string; area: string | null } | null; locations: { name: string } | null;
-  online_order_lines: { line: number; qty: number; unit_price: number; prepared: number; items: { name: string; unit: string } | null }[];
+  online_order_lines: { line: number; qty: number; unit_price: number; prepared: number; note?: string | null; items: { name: string; unit: string } | null }[];
   online_order_boxes: { box_sn: number; line: number; qty: number }[];
 };
 const ST: Record<string, string> = { new: "جديد", accepted: "اتقبل", preparing: "بيتحضّر", ready: "جاهز", out: "مع الطيار", delivered: "اتسلّم", cancelled: "اتلغى" };
@@ -48,7 +48,7 @@ export default function OrderDesk({ o, canCancel }: { o: O; canCancel: boolean }
             const boxes = o.online_order_boxes.filter((b) => b.line === l.line);
             const st = l.prepared <= 0 ? "var(--bad)" : Math.abs(l.prepared - l.qty) / l.qty > 0.2 ? "#b7791f" : "var(--good)";
             return (
-              <tr key={l.line}><td><b>{l.items?.name}</b>
+              <tr key={l.line}><td><b>{l.items?.name}</b>{l.note && <div style={{ color: "var(--bad)", fontWeight: 700, fontSize: 13 }}>✂️ {l.note}</div>}
                 <div className="row noprint" style={{ gap: 4 }}>{boxes.map((b) => <button key={b.box_sn} className="btn" style={{ height: 26, fontSize: 12 }} disabled={!prep && o.status !== "ready"} onClick={() => run(unscan(o.id, b.box_sn), `شلت العلبة #${b.box_sn}`)} title="شيل العلبة">#{b.box_sn} · {b.qty} ✕</button>)}</div></td>
                 <td className="num">{l.qty} {l.items?.unit}</td><td className="num" style={{ color: st, fontWeight: 700 }}>{l.prepared}</td><td className="num">{l.unit_price}</td><td className="num">{Math.round(l.prepared * l.unit_price)}</td></tr>
             );

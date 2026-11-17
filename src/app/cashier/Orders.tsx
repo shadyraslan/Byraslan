@@ -8,7 +8,7 @@ import OrderClose from "@/components/OrderClose";
 
 export type OOrder = {
   id: number; no: number; status: string; created_at: string; pay: string; address: string | null; note: string | null; fee: number; discount: number; est: number; driver: string | null; rider_id?: number | null; rider_note?: string | null; fee_orig?: number | null; branch_discount?: number; branch_discount_note?: string | null; floor?: string | null; apt?: string | null; landmark?: string | null; booking?: boolean; scheduled_for?: string | null; slot?: string | null; deposit?: number; deposit_paid?: boolean; lat?: number | null; lng?: number | null; pin_far?: boolean; pin_km?: number | null;
-  customer: string; phone: string; lines: { line: number; name: string; unit: string; qty: number; prepared: number; price: number }[]; boxes: number[];
+  customer: string; phone: string; lines: { line: number; name: string; unit: string; qty: number; prepared: number; price: number; note?: string | null }[]; boxes: number[];
 };
 const ST: Record<string, string> = { new: "جديد", accepted: "اتقبل", preparing: "بيتحضّر", ready: "جاهز", out: "مع الطيار" };
 const PAY: Record<string, string> = { cash: "كاش", card: "فيزا", instapay: "إنستاباي", wallet: "محفظة", credit: "آجل" };
@@ -108,7 +108,7 @@ export default function OrdersPanel({ sb, orders, ack, reload, online, loc, shif
             )}
             <table>
               <thead><tr><th>الصنف</th><th>المطلوب</th><th>المتحضّر</th><th>القيمة</th></tr></thead>
-              <tbody>{o.lines.map((l) => <tr key={l.line}><td><b>{l.name}</b></td><td className="num">{l.qty} {l.unit}</td><td className="num" style={{ color: l.prepared <= 0 ? "var(--bad)" : "var(--good)", fontWeight: 700 }}>{l.prepared}</td><td className="num">{Math.round((l.prepared || l.qty) * l.price)}</td></tr>)}</tbody>
+              <tbody>{o.lines.map((l) => <tr key={l.line}><td><b>{l.name}</b>{l.note && <div style={{ color: "var(--bad)", fontWeight: 700, fontSize: 13 }}>✂️ {l.note}</div>}</td><td className="num">{l.qty} {l.unit}</td><td className="num" style={{ color: l.prepared <= 0 ? "var(--bad)" : "var(--good)", fontWeight: 700 }}>{l.prepared}</td><td className="num">{Math.round((l.prepared || l.qty) * l.price)}</td></tr>)}</tbody>
             </table>
             {!!o.boxes.length && <div className="row" style={{ gap: 6 }}>{o.boxes.map((sn) => <button key={sn} className="btn" style={{ height: 28, fontSize: 12 }} onClick={() => run(sb.rpc("order_unscan", { p_id: o.id, p_sn: sn }), `شلت العلبة #${sn}`)}>#{sn} ✕</button>)}</div>}
             <div className="muted">التوصيل {o.fee} {o.discount > 0 ? `· خصم ${o.discount}` : ""} · الدفع {PAY[o.pay]}{o.booking ? ` · حجز الساعة ${o.slot}${o.deposit ? ` · عربون ${o.deposit} ج ${o.deposit_paid ? "✓ مدفوع" : "(مش مدفوع)"}` : ""}` : ""}</div>

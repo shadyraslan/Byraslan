@@ -11,7 +11,7 @@ export async function getMenu(loc: string): Promise<Menu[]> {
   return ((data ?? []) as Menu[]).map((m) => ({ ...m, price: Number(m.price), available: Number(m.available) }));
 }
 
-export async function placeOrder(o: { district: number; phone: string; name: string; address: string; note: string; pay: string; channel: string; lines: { item_id: number; qty: number }[] }): Promise<Result<{ no: number; token: string; total: number }>> {
+export async function placeOrder(o: { district: number; phone: string; name: string; address: string; note: string; pay: string; channel: string; lines: { item_id: number; qty: number; note?: string }[] }): Promise<Result<{ no: number; token: string; total: number }>> {
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("place_order_d", { p_district: o.district, p_phone: o.phone, p_name: o.name, p_address: o.address, p_note: o.note, p_pay: o.pay, p_lines: o.lines, p_channel: o.channel });
   if (error) return { ok: false, error: dbMsg(error.message) };
@@ -20,7 +20,7 @@ export async function placeOrder(o: { district: number; phone: string; name: str
 }
 
 // الموظف: طلب واتساب/تليفون (بيتسجّل باسمه)
-export async function staffPlace(o: { district: number; phone: string; name: string; address: string; note: string; pay: string; channel: string; lines: { item_id: number; qty: number }[] }): Promise<Result<{ no: number; token: string; total: number }>> {
+export async function staffPlace(o: { district: number; phone: string; name: string; address: string; note: string; pay: string; channel: string; lines: { item_id: number; qty: number; note?: string }[] }): Promise<Result<{ no: number; token: string; total: number }>> {
   { const g = await deny("cs.agent", "orders.handle"); if (g) return g; }
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("cs_place_order", { p_district: o.district, p_phone: o.phone, p_name: o.name, p_address: o.address, p_note: o.note, p_pay: o.pay, p_lines: o.lines, p_channel: o.channel });
@@ -28,7 +28,7 @@ export async function staffPlace(o: { district: number; phone: string; name: str
   const r = data as { no: number; token: string; total: number };
   return { ok: true, no: Number(r.no), token: r.token, total: Number(r.total) };
 }
-export async function makeCart(o: { district: number; lines: { item_id: number; qty: number }[]; phone: string; name: string; address: string }): Promise<Result<{ id: string }>> {
+export async function makeCart(o: { district: number; lines: { item_id: number; qty: number; note?: string }[]; phone: string; name: string; address: string }): Promise<Result<{ id: string }>> {
   { const g = await deny("cs.agent", "orders.handle"); if (g) return g; }
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("cs_make_cart", { p_district: o.district, p_items: o.lines, p_phone: o.phone, p_name: o.name, p_address: o.address });
@@ -43,7 +43,7 @@ export async function getSlots(district: number, date: string): Promise<Slot[]> 
   const { data } = await sb.rpc("booking_slots", { p_district: district, p_date: date });
   return (data ?? []) as Slot[];
 }
-export async function bookOrder(o: { district: number; phone: string; name: string; address: string; note: string; pay: string; channel: string; lines: { item_id: number; qty: number }[]; date: string; slot: string }): Promise<Result<{ no: number; token: string; total: number }>> {
+export async function bookOrder(o: { district: number; phone: string; name: string; address: string; note: string; pay: string; channel: string; lines: { item_id: number; qty: number; note?: string }[]; date: string; slot: string }): Promise<Result<{ no: number; token: string; total: number }>> {
   const sb = await supabaseServer();
   const { data, error } = await sb.rpc("book_order", { p_district: o.district, p_phone: o.phone, p_name: o.name, p_address: o.address, p_note: o.note, p_pay: o.pay, p_lines: o.lines, p_channel: o.channel, p_date: o.date, p_slot: o.slot });
   if (error) return { ok: false, error: dbMsg(error.message) };

@@ -22,6 +22,11 @@ export async function savePromo(fd: FormData) {
     channels: fd.getAll("ch").map(String), locations: fd.getAll("loc").map(String), families: fd.getAll("fam").map(Number),
     stackable: fd.get("stack") === "on", first_order: fd.get("first") === "on", note: String(fd.get("note") || "") || null,
   };
+  // الباقة: الأصناف والكميات
+  const bi = fd.getAll("b_item").map(Number), bq = fd.getAll("b_qty").map((x) => Number(x));
+  const bundle = bi.map((id, i) => ({ item_id: id, qty: bq[i] })).filter((b) => b.item_id > 0 && b.qty > 0);
+  (row as Record<string, unknown>).bundle = row.kind === "bundle" ? bundle : null;
+  if (row.kind === "bundle" && bundle.length < 1) return done(`err=${encodeURIComponent("الباقة محتاجة صنف واحد على الأقل بكميته")}`);
   if (!row.name || !(row.value > 0) || !row.channels.length) return done(`err=${encodeURIComponent("اكتب الاسم والقيمة واختار قناة واحدة على الأقل")}`);
   if (!row.locations.length) (row as { locations: string[] | null }).locations = null;
   if (!row.families.length) (row as { families: number[] | null }).families = null;

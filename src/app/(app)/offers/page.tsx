@@ -6,7 +6,7 @@ import { money } from "@/lib/time";
 import { savePromo, togglePromo, saveOffer } from "./actions";
 
 type P = { id: number; name: string; kind: string; value: number; max_off: number | null; auto: boolean; code: string | null; min_order: number; starts_at: string | null; ends_at: string | null;
-  max_uses: number | null; max_per_customer: number | null; channels: string[]; locations: string[] | null; families: number[] | null; stackable: boolean; first_order: boolean; active: boolean; note: string | null };
+  max_uses: number | null; max_per_customer: number | null; channels: string[]; locations: string[] | null; families: number[] | null; stackable: boolean; first_order: boolean; active: boolean; note: string | null; bundle: { item_id: number; qty: number }[] | null };
 type O = { id: number; kind: string; title: string | null; subtitle: string | null; badge: string | null; cta: string | null; icon: string | null; bg: string | null; target_family: string | null; item_id: number | null; pct: number | null; active: boolean; sort: number; starts_at: string | null; ends_at: string | null };
 const CH: [string, string][] = [["app", "التطبيق"], ["web", "الويب"], ["phone", "تليفون"], ["whatsapp", "واتساب"], ["direct", "الكاشير"]];
 const local = (s: string | null) => (s ? new Date(s).toLocaleString("sv-SE", { timeZone: "Africa/Cairo" }).slice(0, 16).replace(" ", "T") : "");
@@ -63,7 +63,7 @@ export default async function Offers({ searchParams }: { searchParams: Promise<{
               return (
                 <tr key={p.id} style={{ opacity: p.active ? 1 : 0.55 }}>
                   <td><b>{p.name}</b>{p.note && <div className="muted" style={{ fontSize: 12 }}>{p.note}</div>}</td>
-                  <td>{p.kind === "pct" ? `${p.value}%` : `${money(p.value)} ج`}{p.max_off ? ` (أقصى ${money(p.max_off)})` : ""}{p.min_order ? <div className="muted" style={{ fontSize: 12 }}>من {money(p.min_order)} ج</div> : null}</td>
+                  <td>{p.kind === "pct" ? `${p.value}%` : p.kind === "bundle" ? `باقة بـ ${money(p.value)} ج (${(p.bundle ?? []).map((b) => `${b.qty} ${(items ?? []).find((i) => i.id === b.item_id)?.name ?? ""}`).join(" + ")})` : `${money(p.value)} ج`}{p.max_off ? ` (أقصى ${money(p.max_off)})` : ""}{p.min_order ? <div className="muted" style={{ fontSize: 12 }}>من {money(p.min_order)} ج</div> : null}</td>
                   <td>{p.auto ? "تلقائي" : <b dir="ltr">{p.code}</b>}{p.stackable ? <div className="muted" style={{ fontSize: 12 }}>بيتجمع</div> : null}{p.first_order ? <div className="muted" style={{ fontSize: 12 }}>أول طلب</div> : null}</td>
                   <td style={{ fontSize: 13 }}>{p.channels.map((c) => CH.find((x) => x[0] === c)?.[1] ?? c).join("، ")}
                     <div className="muted" style={{ fontSize: 12 }}>{p.locations?.length ? p.locations.map((l) => LN.get(l) ?? l).join("، ") : "كل الفروع"}{p.families?.length ? ` · ${p.families.map((f) => FN.get(f)).join("، ")}` : ""}</div></td>
@@ -89,11 +89,21 @@ export default async function Offers({ searchParams }: { searchParams: Promise<{
           {cur && <input type="hidden" name="id" value={cur.id} />}
           <div className="row">
             <label className="fld" style={{ flex: 2 }}>الاسم<input name="name" required defaultValue={cur?.name ?? ""} placeholder="خصم الافتتاح، عرض الويك إند…" /></label>
-            <label className="fld">النوع<select name="kind" defaultValue={cur?.kind ?? "pct"}><option value="pct">نسبة %</option><option value="fixed">مبلغ ثابت</option></select></label>
-            <label className="fld">القيمة<input name="value" required inputMode="decimal" dir="ltr" defaultValue={cur?.value ?? ""} style={{ width: 90 }} /></label>
+            <label className="fld">النوع<select name="kind" defaultValue={cur?.kind ?? "pct"}><option value="pct">نسبة %</option><option value="fixed">مبلغ ثابت</option><option value="bundle">باقة (كذا صنف بسعر واحد)</option></select></label>
+            <label className="fld">القيمة (للباقة = سعر الباقة)<input name="value" required inputMode="decimal" dir="ltr" defaultValue={cur?.value ?? ""} style={{ width: 90 }} /></label>
             <label className="fld">أقصى خصم (ج)<input name="max_off" inputMode="decimal" dir="ltr" defaultValue={cur?.max_off ?? ""} style={{ width: 90 }} /></label>
             <label className="fld">أقل فاتورة (ج)<input name="min_order" inputMode="decimal" dir="ltr" defaultValue={cur?.min_order ?? 0} style={{ width: 90 }} /></label>
           </div>
+          <details open={cur?.kind === "bundle"}>
+            <summary><b>أصناف الباقة</b> <span className="muted" style={{ fontSize: 12.5 }}>— للنوع «باقة» بس: الصنف والكمية (كيلو أو قطعة). الخصم = سعر الأصناف دي في الفاتورة − سعر الباقة، ولو العميل خد باقتين يتحسب مرتين.</span></summary>
+            <div style={{ display: "grid", gap: 6, marginTop: 6 }}>
+              {[0, 1, 2, 3, 4, 5].map((i) => { const b = (cur?.bundle ?? [])[i]; return (
+                <div key={i} className="row">
+                  <select name="b_item" defaultValue={b?.item_id ?? ""} style={{ minWidth: 220 }}><option value="">—</option>{(items ?? []).map((it) => <option key={it.id} value={it.id}>{it.name}</option>)}</select>
+                  <input name="b_qty" defaultValue={b?.qty ?? ""} placeholder="الكمية" inputMode="decimal" dir="ltr" style={{ width: 90 }} />
+                </div>); })}
+            </div>
+          </details>
           <div className="row">
             <label className="fld">بيتطبّق<select name="mode" defaultValue={cur ? (cur.auto ? "auto" : "code") : "code"}><option value="code">ببروموكود</option><option value="auto">تلقائي على كل فاتورة</option></select></label>
             <label className="fld">الكود (فاضي = يتعمل لوحده)<input name="code" dir="ltr" defaultValue={cur?.code ?? ""} style={{ textTransform: "uppercase", width: 130 }} /></label>

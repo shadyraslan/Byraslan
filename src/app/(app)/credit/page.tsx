@@ -13,7 +13,7 @@ const METHOD: [string, string][] = [["cash", "كاش"], ["transfer", "تحويل
 const d = (s: string | null) => (s ? new Date(s).toLocaleDateString("ar-EG", { day: "numeric", month: "numeric", year: "2-digit" }) : "—");
 
 /** حسابات الآجل: حد لكل عميل ومدة سداد، البيع آجل من الكاشير، التحصيل، المتأخرات، وكارت الحساب */
-export default async function Credit({ searchParams }: { searchParams: Promise<{ err?: string; ok?: string; c?: string; f?: string }> }) {
+export default async function Credit({ searchParams }: { searchParams: Promise<{ err?: string; ok?: string; c?: string; f?: string; all?: string }> }) {
   const sp = await searchParams;
   const me = await getMe();
   if (!["credit.view", "credit.open", "credit.collect"].some((p) => can(me, p))) redirect("/dashboard");
@@ -27,6 +27,8 @@ export default async function Credit({ searchParams }: { searchParams: Promise<{
   const all = (data ?? []) as A[];
   const L = sp.f === "late" ? all.filter((a) => a.overdue > 0) : sp.f === "off" ? all.filter((a) => !a.active || a.blocked) : all;
   const cur = sp.c ? all.find((a) => a.customer_id === Number(sp.c)) : null;
+  type It = { id: number; at: string; due: string | null; source: string; note: string | null; invoice_total: number | null; on_credit: number; part: boolean; paid: number; remaining: number; late: boolean };
+  const items: It[] = cur ? (((await sb.rpc("credit_items", { p_cust: cur.customer_id })).data ?? []) as It[]).reverse() : [];
   const tot = { bal: all.reduce((s, a) => s + Number(a.balance), 0), od: all.reduce((s, a) => s + Number(a.overdue), 0), lim: all.reduce((s, a) => s + Number(a.limit), 0) };
   const wa = (a: A) => `https://wa.me/2${a.phone.replace(/\D/g, "").replace(/^2/, "")}?text=${encodeURIComponent(`أهلاً ${a.company ?? a.name ?? ""}، ده تذكير من باي رسلان: رصيد حسابكم ${money(a.balance)} ج${a.overdue > 0 ? `، منه ${money(a.overdue)} ج متأخر من ${a.oldest_due}` : ""}. شكراً لتعاملكم معانا.`)}`;
   return (
@@ -70,6 +72,25 @@ export default async function Credit({ searchParams }: { searchParams: Promise<{
         <div className="card" style={{ display: "grid", gap: 10, marginTop: 10 }}>
           <div className="row" style={{ justifyContent: "space-between" }}><h2 style={{ margin: 0 }}>{cur.company ?? cur.name}</h2><Link className="btn" href="/credit">قفل</Link></div>
           <div className="muted">الرصيد {money(cur.balance)} ج · المتاح {money(cur.available)} ج{cur.blocked ? ` · ${cur.blocked}` : ""}</div>
+          <div style={{ overflowX: "auto" }}>
+            <b>أصل المديونية</b> <span className="muted" style={{ fontSize: 12.5 }}>— السداد بيتوزّع على الأقدم الأول</span>
+            <table style={{ marginTop: 6 }}>
+              <thead><tr><th>جاية من</th><th>التاريخ</th><th>الفاتورة</th><th>اللي اتشال آجل</th><th>اتسدّد</th><th>الباقي</th><th>الاستحقاق</th></tr></thead>
+              <tbody>{items.filter((x) => x.remaining > 0.01 || sp.all === "1").map((x) => (
+                <tr key={x.id} style={{ color: x.late ? "#e11d48" : undefined }}>
+                  <td><b>{x.source}</b>{x.note ? <div className="muted" style={{ fontSize: 12 }}>{x.note}</div> : null}</td>
+                  <td>{d(x.at)}</td>
+                  <td className="num">{x.invoice_total != null ? money(x.invoice_total) : "—"}</td>
+                  <td className="num">{money(x.on_credit)}{x.part ? <div style={{ fontSize: 11 }}>باقي فاتورة</div> : x.invoice_total != null ? <div style={{ fontSize: 11 }}>فاتورة كاملة</div> : null}</td>
+                  <td className="num">{money(x.paid)}</td>
+                  <td className="num"><b>{money(x.remaining)}</b></td>
+                  <td>{x.due ?? "—"}{x.late ? " · متأخر" : ""}</td>
+                </tr>))}
+                {!items.some((x) => x.remaining > 0.01) && <tr><td colSpan={7} className="muted">مفيش مديونية مفتوحة</td></tr>}
+              </tbody>
+            </table>
+            <Link className="muted" style={{ fontSize: 12.5 }} href={`/credit?c=${cur.customer_id}${sp.all === "1" ? "" : "&all=1"}`}>{sp.all === "1" ? "اعرض المفتوح بس" : "اعرض اللي اتسدّد كمان"}</Link>
+          </div>
           {can(me, "credit.collect") && (
             <form action={collect} className="row" style={{ alignItems: "end" }}>
               <input type="hidden" name="cust" value={cur.customer_id} />

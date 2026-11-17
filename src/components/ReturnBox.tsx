@@ -6,17 +6,20 @@ type L = { line: number; item_id: number; name: string; unit: string; box_sn: nu
 type S = { id: number; no: number; at: string; branch: string; days: number; max_days: number; limit: number | null; total: number; discount: number; returned: number; customer: string | null;
   paid: { cash: number; card: number; credit: number; staff: number; points: number }; lines: L[] };
 export type Ret = { no: number; sale_no: number; branch: string; at: string; reason: string; total: number; refund_cash: number; refund_card: number; refund_credit: number; refund_staff: number;
-  refund_points_value: number; points_back: number; points_taken: number; lines: { name: string; qty: number; total: number; restock: boolean }[] };
+  refund_points_value: number; points_back: number; points_taken: number; lines: { name: string; qty: number; total: number; restock: boolean; fate?: string }[] };
 const f2 = (n: number) => Number(n).toLocaleString("ar-EG", { maximumFractionDigits: 2 });
 const REASONS = ["العميل غيّر رأيه", "الصنف بايظ / تالف", "صلاحية", "غلط في الفاتورة", "مقاس / نوع غلط"];
 
 /** مرتجع فاتورة كاشير — نفس الشاشة في الكاشير والداشبورد. الحد والصلاحية من pos.return */
-export default function ReturnBox({ shiftClient, onDone, onClose }: { shiftClient?: string | null; onDone?: (r: Ret) => void; onClose?: () => void }) {
+const FATE: [string, string][] = [["stock", "يرجع المخزن"], ["waste", "هالك"], ["donate", "مخزن التبرعات"]];
+const FL: Record<string, string> = { stock: "", waste: " (هالك)", donate: " (تبرعات)" };
+
+export default function ReturnBox({ shiftClient, onDone, onClose, onExchange }: { shiftClient?: string | null; onDone?: (r: Ret) => void; onClose?: () => void; onExchange?: (r: Ret) => void }) {
   const sb = supabaseBrowser();
   const [no, setNo] = useState("");
   const [s, setS] = useState<S | null>(null);
   const [q, setQ] = useState<Record<number, string>>({});
-  const [rs, setRs] = useState<Record<number, boolean>>({});
+  const [rs, setRs] = useState<Record<number, string>>({});
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -34,7 +37,7 @@ export default function ReturnBox({ shiftClient, onDone, onClose }: { shiftClien
   const go = async () => {
     if (!s) return;
     setBusy(true); setErr(null);
-    const lines = s.lines.filter((l) => Number(q[l.line]) > 0).map((l) => ({ line: l.line, qty: Number(q[l.line]), restock: rs[l.line] ?? true }));
+    const lines = s.lines.filter((l) => Number(q[l.line]) > 0).map((l) => ({ line: l.line, qty: Number(q[l.line]), fate: rs[l.line] ?? "stock" }));
     const { data, error } = await sb.rpc("pos_return", { p_sale: s.id, p_lines: lines, p_reason: reason, p_shift_client: shiftClient ?? null });
     setBusy(false);
     if (error) return E(error);
@@ -49,7 +52,7 @@ export default function ReturnBox({ shiftClient, onDone, onClose }: { shiftClien
         <b style={{ textAlign: "center" }}>باي رسلان — {done.branch}</b>
         <b style={{ textAlign: "center" }}>إيصال مرتجع R-{done.no}</b>
         <div>على فاتورة S-{done.sale_no} · {new Date(done.at).toLocaleString("ar-EG")}</div>
-        {done.lines.map((l, i) => <div key={i} className="row" style={{ justifyContent: "space-between" }}><span>{l.name} × {l.qty}{l.restock ? "" : " (تالف)"}</span><span>{f2(l.total)}</span></div>)}
+        {done.lines.map((l, i) => <div key={i} className="row" style={{ justifyContent: "space-between" }}><span>{l.name} × {l.qty}{FL[l.fate ?? (l.restock ? "stock" : "waste")]}</span><span>{f2(l.total)}</span></div>)}
         <hr />
         <div className="row" style={{ justifyContent: "space-between" }}><b>إجمالي المرتجع</b><b>{f2(done.total)}</b></div>
         {done.refund_cash > 0 && <div className="row" style={{ justifyContent: "space-between" }}><span>كاش للعميل</span><span>{f2(done.refund_cash)}</span></div>}
@@ -63,7 +66,8 @@ export default function ReturnBox({ shiftClient, onDone, onClose }: { shiftClien
       </div>
       {done.refund_cash > 0 && <div className="okmsg">ادّي العميل {f2(done.refund_cash)} ج كاش من الدرج</div>}
       {done.refund_card > 0 && <div className="okmsg">رجّع {f2(done.refund_card)} ج على ماكينة الفيزا</div>}
-      <div className="row"><button className="btn pri" onClick={print}>🖨 اطبع إيصال المرتجع</button>{onClose && <button className="btn" onClick={onClose}>قفل</button>}</div>
+      <div className="row"><button className="btn pri" onClick={print}>🖨 اطبع إيصال المرتجع</button>{onExchange && done.refund_cash > 0 && <button className="btn pri" onClick={() => onExchange(done)}>🔁 بدّل بصنف تاني ({f2(done.refund_cash)} ج)</button>}{onClose && <button className="btn" onClick={onClose}>قفل</button>}</div>
+      {onExchange && done.refund_cash > 0 && <div className="muted" style={{ fontSize: 12.5 }}>التبديل: متدّيش العميل الكاش — دوس «بدّل» وامسح الصنف الجديد، وقيمة المرتجع هتتحسب من الدفع.</div>}
     </div>
   );
 
@@ -84,7 +88,7 @@ export default function ReturnBox({ shiftClient, onDone, onClose }: { shiftClien
                 <td>{left > 0 && (l.box_sn
                   ? <label className="row" style={{ gap: 4 }}><input type="checkbox" checked={Number(q[l.line]) > 0} onChange={(e) => setQ({ ...q, [l.line]: e.target.checked ? String(l.qty) : "" })} /> رجّع العلبة</label>
                   : <input value={q[l.line] ?? ""} onChange={(e) => setQ({ ...q, [l.line]: e.target.value })} placeholder={`لحد ${left}`} inputMode="decimal" dir="ltr" style={{ width: 80 }} />)}</td>
-                <td>{Number(q[l.line]) > 0 && <label className="row" style={{ gap: 4, fontSize: 13 }}><input type="checkbox" checked={rs[l.line] ?? true} onChange={(e) => setRs({ ...rs, [l.line]: e.target.checked })} /> يرجع المخزن</label>}</td>
+                <td>{Number(q[l.line]) > 0 && <select value={rs[l.line] ?? "stock"} onChange={(e) => setRs({ ...rs, [l.line]: e.target.value })} style={{ height: 34, fontSize: 13 }}>{FATE.map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>}</td>
               </tr>); })}</tbody></table>
           <div className="row" style={{ gap: 4 }}>{REASONS.map((x) => <button key={x} className={reason === x ? "btn pri" : "btn"} onClick={() => setReason(x)}>{x}</button>)}</div>
           <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="السبب" />
@@ -93,7 +97,7 @@ export default function ReturnBox({ shiftClient, onDone, onClose }: { shiftClien
             {over && <span className="badmsg">حدّك {f2(s.limit!)} ج</span>}
             <button className="btn pri" disabled={busy || tot <= 0 || late || !!over || reason.trim().length < 3} onClick={go}>{busy ? "…" : "نفّذ المرتجع"}</button>
           </div>
-          <div className="muted" style={{ fontSize: 12 }}>شيل علامة «يرجع المخزن» لو الصنف تالف ومش هيتباع تاني.</div>
+          <div className="muted" style={{ fontSize: 12 }}>اختار مصير كل صنف: يرجع المخزن ويتباع تاني، أو هالك، أو يروح مخزن التبرعات.</div>
         </>
       )}
       {err && <div className="badmsg">{err}</div>}
