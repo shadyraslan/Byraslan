@@ -127,3 +127,19 @@ export async function goReceive(fd: FormData) {
   await need("purchase.edit", "stock.edit");
   redirect(`/purchasing/receive/${Number(fd.get("id"))}`);
 }
+
+// كارت لصنف جديد: يعمل الصنف ويفتح كارته على طول
+export async function newSpecItem(fd: FormData) {
+  const { need } = await import("@/lib/perms");
+  await need("purchase.edit", "items.edit");
+  const { supabaseServer: S } = await import("@/lib/supabase/server");
+  const sb = await S();
+  const unit = String(fd.get("unit") || "كيلو");
+  const { data, error } = await sb.from("items").insert({
+    name: String(fd.get("name") || "").trim(), kind: String(fd.get("kind") || "raw"), arm: String(fd.get("arm") || "rostos"), unit,
+    sold_by: unit === "قطعة" ? "piece" : "weight",
+  }).select("id").single();
+  const { redirect } = await import("next/navigation");
+  if (error || !data) redirect(`/purchasing/specs?err=${encodeURIComponent(error?.message.includes("duplicate") ? "فيه صنف بالاسم ده" : "الصنف ماتعملش")}`);
+  redirect(`/purchasing/specs/${data!.id}`);
+}

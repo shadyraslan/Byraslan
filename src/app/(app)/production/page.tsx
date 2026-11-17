@@ -9,7 +9,8 @@ type Ord = { id: number; no: number; qty: number; due: string; status: string; i
 const one = <X,>(v: X | X[] | null | undefined): X | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 const ST: Record<string, string> = { planned: "مستني", running: "شغال", done: "خلص", cancelled: "اتلغى" };
 
-export default async function Production() {
+export default async function Production({ searchParams }: { searchParams: Promise<{ item?: string; qty?: string }> }) {
+  const pre = await searchParams;
   const me = await getMe();
   if (!can(me, "prod.orders")) redirect("/dashboard");
   const sb = await supabaseServer();
@@ -24,7 +25,7 @@ export default async function Production() {
       <div className="top"><h1>أوامر الإنتاج</h1>
         <div className="row"><Link className="btn" href="/station" style={{ display: "inline-grid", placeItems: "center" }}>تابلت الغرف</Link><Link className="btn" href="/production/routes" style={{ display: "inline-grid", placeItems: "center" }}>مشوار المنتجات على الغرف</Link></div>
       </div>
-      <NewOrder items={(items ?? []).map((i) => ({ id: Number(i.id), name: i.name as string, unit: i.unit as string, route: routeOf(Number(i.id)) }))} />
+      <NewOrder items={(items ?? []).map((i) => ({ id: Number(i.id), name: i.name as string, unit: i.unit as string, route: routeOf(Number(i.id)) }))} defItem={pre.item} defQty={pre.qty} />
       <div className="card" style={{ overflowX: "auto" }}>
         <table>
           <thead><tr><th>الأمر</th><th>المنتج</th><th>الكمية</th><th>ميعاده</th><th>الغرف</th><th>الحالة</th></tr></thead>

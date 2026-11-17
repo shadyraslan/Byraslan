@@ -4,11 +4,16 @@ import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
 import Tabs from "../Tabs";
 
-export default async function Specs() {
+import { newSpecItem } from "../actions";
+
+const KIND: Record<string, string> = { raw: "خامة", semi: "نص مصنع", mix: "خلطة", pack: "تغليف", product: "منتج" };
+
+export default async function Specs({ searchParams }: { searchParams: Promise<{ err?: string; q?: string }> }) {
+  const sp = await searchParams;
   { const me_ = await getMe(); if (!(can(me_, "purchase.edit") || can(me_, "qa.approve"))) redirect("/dashboard"); }
   const sb = await supabaseServer();
   const [{ data: items }, { data: specs }, { data: cur }, { data: isup }] = await Promise.all([
-    sb.from("items").select("id,name,unit,kind").eq("active", true).in("kind", ["raw", "mix", "pack", "semi"]).order("name"),
+    sb.from("items").select("id,name,unit,kind,arm").eq("active", true).order("kind").order("name"),
     sb.from("item_specs").select("item_id,brand,dirty"),
     sb.from("spec_current").select("item_id,version,approved_at"),
     sb.from("item_suppliers").select("item_id,rank,suppliers(name)"),
@@ -19,6 +24,15 @@ export default async function Specs() {
     <>
       <div className="top"><h1>كارت الصنف</h1></div>
       <Tabs cur="/purchasing/specs" />
+      {sp.err && <div className="badmsg">{sp.err}</div>}
+      <form action={newSpecItem} className="card row" style={{ alignItems: "end" }}>
+        <b style={{ alignSelf: "center" }}>+ كارت لصنف جديد</b>
+        <label className="fld" style={{ flex: 1, minWidth: 180 }}>اسم الصنف<input name="name" required /></label>
+        <label className="fld">النوع<select name="kind" defaultValue="raw">{Object.entries(KIND).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
+        <label className="fld">تبع<select name="arm"><option value="rostos">روستوز</option><option value="market">السوبر ماركت</option></select></label>
+        <label className="fld">الوحدة<select name="unit"><option>كيلو</option><option>قطعة</option><option>لتر</option></select></label>
+        <button className="btn pri">اعمله وافتح كارته</button>
+      </form>
       <div className="card" style={{ overflowX: "auto" }}>
         <table>
           <thead><tr><th>الصنف</th><th>البراند</th><th>الموردين</th><th>الحالة</th></tr></thead>
@@ -29,7 +43,7 @@ export default async function Specs() {
               const st = !s ? ["مفيش مواصفة", "var(--bad)"] : !c ? ["مش معتمدة", "var(--bad)"] : s.dirty ? [`معتمدة v${c.version} — فيه تعديل مستني`, "#b7791f"] : [`معتمدة v${c.version}`, "var(--ok)"];
               return (
                 <tr key={i.id}>
-                  <td><Link href={`/purchasing/specs/${i.id}`}><b>{i.name}</b></Link></td>
+                  <td><Link href={`/purchasing/specs/${i.id}`}><b>{i.name}</b></Link> <span className="muted" style={{ fontSize: 12 }}>{KIND[i.kind as string] ?? i.kind}{i.arm === "market" ? " · سوبر ماركت" : ""}</span></td>
                   <td>{s?.brand ?? "—"}</td>
                   <td style={{ fontSize: 12.5 }}>{sups.map((x) => { const n = Array.isArray(x.suppliers) ? x.suppliers[0]?.name : (x.suppliers as { name: string } | null)?.name; return <div key={x.rank}>{x.rank === 1 ? "الأساسي" : `بديل ${x.rank - 1}`}: {n}</div>; })}{!sups.length && <span className="muted">—</span>}</td>
                   <td style={{ color: st[1] }}>{st[0]}</td>

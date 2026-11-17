@@ -36,6 +36,8 @@ export const NAV: NavGroup[] = [
     { href: "/stock/count", label: "الجرد", icon: "count", color: "#0d9488", perms: ["stock.count", "stock.adjust", "stock.view"] },
     { href: "/transfers", label: "التحويلات", icon: "transfer", color: "#7c3aed", perms: ["stock.view", "stock.edit"] },
     { href: "/stock/dispose", label: "هالك وتبرعات", icon: "trash", color: "#dc2626", perms: ["stock.waste"] },
+    { href: "/stock/expiry", label: "الصلاحية (خلصت / قربت)", icon: "warning", color: "#dc2626", perms: ["stock.view", "stock.waste", "stock.donate"] },
+    { href: "/stock/low", label: "النواقص (تحت الحد الأدنى)", icon: "stock", color: "#d97706", perms: ["stock.view", "prod.orders"] },
     { href: "/boxes", label: "تتبّع العلبة", icon: "search", color: "#0891b2", perms: ["stock.view"] },
   ] },
   { id: "purchasing", title: "المشتريات", icon: "purchase", color: "#7c3aed", links: [

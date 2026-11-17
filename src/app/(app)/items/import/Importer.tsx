@@ -2,9 +2,11 @@
 import { useState } from "react";
 import * as XLSX from "xlsx";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { downloadXlsx } from "@/lib/xlsxTemplate";
+import { setPhoto } from "../[id]/actions";
 
 type Loc = { id: string; name: string };
-type Item = { code: string | null; name: string; arm: string; unit: string | null; sold_by: string | null; kind: string | null; scale_plu: string | null; cost: number | null; shelf_days: number | null; active: boolean; family: string | null; group: string | null; barcodes: string; prices: Record<string, Record<string, number>>; maker?: string | null; size?: string | null; reorder_min?: number | null };
+type Item = { id?: number; photo?: string | null; code: string | null; name: string; arm: string; unit: string | null; sold_by: string | null; kind: string | null; scale_plu: string | null; cost: number | null; shelf_days: number | null; active: boolean; family: string | null; group: string | null; barcodes: string; prices: Record<string, Record<string, number>>; maker?: string | null; size?: string | null; reorder_min?: number | null };
 type Res = { rows: number; added: number; updated: number; prices: number; hidden_demo: number; errors: { row: number; name: string; error: string }[]; prices_skipped: boolean; internal?: number; stock?: number };
 
 const ARM: Record<string, string> = { rostos: "روستوز", market: "ماركت", oricci: "تودزي" };
@@ -18,7 +20,9 @@ const COLS: [string, string][] = [
 ];
 
 /** رفع الأصناف والعائلات والباركود والأسعار من ملف إكسل واحد — ونفس الملف بيتنزّل بالموجود عشان تعدّل عليه */
-export default function Importer({ items, locs }: { items: Item[]; locs: Loc[] }) {
+type Lists = { groups: string[]; families: string[]; suppliers: string[] };
+
+export default function Importer({ items, locs, lists }: { items: Item[]; locs: Loc[]; lists: Lists }) {
   const [rows, setRows] = useState<Record<string, unknown>[] | null>(null);
   const [fname, setFname] = useState("");
   const [hideDemo, setHideDemo] = useState(true);
@@ -27,6 +31,29 @@ export default function Importer({ items, locs }: { items: Item[]; locs: Loc[] }
   const [err, setErr] = useState<string | null>(null);
   const [warn, setWarn] = useState<string[]>([]);
 
+  // القوايم المنسدلة: أي خانة ليها اختيارات محددة بتتختار من القايمة بدل الكتابة باليد
+  const dd: Record<string, string[]> = {
+    "المجموعة": lists.groups, "العائلة": lists.families, "المورد": lists.suppliers,
+    "البراند": Object.values(ARM), "بيتباع بـ": Object.values(SOLD), "الوحدة": ["كجم", "قطعة", "علبة", "لتر"], "شغال": ["أيوه", "لا"],
+  };
+  // صور المنتجات بالجملة: اسم كل صورة = الباركود (أو كود الصنف)
+  const [imgMsg, setImgMsg] = useState<string | null>(null);
+  const bulkImages = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const sb = supabaseBrowser(); let ok = 0; const miss: string[] = [];
+    for (const f of Array.from(files)) {
+      if (!f.type.startsWith("image/")) { miss.push(f.name); continue; }
+      const key = f.name.replace(/\.[^.]+$/, "").trim();
+      const it = items.find((i) => i.barcodes.split(/[,\s]+/).includes(key) || (i.code ?? "") === key);
+      if (!it?.id) { miss.push(f.name); continue; }
+      setImgMsg(`بيرفع ${ok + miss.length + 1} من ${files.length}…`);
+      const path = `${key}-${Date.now()}.${(f.name.split(".").pop() || "jpg").toLowerCase()}`;
+      const { error } = await sb.storage.from("items").upload(path, f, { contentType: f.type, upsert: true });
+      if (error) { miss.push(f.name); continue; }
+      await setPhoto(it.id, sb.storage.from("items").getPublicUrl(path).data.publicUrl); ok++;
+    }
+    setImgMsg(`اترفع ${ok} صورة${miss.length ? ` — ماتربطش ${miss.length}: ${miss.slice(0, 8).join("، ")}${miss.length > 8 ? "…" : ""} (اسم الصورة لازم يبقى الباركود أو كود الصنف)` : ""}`);
+  };
   const headers = [...COLS.map((c) => c[0]), ...locs.flatMap((l) => [`مباشر: ${l.name}`, `تطبيق: ${l.name}`, `رصيد: ${l.name}`])];
   // قالب السوبرماركت: الأعمدة اللي محتاجها بس، والباركود نص عشان الإكسل مايبوّظش الأرقام الطويلة
   const market = () => {
@@ -35,13 +62,7 @@ export default function Importer({ items, locs }: { items: Item[]; locs: Loc[] }
       { "الباركود": "6221234567890", "الاسم": "زيت عباد الشمس 1 لتر", "الماركة (المُصنّع)": "عافية", "الحجم / العبوة": "1 لتر", "المجموعة": "البقالة", "العائلة": "زيوت", "بيتباع بـ": "قطعة", "المورد": "اسم المورد", "التكلفة": 82, "سعر البيع المباشر (كل الفروع)": 95, "سعر التطبيق (كل الفروع)": 99, "حد إعادة الطلب": 12 },
       { "الباركود": "", "الاسم": "طماطم (سايب)", "المجموعة": "خضار وفاكهة", "العائلة": "خضار", "بيتباع بـ": "وزن", "التكلفة": 12, "سعر البيع المباشر (كل الفروع)": 18 },
     ];
-    const ws = XLSX.utils.json_to_sheet(ex, { header: H });
-    ws["!cols"] = H.map((h) => ({ wch: Math.max(14, h.length + 2) }));
-    for (let r = 1; r <= 500; r++) { const a = XLSX.utils.encode_cell({ r, c: 0 }); ws[a] = ws[a] ?? { t: "s", v: "" }; ws[a].z = "@"; ws[a].t = "s"; }
-    ws["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 500, c: H.length - 1 } });
-    const wb = XLSX.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
-    XLSX.utils.book_append_sheet(wb, ws, "الأصناف");
-    XLSX.writeFile(wb, "قالب-السوبرماركت.xlsx");
+    downloadXlsx({ file: "قالب-السوبرماركت.xlsx", sheet: "الأصناف", headers: H, rows: ex, textCols: ["الباركود"], lists: dd });
   };
   const download = (withData: boolean) => {
     const data = withData && items.length ? items.map((i) => {
@@ -55,13 +76,7 @@ export default function Importer({ items, locs }: { items: Item[]; locs: Loc[] }
       { "الكود": "M-001", "الاسم": "زيت عباد الشمس 1 لتر", "البراند": "ماركت", "المجموعة": "البقالة", "العائلة": "زيوت", "الوحدة": "قطعة", "بيتباع بـ": "قطعة", "الباركود": "6221234567890", "شغال": "أيوه", "سعر البيع المباشر (كل الفروع)": 95, "سعر التطبيق (كل الفروع)": 99 },
       { "الكود": "R-010", "الاسم": "صدور فراخ متبلة", "البراند": "روستوز", "المجموعة": "الدواجن", "العائلة": "صدور", "الوحدة": "كجم", "بيتباع بـ": "وزن", "كود الميزان": "00123", "الصلاحية (يوم)": 4, "شغال": "أيوه", "سعر البيع المباشر (كل الفروع)": 260, "سعر التطبيق (كل الفروع)": 270 },
     ];
-    const ws = XLSX.utils.json_to_sheet(data, { header: headers });
-    const bc = headers.indexOf("الباركود");
-    for (let r = 1; r <= data.length; r++) { const a = XLSX.utils.encode_cell({ r, c: bc }); if (ws[a]) { ws[a].t = "s"; ws[a].v = String(ws[a].v ?? ""); ws[a].z = "@"; } }
-    ws["!cols"] = headers.map((h) => ({ wch: Math.max(12, h.length + 2) }));
-    const wb = XLSX.utils.book_new(); wb.Workbook = { Views: [{ RTL: true }] };
-    XLSX.utils.book_append_sheet(wb, ws, "الأصناف");
-    XLSX.writeFile(wb, withData ? "أصناف-باي-رسلان.xlsx" : "قالب-الأصناف.xlsx");
+    downloadXlsx({ file: withData ? "أصناف-باي-رسلان.xlsx" : "قالب-الأصناف.xlsx", sheet: "الأصناف", headers, rows: data, textCols: ["الباركود", "كود الميزان", "الكود"], lists: dd });
   };
 
   const read = async (f: File | undefined) => {
@@ -120,12 +135,19 @@ export default function Importer({ items, locs }: { items: Item[]; locs: Loc[] }
           <button className="btn" onClick={() => download(false)}>⬇ قالب فاضي بمثال</button>
           <button className="btn" onClick={market}>⬇ قالب السوبرماركت (بالباركود)</button>
         </div>
+        <div className="muted" style={{ marginTop: 6 }}>المجموعة والعائلة والمورد والبراند والوحدة و«بيتباع بـ» و«شغال» بقت قوايم بتختار منها في الإكسل — مش بتتكتب باليد، عشان السيستم يقرا كل صنف ويحطه في مكانه. لو محتاج مجموعة أو مورد جديد ضيفه في السيستم الأول ونزّل الملف تاني.</div>
         <div className="muted" style={{ marginTop: 6 }}>
           السوبرماركت: امسح باركود كل منتج في عمود الباركود (الإسكانر بيكتب في الخانة على طول). الصنف اللي بالقطعة ومالوش باركود السيستم بيعمله باركود داخلي (بيبدأ بـ 20) تطبعه من الملصقات، والسايب بالوزن بيتباع بكود الميزان.
           لو رفعت نفس الباركود تاني الصنف بيتعدّل مش بيتكرر، والباركود المتسجّل على صنف تاني بيطلع غلط ومش بيتنقل. "رصيد: الفرع" بيظبط رصيد أول المدة (محتاج صلاحية التسويات).
           كل صنف في سطر. الكود اختياري بس بيخلّي التعديل أدق. البراند: روستوز / ماركت / تودزي. بيتباع بـ: وزن / قطعة / علبة. أكتر من باركود: افصل بينهم بفاصلة.
           السعر في عمود "كل الفروع" بيتحط لكل الفروع، وأعمدة "مباشر: الفرع" و"تطبيق: الفرع" لو فرع سعره مختلف. العائلات والمجموعات اللي مش موجودة بتتعمل لوحدها.
         </div>
+      </div>
+      <div className="card">
+        <h2>📷 صور المنتجات بالجملة</h2>
+        <div className="muted">اختار كل الصور مرة واحدة — اسم كل صورة لازم يبقى <b>الباركود</b> بتاع الصنف (أو كود الصنف)، مثلاً <span dir="ltr">6221234567890.jpg</span>. الصورة بتظهر في التطبيق على طول.</div>
+        <label className="btn pri" style={{ marginTop: 8, display: "inline-grid", placeItems: "center", cursor: "pointer" }}>اختار الصور<input type="file" accept="image/*" multiple hidden onChange={(e) => bulkImages(e.target.files)} /></label>
+        {imgMsg && <div className="okmsg" style={{ marginTop: 8 }}>{imgMsg}</div>}
       </div>
       <div className="card">
         <h2>٢. ارفعه</h2>
