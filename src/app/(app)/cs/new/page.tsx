@@ -5,7 +5,7 @@ import { getMe, can } from "@/lib/perms";
 import Shop, { type Init } from "@/app/order/Shop";
 import { saveCustomer } from "../actions";
 
-type Cust = { found: boolean; name: string | null; addresses: { address: string; district_id: number | null; district: string | null }[];
+type Cust = { found: boolean; id: number | null; name: string | null; notes: string | null; company: string | null; addresses: { address: string; floor: string | null; apt: string | null; landmark: string | null; district_id: number | null; district: string | null }[];
   orders: { no: number; status: string; at: string; total: number; district_id: number | null; address: string | null; lines: { item_id: number; name: string; qty: number }[] | null }[] };
 
 /** طلب واتساب / تليفون: رقم العميل ← كارته وعناوينه وطلباته ← نفس شاشة الطلب، أو لينك سلة جاهزة */
@@ -30,7 +30,7 @@ export default async function CsNew({ searchParams }: { searchParams: Promise<{ 
   const init: Init | undefined = phone.length >= 10 ? {
     district: last?.district_id ?? addr?.district_id ?? null,
     cart: last ? Object.fromEntries((last.lines ?? []).map((l) => [l.item_id, Number(l.qty)])) : undefined,
-    info: { name: c?.name ?? "", phone, address: last?.address ?? addr?.address ?? "" },
+    info: { name: c?.name ?? "", phone, address: last?.address ?? addr?.address ?? "", floor: addr?.floor ?? "", apt: addr?.apt ?? "", landmark: addr?.landmark ?? "" },
   } : undefined;
   const q = (x: Record<string, string>) => `/cs/new?${new URLSearchParams({ phone, ch, ...x })}`;
   // العميل لازم يبقى متسجّل بعنوان الأول — بعدها الطلب بيبدأ على طول من غير اختيار منطقة
@@ -53,7 +53,12 @@ export default async function CsNew({ searchParams }: { searchParams: Promise<{ 
             <label className="fld" style={{ flex: 1 }}>الاسم<input name="name" defaultValue={c?.name ?? ""} required autoFocus /></label>
             <label className="fld" style={{ flex: 1 }}>المنطقة<select name="district" required defaultValue=""><option value="" disabled>اختار المنطقة</option>{(dists ?? []).map((d) => <option key={d.id} value={d.id}>{d.city} — {d.name}</option>)}</select></label>
           </div>
-          <label className="fld">العنوان بالتفصيل<input name="address" required placeholder="الشارع، العمارة، الدور، الشقة، علامة مميزة" /></label>
+          <label className="fld">العنوان (الشارع ورقم العمارة)<input name="address" required /></label>
+          <div className="row">
+            <label className="fld">الدور<input name="floor" style={{ width: 90 }} /></label>
+            <label className="fld">الشقة<input name="apt" style={{ width: 90 }} /></label>
+            <label className="fld" style={{ flex: 1 }}>علامة مميزة<input name="landmark" placeholder="جنب إيه / قصاد إيه" /></label>
+          </div>
           <div className="row">
             <label className="fld">اسم العنوان<input name="label" placeholder="البيت / الشغل" /></label>
             <label className="fld" style={{ flex: 1 }}>ملاحظات عن العميل<input name="notes" /></label>
@@ -63,8 +68,17 @@ export default async function CsNew({ searchParams }: { searchParams: Promise<{ 
       )}
       {c && c.found && !!c.addresses.length && (
         <div className="card">
-          <b>{c.name || "عميل"}</b> <Link href={q({ addr: "1" })} className="muted" style={{ fontSize: 13 }}>+ عنوان جديد</Link>
-          {!!c.addresses.length && <div className="row" style={{ gap: 6, marginTop: 6 }}>{c.addresses.map((a, i) => <Link key={i} className={String(i) === (sp.a ?? "0") && !last ? "btn pri" : "btn"} href={q({ a: String(i) })}>📍 {a.district ?? ""} — {a.address.slice(0, 30)}</Link>)}</div>}
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <div><b>{c.name || "عميل"}</b> <span className="muted" dir="ltr">{phone}</span>{c.company ? <span className="muted"> · {c.company}</span> : null}{c.notes ? <div style={{ fontSize: 13 }}>📝 {c.notes}</div> : null}</div>
+            <div className="row" style={{ gap: 6 }}>
+              {c.id && <Link className="btn" href={`/cs/customers/${c.id}`}>بياناته كاملة / تعديل</Link>}
+              <Link href={q({ addr: "1" })} className="btn">+ عنوان جديد</Link>
+            </div>
+          </div>
+          {!!c.addresses.length && <div style={{ display: "grid", gap: 6, marginTop: 6 }}>{c.addresses.map((a, i) => (
+            <Link key={i} className={String(i) === (sp.a ?? "0") && !last ? "btn pri" : "btn"} href={q({ a: String(i) })} style={{ height: "auto", padding: "6px 10px", textAlign: "start", display: "block" }}>
+              📍 <b>{a.district ?? ""}</b> — {a.address}{a.floor ? ` · الدور ${a.floor}` : ""}{a.apt ? ` · شقة ${a.apt}` : ""}{a.landmark ? ` · ${a.landmark}` : ""}
+            </Link>))}</div>}
           {!!c.orders.length && (
             <div style={{ marginTop: 8 }}>
               <div className="muted">آخر طلباته — دوس "نفس الطلب" يتحط في السلة:</div>

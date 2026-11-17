@@ -12,6 +12,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   if (!data) notFound();
   const o = data as unknown as {
     id: number; no: number; status: string; address: string | null; note: string | null; pay_method: string; est_total: number; total: number | null; delivery_fee: number; discount: number; promo_code: string | null; driver: string | null; cancel_reason: string | null; created_at: string; token: string; channel: string;
+    location_id: string; fee_orig: number | null; branch_discount: number; branch_discount_note: string | null; rider_note: string | null; rider_id: number | null; floor: string | null; apt: string | null; landmark: string | null;
     customers: { name: string; phone: string; area: string | null } | null; locations: { name: string } | null;
     online_order_lines: { line: number; qty: number; unit_price: number; prepared: number; items: { name: string; unit: string } | null }[];
     online_order_boxes: { box_sn: number; line: number; qty: number; removed: boolean }[];

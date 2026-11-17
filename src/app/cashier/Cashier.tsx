@@ -96,6 +96,8 @@ export default function Cashier() {
   const [rec, setRec] = useState<Done | null>(null);
   const [view, setView] = useState<"sell" | "orders" | "list" | "return" | "close">("sell");
   const [rets, setRets] = useState<Ret[]>([]);
+  // كاش الطيارين اللي اتسلّم في الوردية دي (بيدخل الدرج)
+  const [riderIn, setRiderIn] = useState(0);
   const [retKey, setRetKey] = useState(0);
   const [counted, setCounted] = useState("");
   const [openLoc, setOpenLoc] = useState("");
@@ -352,9 +354,15 @@ export default function Cashier() {
     setTimeout(() => window.print(), 80);
   };
 
+  useEffect(() => {
+    const sid = shift?.server_id; if (!sid || !online) return;
+    const f = () => sb.from("rider_cash").select("amount").eq("shift_id", sid).then(({ data }) => setRiderIn(r2((data ?? []).reduce((a, x) => a + Number(x.amount), 0))));
+    f(); const t = setInterval(f, 30000); return () => clearInterval(t);
+  }, [shift?.server_id, online, view]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ---------- قفل الوردية ----------
   const retCash = rets.reduce((a, r) => a + Number(r.refund_cash), 0);
-  const expected = shift ? r2(shift.opening_cash + done.reduce((a, s) => a + s.cash - s.change, 0) - retCash) : 0;
+  const expected = shift ? r2(shift.opening_cash + done.reduce((a, s) => a + s.cash - s.change, 0) - retCash + riderIn) : 0;
   const [closeErr, setCloseErr] = useState<string | null>(null);
   const closeShift = async () => {
     if (!shift) return;
@@ -440,9 +448,10 @@ export default function Cashier() {
       {view === "return" && (
         <div style={{ padding: "0 16px" }}>
           {online ? <ReturnBox key={retKey} shiftClient={shift?.client_id} onDone={(r) => setRets((x) => [...x, r])} onClose={() => setRetKey((k) => k + 1)} /> : <div className="badmsg">المرتجع محتاج نت</div>}
+          {riderIn > 0 && <div className="muted" style={{ marginTop: 8 }}>كاش استلمته من الطيارين في الوردية دي: {f2(riderIn)} ج — اتضاف للمتوقع في الدرج</div>}
           {rets.length > 0 && <div className="muted" style={{ marginTop: 8 }}>مرتجعات الوردية: {rets.map((r) => `R-${r.no} (${f2(r.total)} ج)`).join(" · ")} — الكاش اللي اترجع {f2(retCash)} ج اتخصم من المتوقع في الدرج</div>}
         </div>)}
-      {view === "orders" && <OrdersPanel sb={sb} orders={ord.orders} ack={ord.ack} reload={ord.load} online={online} />}
+      {view === "orders" && <OrdersPanel sb={sb} orders={ord.orders} ack={ord.ack} reload={ord.load} online={online} loc={shift?.loc ?? ""} shiftClient={shift?.client_id ?? null} />}
 
       {view === "sell" && !online && (
         <div className="noprint" style={{ margin: "0 16px 10px", padding: 18, borderRadius: 12, background: "var(--bad)", color: "#fff", fontSize: 19, fontWeight: 800, textAlign: "center" }}>

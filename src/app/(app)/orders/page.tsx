@@ -7,6 +7,7 @@ import Refresh from "@/app/t/[token]/Refresh";
 type O = { id: number; no: number; status: string; created_at: string; est_total: number; total: number | null; delivery_fee: number; location_id: string; pay_method: string; channel: string; driver: string | null; customers: { name: string; area: string | null } | null; online_order_lines: { qty: number }[] };
 const COLS: [string, string[]][] = [["جديد", ["new"]], ["بيتحضّر", ["accepted", "preparing"]], ["جاهز", ["ready"]], ["مع الطيار", ["out"]]];
 const PAY: Record<string, string> = { cash: "كاش", card: "فيزا", instapay: "إنستاباي", credit: "آجل" };
+const ST: Record<string, [string, string]> = { new: ["جديد", "#dc2626"], accepted: ["اتقبل", "#2563eb"], preparing: ["بيتحضّر", "#2563eb"], ready: ["جاهز", "#16a34a"], out: ["مع الطيار", "#7c3aed"] };
 
 export default async function Orders({ searchParams }: { searchParams: Promise<{ loc?: string }> }) {
   const me = await getMe();
@@ -44,7 +45,7 @@ export default async function Orders({ searchParams }: { searchParams: Promise<{
                 const mins = Math.round((now - new Date(o.created_at).getTime()) / 60000);
                 return (
                   <Link key={o.id} href={`/orders/${o.id}`} className={`ocard${mins > lateMin && o.status !== "out" ? " late" : ""}`}>
-                    <div className="row" style={{ justifyContent: "space-between" }}><b className="num">#{o.no}</b><span className="num muted">{mins} د</span></div>
+                    <div className="row" style={{ justifyContent: "space-between" }}><b className="num">#{o.no}</b><span style={{ background: ST[o.status]?.[1] ?? "#555", color: "#fff", borderRadius: 99, padding: "0 10px", fontSize: 12.5, fontWeight: 800 }}>{ST[o.status]?.[0] ?? o.status}{o.status === "out" && o.driver ? ` · ${o.driver}` : ""}</span><span className="num muted">{mins} د</span></div>
                     <div>{o.customers?.name} <span className="muted">{o.customers?.area}</span></div>
                     <div className="muted" style={{ fontSize: 12.5 }}>{loc === "all" && `${LN.get(o.location_id)} · `}{o.online_order_lines.length} صنف · {PAY[o.pay_method]} · <span className="num">{Math.round(Number(o.est_total) + Number(o.delivery_fee))}</span>{o.channel !== "web" ? ` · ${o.channel === "phone" ? "تليفون" : "واتساب"}` : ""}{o.driver ? ` · ${o.driver}` : ""}</div>
                   </Link>

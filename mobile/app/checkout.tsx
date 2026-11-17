@@ -70,6 +70,7 @@ export default function Checkout() {
     setBusy(false);
     if (error) return setErr(errMsg(error));
     const r = data as { no: number; token: string; total: number };
+    if (a.floor || a.apt || a.landmark) await sb.rpc("order_address_set", { p_token: r.token, p_floor: a.floor ?? "", p_apt: a.apt ?? "", p_landmark: a.landmark ?? "" });
     if (a.lat != null && a.lng != null) await sb.rpc("order_set_pin", { p_token: r.token, p_lat: a.lat, p_lng: a.lng });
     if (mode === "book") {
       const { error: be } = await sb.rpc("booking_attach", { p_token: r.token, p_date: bdate, p_slot: bslot });
@@ -89,7 +90,7 @@ export default function Checkout() {
           {addr ? (
             <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
               <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: C.y, alignItems: "center", justifyContent: "center" }}><Ionicons name={addr.label === "الشغل" ? "briefcase" : "home"} size={18} color={C.black} /></View>
-              <View style={{ flex: 1 }}><T w="x">{addr.label} — {district?.name}</T><T style={{ color: C.mid, fontSize: 12 }} numberOfLines={2}>{addr.address}</T></View>
+              <View style={{ flex: 1 }}><T w="x">{addr.label} — {district?.name}</T><T style={{ color: C.mid, fontSize: 12 }} numberOfLines={2}>{addr.address}{addr.floor ? ` · الدور ${addr.floor}` : ""}{addr.apt ? ` · شقة ${addr.apt}` : ""}{addr.landmark ? ` · ${addr.landmark}` : ""}</T></View>
             </View>
           ) : (
             <Pressable onPress={() => router.push("/address")} style={{ borderWidth: 1.5, borderStyle: "dashed", borderColor: C.border, borderRadius: 14, padding: 14, alignItems: "center" }}><T w="x">+ ضيف عنوانك في {district?.name ?? "منطقتك"}</T></Pressable>

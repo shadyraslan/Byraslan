@@ -14,6 +14,9 @@ export default function AddressForm() {
   const old = profile.addresses.find((a) => a.id === id);
   const [label, setLabel] = useState(old?.label ?? "البيت");
   const [address, setAddress] = useState(old?.address ?? "");
+  const [floor, setFloor] = useState(old?.floor ?? "");
+  const [apt, setApt] = useState(old?.apt ?? "");
+  const [landmark, setLandmark] = useState(old?.landmark ?? "");
   const [dId, setDId] = useState<number | null>(old?.district_id ?? district?.id ?? null);
   const d = config?.districts.find((x) => x.id === dId);
   const cities = [...new Set((config?.districts ?? []).map((x) => x.city))];
@@ -32,7 +35,7 @@ export default function AddressForm() {
       setPin({ lat: p.coords.latitude, lng: p.coords.longitude }); setPinMsg("📍 اتحدد مكانك");
     } catch { setPinMsg("ماقدرناش نحدد المكان — اكتب العنوان بالتفصيل"); }
   };
-  const save = () => { if (!dId) return; saveAddress({ id: old?.id, label, district_id: dId, address: address.trim(), is_default: def, lat: pin?.lat, lng: pin?.lng }); router.back(); };
+  const save = () => { if (!dId) return; saveAddress({ id: old?.id, label, district_id: dId, address: address.trim(), floor: floor.trim(), apt: apt.trim(), landmark: landmark.trim(), is_default: def, lat: pin?.lat, lng: pin?.lng }); router.back(); };
   return (
     <View style={{ flex: 1 }}>
       <BlackHead title={old ? "تعديل العنوان" : "عنوان جديد"} />
@@ -48,7 +51,12 @@ export default function AddressForm() {
           {d && <T style={{ color: d.branch ? C.mid : C.red, fontSize: 12 }}>{d.branch ? `هيوصلك من فرع ${d.branch_name} · التوصيل ${d.fee ? money(d.fee) : "مجاني"}` : `منطقة ${d.name} لسه مش متغطية`}</T>}
         </Card>
         <Card title="العنوان بالتفصيل">
-          <Input value={address} onChangeText={setAddress} placeholder="الشارع، رقم العمارة، الدور، الشقة، علامة مميزة" multiline style={{ minHeight: 96, textAlignVertical: "top", paddingTop: 12 }} />
+          <Input value={address} onChangeText={setAddress} placeholder="الشارع ورقم العمارة" />
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Input value={floor} onChangeText={setFloor} placeholder="الدور" style={{ flex: 1 }} />
+            <Input value={apt} onChangeText={setApt} placeholder="الشقة" style={{ flex: 1 }} />
+          </View>
+          <Input value={landmark} onChangeText={setLandmark} placeholder="علامة مميزة (جنب إيه / قصاد إيه)" />
           <Btn title={pin ? "📍 حدّد مكاني تاني" : "📍 حدّد مكاني بالظبط"} onPress={locate} />
           {!!pinMsg && <T style={{ color: C.mid, fontSize: 12 }}>{pinMsg}</T>}
           <Radio on={def} onPress={() => setDef(!def)}><T w="b">خليه العنوان الأساسي</T></Radio>

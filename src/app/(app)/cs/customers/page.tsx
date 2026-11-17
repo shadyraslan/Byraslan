@@ -37,7 +37,12 @@ export default async function CsCustomers({ searchParams }: { searchParams: Prom
             <label className="fld">المنطقة<select name="district"><option value="">—</option>{(dists ?? []).map((d) => <option key={d.id} value={d.id}>{d.city} — {d.name}</option>)}</select></label>
             <label className="fld">اسم العنوان<input name="label" placeholder="البيت / الشغل" /></label>
           </div>
-          <label className="fld">العنوان بالتفصيل<input name="address" /></label>
+          <label className="fld">العنوان (الشارع ورقم العمارة)<input name="address" /></label>
+          <div className="row">
+            <label className="fld">الدور<input name="floor" style={{ width: 90 }} /></label>
+            <label className="fld">الشقة<input name="apt" style={{ width: 90 }} /></label>
+            <label className="fld" style={{ flex: 1 }}>علامة مميزة<input name="landmark" placeholder="جنب إيه / قصاد إيه" /></label>
+          </div>
           <label className="fld">ملاحظات عن العميل<input name="notes" placeholder="مثلاً: بيحب التقطيع رفيع، بيدفع فيزا" /></label>
           <button className="btn pri" style={{ justifySelf: "start" }}>احفظ</button>
         </form>
@@ -52,6 +57,7 @@ export default async function CsCustomers({ searchParams }: { searchParams: Prom
             </div>
             <div className="row" style={{ gap: 6 }}>
               <Link className="btn pri" href={`/cs/new?phone=${c.phone}`}>+ طلب / حجز</Link>
+              <Link className="btn" href={`/cs/customers/${c.id}`}>بياناته / تعديل</Link>
               <Link className="btn" href={`/cs/orders?scope=all&q=${c.phone}`}>طلباته</Link>
               <Link className="btn" href={`/accounts/ledger?t=customer&id=${c.id}`}>كارته</Link>
               <a className="btn" href={`https://wa.me/2${c.phone.replace(/^2/, "")}`} target="_blank" rel="noreferrer">واتساب</a>

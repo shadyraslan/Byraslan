@@ -58,6 +58,12 @@ export async function editBooking(o: { token: string; lines?: { item_id: number;
 }
 
 /** دبوس العنوان بعد الطلب (من الموبايل أو لينك لوكيشن الواتساب) */
+// الدور والشقة والعلامة المميزة — بعد ما الطلب يتعمل (بالتوكن)
+export async function setAddrParts(token: string, a: { floor?: string; apt?: string; landmark?: string; address?: string }): Promise<void> {
+  if (!a.floor && !a.apt && !a.landmark && !a.address) return;
+  const sb = await supabaseServer();
+  await sb.rpc("order_address_set", { p_token: token, p_floor: a.floor ?? "", p_apt: a.apt ?? "", p_landmark: a.landmark ?? "", p_address: a.address ?? null });
+}
 export async function setPin(token: string, lat: number, lng: number): Promise<{ km: number | null; far: boolean } | null> {
   const sb = await supabaseServer();
   const { data } = await sb.rpc("order_set_pin", { p_token: token, p_lat: lat, p_lng: lng });

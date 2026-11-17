@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { getMenu, placeOrder, staffPlace, makeCart, getSlots, bookOrder, editBooking, setPin, type Menu, type Slot } from "./actions";
+import { getMenu, placeOrder, staffPlace, makeCart, getSlots, bookOrder, editBooking, setPin, setAddrParts, type Menu, type Slot } from "./actions";
 
 /** لينك لوكيشن (جوجل ماب/واتساب) أو "lat,lng" ← إحداثيات */
 function parseLoc(t: string): { lat: number; lng: number } | null {
@@ -11,7 +11,7 @@ function parseLoc(t: string): { lat: number; lng: number } | null {
 type Dist = { id: number; name: string; city: string; branch: string | null; branch_name: string | null; fee: number };
 const f = (n: number) => Math.round(n).toLocaleString("en-US");
 
-export type Init = { district?: number | null; cart?: Record<number, number>; info?: { name?: string; phone?: string; address?: string }; edit?: { token: string; no: number; date: string; slot: string } };
+export type Init = { district?: number | null; cart?: Record<number, number>; info?: { name?: string; phone?: string; address?: string; floor?: string; apt?: string; landmark?: string }; edit?: { token: string; no: number; date: string; slot: string } };
 type Staff = { channel: "phone" | "whatsapp" };
 
 /** نفس شاشة الطلب للعميل (الويب) وللموظف اللي بياخد الطلب واتساب/تليفون (staff) */
@@ -30,7 +30,7 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
   const [menu, setMenu] = useState<Menu[] | null>(null);
   const [cart, setCart] = useState<Record<number, number>>({});
   const [step, setStep] = useState<"menu" | "info">("menu");
-  const [info, setInfo] = useState({ name: "", phone: "", address: "", note: "", pay: "cash" });
+  const [info, setInfo] = useState({ name: "", phone: "", address: "", floor: "", apt: "", landmark: "", note: "", pay: "cash" });
   const [pin, setPinXY] = useState<{ lat: number; lng: number } | null>(null);
   const [pinMsg, setPinMsg] = useState("");
   const locate = () => {
@@ -38,14 +38,17 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
     setPinMsg("بنحدد مكانك…");
     navigator.geolocation.getCurrentPosition((p) => { setPinXY({ lat: p.coords.latitude, lng: p.coords.longitude }); setPinMsg("📍 اتحدد مكانك"); }, () => setPinMsg("ماقدرناش نحدد المكان — اكتب العنوان بالتفصيل"), { enableHighAccuracy: true, timeout: 15000 });
   };
-  const pinIt = async (token?: string) => { if (token && pin) { try { await setPin(token, pin.lat, pin.lng); } catch {} } };
+  const pinIt = async (token?: string) => {
+    if (token) { try { await setAddrParts(token, { floor: info.floor, apt: info.apt, landmark: info.landmark }); } catch {} }
+    if (token && pin) { try { await setPin(token, pin.lat, pin.lng); } catch {} }
+  };
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const br = dd && dd.branch ? { name: dd.branch_name ?? "", fee: dd.fee, min_order: minOrder } : null;
 
   useEffect(() => {
-    if (staff || init?.info) { if (init?.info) setInfo((i) => ({ ...i, name: init.info?.name ?? "", phone: init.info?.phone ?? "", address: init.info?.address ?? "" })); return; }
-    try { const s = localStorage.getItem("rostos-info"); if (s) { const v = JSON.parse(s); setInfo((i) => ({ ...i, name: v.name ?? "", phone: v.phone ?? "", address: v.address ?? "" })); if (v.district) setDist(Number(v.district)); } } catch {}
+    if (staff || init?.info) { if (init?.info) setInfo((i) => ({ ...i, name: init.info?.name ?? "", phone: init.info?.phone ?? "", address: init.info?.address ?? "", floor: init.info?.floor ?? "", apt: init.info?.apt ?? "", landmark: init.info?.landmark ?? "" })); return; }
+    try { const s = localStorage.getItem("rostos-info"); if (s) { const v = JSON.parse(s); setInfo((i) => ({ ...i, name: v.name ?? "", phone: v.phone ?? "", address: v.address ?? "", floor: v.floor ?? "", apt: v.apt ?? "", landmark: v.landmark ?? "" })); if (v.district) setDist(Number(v.district)); } } catch {}
   }, []);
   const firstLoad = useMemo(() => ({ v: true }), []);
   useEffect(() => {
@@ -106,7 +109,12 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
         <input placeholder="الاسم" value={info.name} onChange={(e) => setInfo({ ...info, name: e.target.value })} />
         <input placeholder="رقم الموبايل" inputMode="tel" dir="ltr" value={info.phone} onChange={(e) => setInfo({ ...info, phone: e.target.value })} />
         <div className="muted">المنطقة: <b>{dd?.name}</b></div>
-        <textarea placeholder="العنوان بالتفصيل (الشارع، العمارة، الدور، الشقة، علامة مميزة)" rows={3} value={info.address} onChange={(e) => setInfo({ ...info, address: e.target.value })} />
+        <input placeholder="العنوان (الشارع ورقم العمارة)" value={info.address} onChange={(e) => setInfo({ ...info, address: e.target.value })} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <input placeholder="الدور" value={info.floor} onChange={(e) => setInfo({ ...info, floor: e.target.value })} />
+          <input placeholder="الشقة" value={info.apt} onChange={(e) => setInfo({ ...info, apt: e.target.value })} />
+        </div>
+        <input placeholder="علامة مميزة (جنب إيه / قصاد إيه)" value={info.landmark} onChange={(e) => setInfo({ ...info, landmark: e.target.value })} />
         {staff
           ? <input placeholder="لينك اللوكيشن من الواتساب (اختياري)" dir="ltr" onChange={(e) => { const x = parseLoc(e.target.value); setPinXY(x); setPinMsg(x ? "📍 اتحدد المكان من اللينك" : e.target.value ? "اللينك ده مافيهوش مكان" : ""); }} />
           : <button type="button" className="btn" onClick={locate}>📍 حدّد مكاني بالظبط (أسرع في التوصيل)</button>}
@@ -140,6 +148,7 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
         if (mode === "book" && (!bdate || !bslot)) return setErr("اختار يوم وميعاد الحجز");
         if (edit) {
           const r = await editBooking({ token: edit.token, lines: lines(), date: bdate, slot: bslot, address: info.address, note: info.note });
+          if (r.ok) { try { await setAddrParts(edit.token, { floor: info.floor, apt: info.apt, landmark: info.landmark }); } catch {} }
           if (!r.ok) return setErr(r.error);
           if (staff) return setDone({ no: edit.no, token: edit.token, total: r.total, when: `${dayName(bdate)} ${bslot}` });
           window.location.href = `/t/${edit.token}`; return;
@@ -150,7 +159,7 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
           await pinIt(r.token);
           if (staff) return setDone({ no: r.no, token: r.token, total: r.total, when: `${dayName(bdate)} ${bslot}` });
           try { const L = JSON.parse(localStorage.getItem("my-orders") ?? "[]") as string[]; localStorage.setItem("my-orders", JSON.stringify([r.token, ...L].slice(0, 20))); } catch {}
-          try { localStorage.setItem("rostos-info", JSON.stringify({ name: info.name, phone: info.phone, address: info.address, district: dd?.id })); } catch {}
+          try { localStorage.setItem("rostos-info", JSON.stringify({ name: info.name, phone: info.phone, address: info.address, floor: info.floor, apt: info.apt, landmark: info.landmark, district: dd?.id })); } catch {}
           window.location.href = `/t/${r.token}`; return;
         }
         if (staff) {
@@ -163,7 +172,7 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
         if (!r.ok) return setErr(r.error);
         await pinIt(r.token);
         try { const L = JSON.parse(localStorage.getItem("my-orders") ?? "[]") as string[]; localStorage.setItem("my-orders", JSON.stringify([r.token, ...L].slice(0, 20))); } catch {}
-        try { localStorage.setItem("rostos-info", JSON.stringify({ name: info.name, phone: info.phone, address: info.address, district: dd?.id })); } catch {}
+        try { localStorage.setItem("rostos-info", JSON.stringify({ name: info.name, phone: info.phone, address: info.address, floor: info.floor, apt: info.apt, landmark: info.landmark, district: dd?.id })); } catch {}
         window.location.href = `/t/${r.token}`;
       })}>{edit ? "احفظ التعديل" : mode === "book" ? (staff ? "سجّل الحجز" : "أكّد الحجز") : staff ? "سجّل الطلب" : "أكّد الطلب"}</button>
       {err && <div className="badmsg" style={{ marginTop: 8 }}>{err}</div>}

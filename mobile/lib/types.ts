@@ -6,7 +6,7 @@ export type Config = {
   welcome: { on: boolean; ver: number; title: string; body: string } | null;
 };
 export type MenuItem = { item_id: number; name: string; unit: string; sold_by: string; price: number; old_price: number | null; pct: number; family: string | null; brand: string; available: number; photo: string | null; icon: string | null; color: string | null };
-export type Address = { id: string; label: string; district_id: number; address: string; is_default: boolean; lat?: number; lng?: number };
+export type Address = { id: string; label: string; district_id: number; address: string; floor?: string; apt?: string; landmark?: string; is_default: boolean; lat?: number; lng?: number };
 export type Profile = { name: string; phone: string; addresses: Address[] };
 export type OrderLine = { item_id: number; name: string; qty: number; unit: string; icon: string | null; prepared?: number; price?: number };
 export type MyOrder = { no: number; token: string; status: string; created_at: string; branch: string; district_id: number | null; total: number; lines: OrderLine[] };

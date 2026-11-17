@@ -21,6 +21,9 @@ async function save(fd: FormData) {
     { key: "scale_barcode", value: {
       prefix: String(fd.get("sc_prefix") || "20").trim(), plu_digits: Number(fd.get("sc_plu") || 5), weight_digits: Number(fd.get("sc_w") || 5),
       decimals: Number(fd.get("sc_dec") || 3), type: String(fd.get("sc_type") || "weight"), double_read_sec: 1 } },
+    { key: "receipt", value: {
+      thanks: String(fd.get("rc_thanks") || "").trim(), policy: String(fd.get("rc_policy") || "").trim(), cs_phone: String(fd.get("rc_cs") || "").trim(),
+      tax_no: String(fd.get("rc_tax") || "").trim(), cr_no: String(fd.get("rc_cr") || "").trim() } },
     { key: "app.support", value: {
       whatsapp: String(fd.get("wa") || "").trim(), phone: String(fd.get("phone") || "").trim(), hours: String(fd.get("hours") || "").trim(),
       faq: String(fd.get("faq") || "").split(/\n/).map((l) => l.split("|").map((x) => x.trim())).filter((x) => x[0] && x[1]).map((x) => [x[0], x.slice(1).join(" | ")]) } },
@@ -55,6 +58,18 @@ export default async function Settings() {
         <label className="fld">الكاشير يحدّث الأسعار والعلب كل (دقيقة)<input name="posmin" defaultValue={String(g("pos.refresh_minutes") ?? 1)} inputMode="decimal" dir="ltr" style={{ width: 100 }} /></label>
         <div className="muted" style={{ fontSize: 13 }}>ولو اتمسح كود مش موجود على الجهاز والنت شغال، بيسأل السيستم على طول.</div>
         <label className="fld">لو نت كاشير الفرع قطع أكتر من (دقيقة) طلبات الأونلاين الجديدة تروح للفرع الاحتياطي — 0 = مايتحوّلش<input name="reroute" defaultValue={String(g("online.offline_reroute_minutes") ?? 5)} inputMode="numeric" dir="ltr" style={{ width: 100 }} /></label>
+        <h2 style={{ marginTop: 14 }}>فاتورة طلبات الأونلاين</h2>
+        {(() => { const rc = (g("receipt") ?? {}) as { thanks?: string; policy?: string; cs_phone?: string; tax_no?: string; cr_no?: string }; return (
+          <div style={{ display: "grid", gap: 8 }}>
+            <label className="fld">جملة الشكر<input name="rc_thanks" defaultValue={rc.thanks ?? ""} /></label>
+            <label className="fld">سياسة الاستبدال (بتتطبع تحت الفاتورة)<textarea name="rc_policy" rows={2} defaultValue={rc.policy ?? ""} /></label>
+            <div className="row">
+              <label className="fld">رقم خدمة العملاء<input name="rc_cs" defaultValue={rc.cs_phone ?? ""} dir="ltr" /></label>
+              <label className="fld">الملف الضريبي<input name="rc_tax" defaultValue={rc.tax_no ?? ""} dir="ltr" /></label>
+              <label className="fld">السجل التجاري<input name="rc_cr" defaultValue={rc.cr_no ?? ""} dir="ltr" /></label>
+            </div>
+          </div>
+        ); })()}
         <h2 style={{ marginTop: 14 }}>باركود الميزان</h2>
         {(() => { const sc = (g("scale_barcode") ?? {}) as { prefix?: string; plu_digits?: number; weight_digits?: number; decimals?: number; type?: string }; return (
           <>
