@@ -98,6 +98,8 @@ export default function Cashier() {
   const [rec, setRec] = useState<Done | null>(null);
   const [view, setView] = useState<"sell" | "orders" | "list" | "return" | "close" | "expiry">("sell");
   const [rets, setRets] = useState<Ret[]>([]);
+  // تبويب الصلاحية: فاضل كام يوم (زي تقرير المخزن)
+  const [expDays, setExpDays] = useState<number | null>(null);
   // كاش الطيارين اللي اتسلّم في الوردية دي (بيدخل الدرج)
   const [riderIn, setRiderIn] = useState(0);
   const [retKey, setRetKey] = useState(0);
@@ -381,7 +383,7 @@ export default function Cashier() {
   // ---------- قفل الوردية ----------
   const retCash = rets.reduce((a, r) => a + Number(r.refund_cash), 0);
   // الصلاحية في الفرع: اللي خلص أو هيخلص خلال أيام التنبيه (من آخر تحديث للعلب)
-  const expList = (snap?.boxes ?? []).filter((b) => b.exp && new Date(b.exp).getTime() < Date.now() + (snap?.warn_days ?? 1) * 864e5).sort((a, b) => String(a.exp).localeCompare(String(b.exp)));
+  const expList = (snap?.boxes ?? []).filter((b) => b.exp && new Date(b.exp).getTime() < Date.now() + (expDays ?? snap?.warn_days ?? 1) * 864e5).sort((a, b) => String(a.exp).localeCompare(String(b.exp)));
   const expGone = expList.filter((b) => new Date(String(b.exp)).getTime() < Date.now()).length;
   const expN = expList.length;
   const expected = shift ? r2(shift.opening_cash + done.reduce((a, s) => a + s.cash - s.change, 0) - retCash + riderIn) : 0;
@@ -476,7 +478,12 @@ export default function Cashier() {
       {view === "expiry" && (
         <div style={{ padding: "0 16px" }}>
           <div className="card" style={{ display: "grid", gap: 6 }}>
-            <b>الصلاحية في الفرع — اللي خلص أو هيخلص خلال {snap?.warn_days ?? 1} يوم ({expN})</b>
+            <b>الصلاحية في الفرع ({expN})</b>
+            <div className="row" style={{ gap: 6 }}>
+              {[[0, "اللي خلص بس"], [1, "فاضل يوم"], [2, "فاضل يومين"], [3, "3 أيام"], [7, "أسبوع"]].map(([d, l]) => (
+                <button key={d} className={(expDays ?? snap?.warn_days ?? 1) === d ? "btn pri" : "btn"} style={{ height: 34 }} onClick={() => setExpDays(Number(d))}>{l}</button>
+              ))}
+            </div>
             <div className="muted" style={{ fontSize: 13 }}>اللي صلاحيته خلصت الكاشير بيرفضه لو اتمسح. حط الأطباق دي على جنب{snap?.can_waste ? " وحوّلها هالك أو تبرعات من الداشبورد" : " وبلّغ المسؤول يحوّلها هالك أو تبرعات"}. (حسب آخر تحديث {snap ? hhmm(snap.at) : ""})</div>
             {expList.map((b) => { const gone = new Date(String(b.exp)).getTime() < Date.now(); const h = Math.round((new Date(String(b.exp)).getTime() - Date.now()) / 36e5); return (
               <div key={b.sn} className="row" style={{ justifyContent: "space-between", borderTop: "1px solid var(--line)", padding: "6px 0", color: gone ? "var(--bad)" : "#b7791f" }}>
