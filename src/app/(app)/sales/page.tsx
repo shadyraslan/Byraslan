@@ -3,7 +3,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import { cairoDate, money } from "@/lib/time";
 
-type Sale = { id: number; no: number; location_id: string; at: string; subtotal: number; discount: number; total: number; paid_cash: number; paid_card: number; change: number; cashier: string };
+type Sale = { voided_at?: string | null; void_reason?: string | null; id: number; no: number; location_id: string; at: string; subtotal: number; discount: number; total: number; paid_cash: number; paid_card: number; change: number; cashier: string };
 type Shift = { id: number; location_id: string; cashier: string; opened_at: string; closed_at: string | null; opening_cash: number; counted_cash: number | null; expected_cash: number | null; status: string };
 
 export default async function Sales({ searchParams }: { searchParams: Promise<{ d?: string; loc?: string }> }) {
@@ -12,7 +12,7 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
   if (!can(me, "acc.view") && !can(me, "pos.shift")) redirect("/dashboard");
   const sb = await supabaseServer();
   const from = `${d}T00:00:00+02:00`, to = `${d}T23:59:59.999+02:00`;
-  let sq = sb.from("sales").select("id,no,location_id,at,subtotal,discount,total,paid_cash,paid_card,change,cashier").gte("at", from).lte("at", to).order("at", { ascending: false });
+  let sq = sb.from("sales").select("id,no,location_id,at,subtotal,discount,total,paid_cash,paid_card,change,cashier,voided_at,void_reason").gte("at", from).lte("at", to).order("at", { ascending: false });
   if (loc) sq = sq.eq("location_id", loc);
   let hq = sb.from("shifts").select("id,location_id,cashier,opened_at,closed_at,opening_cash,counted_cash,expected_cash,status").gte("opened_at", from).lte("opened_at", to).order("opened_at");
   if (loc) hq = hq.eq("location_id", loc);
@@ -71,7 +71,7 @@ export default async function Sales({ searchParams }: { searchParams: Promise<{ 
           <tbody>
             {S.map((x) => (
               <tr key={x.id}>
-                <td className="num">#{x.no}</td>
+                <td className="num">#{x.no}{x.voided_at && <div style={{ color: "var(--bad)", fontSize: 12 }}>⛔ ملغية: {x.void_reason}</div>}</td>
                 <td className="num">{new Date(x.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Cairo" })}</td>
                 <td>{ln(x.location_id)}</td><td>{pn(x.cashier)}</td>
                 <td className="num"><b>{Number(x.total).toFixed(2)}</b></td>

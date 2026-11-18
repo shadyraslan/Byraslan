@@ -12,10 +12,10 @@ import OrdersPanel, { useOrders } from "./Orders";
 
 type Item = { id: number; name: string; unit: string; sold_by: string; arm: string; kind: string; fams?: number[]; plu: string | null; price: number };
 type Promo = { id: number; name: string; kind: string; value: number; max_off: number | null; auto: boolean; code: string | null; min_order: number; families: number[] | null; stackable: boolean; ends_at: string | null; bundle?: { item_id: number; qty: number }[] | null };
-type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number; exp?: string | null }[]; warn_days?: number; can_waste?: boolean; promos?: Promo[]; unknown_item?: number | null; can_unknown?: boolean; can_credit?: boolean; can_return?: boolean };
+type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number; exp?: string | null }[]; warn_days?: number; can_waste?: boolean; promos?: Promo[]; unknown_item?: number | null; can_unknown?: boolean; can_credit?: boolean; can_return?: boolean; can_void?: boolean };
 type Line = { item_id: number; name: string; unit: string; box_sn: number | null; qty: number; unit_price: number; unknown_code?: string };
 type Sale = { client_id: string; shift: string; at: string; local_no: string; lines: Line[]; discount: number; cash: number; card: number; offline: boolean; promo_code?: string | null; credit?: number; credit_customer?: number | null; credit_name?: string | null; points_code?: string | null; points?: number; points_off?: number; points_earn?: number };
-type Done = Sale & { no?: number; conflicts?: string[]; total: number; change: number };
+type Done = Sale & { no?: number; conflicts?: string[]; total: number; change: number; voided?: string };
 type Shift = { client_id: string; loc: string; loc_name: string; opening_cash: number; opened_at: string; server_id?: number; closing?: { counted: number; closed_at: string } };
 type Me = { id: string; name: string; home: string | null };
 
@@ -98,6 +98,20 @@ export default function Cashier() {
   const [rec, setRec] = useState<Done | null>(null);
   const [view, setView] = useState<"sell" | "orders" | "list" | "return" | "close" | "expiry">("sell");
   const [rets, setRets] = useState<Ret[]>([]);
+  // إلغاء فاتورة (Void) في نفس الوردية
+  const [voidOf, setVoidOf] = useState<string | null>(null);
+  const [voidWhy, setVoidWhy] = useState("");
+  const [voidMsg, setVoidMsg] = useState<{ ok: boolean; t: string } | null>(null);
+  const doVoid = async (d: Done) => {
+    if (!shift || !d.no) return;
+    const { data, error } = await sb.rpc("pos_void", { p_no: d.no, p_reason: voidWhy, p_shift_client: shift.client_id });
+    if (error) return setVoidMsg({ ok: false, t: errText(error) });
+    setRets((x) => [...x, data as Ret]);
+    const nd = done.map((x) => (x.client_id === d.client_id ? { ...x, voided: voidWhy } : x));
+    setDone(nd); await kv.set("done", nd);
+    setVoidOf(null); setVoidWhy("");
+    setVoidMsg({ ok: true, t: `اتلغت الفاتورة #${d.no} — ${f2(Number((data as Ret).refund_cash))} ج اتشالوا من الدرج، والأصناف رجعت المخزون` });
+  };
   // تبويب الصلاحية: فاضل كام يوم (زي تقرير المخزن)
   const [expDays, setExpDays] = useState<number | null>(null);
   // كاش الطيارين اللي اتسلّم في الوردية دي (بيدخل الدرج)
@@ -599,13 +613,27 @@ export default function Cashier() {
                 <tr key={s.client_id}>
                   <td className="num">{s.no ? `#${s.no}` : s.local_no}</td><td className="num">{hhmm(s.at)}</td><td className="num"><b>{f2(s.total)}</b></td>
                   <td className="num">{f2(s.cash - s.change)} / {f2(s.card)}</td>
-                  <td>{s.no ? (s.conflicts?.length ? <span style={{ color: "var(--bad)" }}>{s.conflicts.join("، ")}</span> : "متسجّلة ✓") : <span style={{ color: "#b7791f" }}>مستنية تترفع</span>}</td>
-                  <td><button className="btn" style={{ height: 30 }} onClick={() => { setRec(s); setTimeout(() => window.print(), 50); }}>اطبع تاني</button></td>
+                  <td>{s.voided ? <span style={{ color: "var(--bad)" }}>⛔ ملغية — {s.voided}</span> : s.no ? (s.conflicts?.length ? <span style={{ color: "var(--bad)" }}>{s.conflicts.join("، ")}</span> : "متسجّلة ✓") : <span style={{ color: "#b7791f" }}>مستنية تترفع</span>}</td>
+                  <td>
+                    <div className="row" style={{ gap: 4 }}>
+                      <button className="btn" style={{ height: 30 }} onClick={() => { setRec(s); setTimeout(() => window.print(), 50); }}>اطبع تاني</button>
+                      {snap?.can_void && s.no && !s.voided && online && voidOf !== s.client_id && <button className="btn" style={{ height: 30, color: "var(--bad)" }} onClick={() => { setVoidOf(s.client_id); setVoidWhy(""); setVoidMsg(null); }}>إلغاء الفاتورة</button>}
+                    </div>
+                    {voidOf === s.client_id && (
+                      <div className="row" style={{ gap: 4, marginTop: 4 }}>
+                        <input value={voidWhy} onChange={(e) => setVoidWhy(e.target.value)} placeholder="سبب الإلغاء" autoFocus style={{ height: 32, width: 170 }} />
+                        <button className="btn pri" style={{ height: 32, background: "var(--bad)" }} disabled={voidWhy.trim().length < 3} onClick={() => doVoid(s)}>الغيها</button>
+                        <button className="btn" style={{ height: 32 }} onClick={() => setVoidOf(null)}>لأ</button>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))}
               {!done.length && <tr><td colSpan={6} className="muted">لسه مفيش فواتير في الوردية دي</td></tr>}
             </tbody>
           </table>
+          {voidMsg && <div className={voidMsg.ok ? "okmsg" : "badmsg"}>{voidMsg.t}</div>}
+          <div className="muted" style={{ fontSize: 12.5, marginTop: 6 }}>إلغاء الفاتورة للفواتير اللي في الوردية المفتوحة بس؛ الفواتير القديمة بتتعمل «مرتجع».</div>
         </div>
       )}
 
