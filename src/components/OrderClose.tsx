@@ -7,7 +7,10 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 export type CloseO = {
   id: number; status: string; pay_method: string; loc: string; sub: number; fee: number; fee_orig: number | null;
   discount: number; branch_discount: number; branch_discount_note: string | null; rider_note: string | null; rider_id: number | null;
+  tudzi_state?: string | null; tudzi_courier?: { courier?: { name?: string; phone?: string; plate?: string; vehicle?: string } } | null; tudzi_track?: string | null; tudzi_error?: string | null;
 };
+const TZ: Record<string, string> = { sent: "اتبعت لتودزي…", searching: "بيدوّر على كابتن", accepted: "كابتن قبل وجاي الفرع", at_pickup: "الكابتن وصل الفرع", picked: "الكابتن استلم وفي الطريق",
+  done: "اتسلّم للعميل", cancelling: "بيتلغى من تودزي…", cancelled: "اتلغى من تودزي", nocourier: "مفيش كابتن قبل", failed: "تودزي ماقبلش الطلب", returned: "رجع مع الكابتن" };
 type Rider = { id: number; name: string; kind: string; location_id: string | null };
 const METHODS: [string, string][] = [["cash", "كاش"], ["instapay", "إنستاباي"], ["wallet", "محفظة"], ["card", "فيزا"]];
 const KIND: Record<string, string> = { own: "طيارنا", tudzi: "تودزي", other: "خارجي" };
@@ -29,6 +32,12 @@ export default function OrderClose({ o, onDone }: { o: CloseO; onDone: (msg: str
   const def = o.pay_method === "card" ? "card" : o.pay_method === "instapay" ? "instapay" : o.pay_method === "wallet" ? "wallet" : "cash";
   const [pays, setPays] = useState<{ m: string; a: string }[]>([{ m: def, a: "" }]);
   const open = !["delivered", "cancelled"].includes(o.status);
+  const [tz, setTz] = useState<{ ready: boolean; auto: boolean } | null>(null);
+  useEffect(() => {
+    sb.rpc("tudzi_link_list").then(({ data }) => { const l = ((data ?? []) as { loc: string; ready: boolean; auto: boolean; active: boolean }[]).find((x) => x.loc === o.loc); setTz(l ? { ready: l.ready && l.active, auto: l.auto } : null); });
+  }, [o.loc]); // eslint-disable-line react-hooks/exhaustive-deps
+  const tzLive = ["sent", "searching", "accepted", "at_pickup", "picked", "cancelling"].includes(o.tudzi_state ?? "");
+  const cu = o.tudzi_courier?.courier;
 
   useEffect(() => {
     sb.from("riders").select("id,name,kind,location_id").eq("active", true).order("name").then(({ data }) => setRiders(((data ?? []) as Rider[]).filter((r) => !r.location_id || r.location_id === o.loc)));
@@ -70,7 +79,28 @@ export default function OrderClose({ o, onDone }: { o: CloseO; onDone: (msg: str
         </div>
       </details>
 
-      {o.status === "ready" && (
+      {(tz?.ready || o.tudzi_state) && (
+        <div className="card" style={{ display: "grid", gap: 6, borderColor: tzLive ? "#F2B705" : undefined }}>
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <b>🛵 تودزي{tz?.auto ? " (أوتوماتيك)" : ""}</b>
+            {o.tudzi_state && <b>{TZ[o.tudzi_state] ?? o.tudzi_state}</b>}
+          </div>
+          {cu?.name && <div>الكابتن: <b>{cu.name}</b>{cu.phone && <> · <a className="num" href={`tel:${cu.phone}`}>{cu.phone}</a></>}{cu.vehicle ? ` · ${cu.vehicle}` : ""}{cu.plate ? ` · ${cu.plate}` : ""}</div>}
+          {o.tudzi_track && <a href={o.tudzi_track} target="_blank" rel="noreferrer">📍 تابع الكابتن على الخريطة</a>}
+          {o.tudzi_error && <div className="badmsg">{o.tudzi_error}</div>}
+          <div className="row">
+            {!tzLive && o.tudzi_state !== "done" && ["new", "accepted", "preparing", "ready"].includes(o.status) && tz?.ready && (
+              <button className="btn pri" disabled={busy} onClick={() => call(() => sb.rpc("tudzi_send_now", { p_order: o.id }), "اتبعت لتودزي")}>{o.tudzi_state ? "ابعته لتودزي تاني" : "ابعت لتودزي"}</button>
+            )}
+            {["sent", "searching", "accepted", "at_pickup"].includes(o.tudzi_state ?? "") && (
+              <button className="btn" disabled={busy} onClick={() => call(() => sb.rpc("tudzi_cancel_now", { p_order: o.id, p_reason: "" }), "اتطلب الإلغاء من تودزي")}>الغيه من تودزي</button>
+            )}
+          </div>
+          {tzLive && <div className="muted" style={{ fontSize: 12.5 }}>الحالة بتتحدّث لوحدها كل دقيقة. لما الكابتن يستلم الطلب بيخرج، ولما يسلّمه الطلب بيتقفل والكاش بيتسجّل على الكابتن.</div>}
+        </div>
+      )}
+
+      {o.status === "ready" && !(tzLive && o.tudzi_state !== "cancelling") && (
         <div className="card" style={{ display: "grid", gap: 8 }}>
           <b>الطيار</b>
           <div className="row">
@@ -91,7 +121,7 @@ export default function OrderClose({ o, onDone }: { o: CloseO; onDone: (msg: str
         </div>
       )}
 
-      {o.status === "out" && (
+      {o.status === "out" && !tzLive && (
         <div className="card" style={{ display: "grid", gap: 8 }}>
           <div className="row" style={{ justifyContent: "space-between" }}><b>التحصيل</b><b className="num" style={{ fontSize: 20 }}>{total} ج</b></div>
           {o.pay_method === "credit" ? <div className="muted">الطلب ده آجل على حساب العميل — مفيش تحصيل دلوقتي.</div> : (

@@ -7,7 +7,7 @@ import OrderClose from "@/components/OrderClose";
 
 type O = {
   id: number; no: number; status: string; address: string | null; note: string | null; pay_method: string; est_total: number; total: number | null; delivery_fee: number; discount: number; promo_code: string | null; driver: string | null; cancel_reason: string | null; created_at: string; channel: string;
-  location_id: string; fee_orig: number | null; branch_discount: number; branch_discount_note: string | null; rider_note: string | null; rider_id: number | null; floor: string | null; apt: string | null; landmark: string | null;
+  location_id: string; fee_orig: number | null; branch_discount: number; branch_discount_note: string | null; rider_note: string | null; rider_id: number | null; tudzi_state?: string | null; tudzi_courier?: { courier?: { name?: string; phone?: string; plate?: string; vehicle?: string } } | null; tudzi_track?: string | null; tudzi_error?: string | null; floor: string | null; apt: string | null; landmark: string | null;
   customers: { name: string; phone: string; area: string | null } | null; locations: { name: string } | null;
   online_order_lines: { line: number; qty: number; unit_price: number; prepared: number; note?: string | null; items: { name: string; unit: string } | null }[];
   online_order_boxes: { box_sn: number; line: number; qty: number }[];
@@ -65,7 +65,7 @@ export default function OrderDesk({ o, canCancel }: { o: O; canCancel: boolean }
         {["ready", "out", "delivered"].includes(o.status) && <a className="btn" href={`/print/order/${o.id}`} target="_blank" rel="noreferrer" style={{ display: "inline-grid", placeItems: "center" }}>🖨️ اطبع الفاتورة</a>}
         {canCancel && !["delivered", "cancelled"].includes(o.status) && <span className="row" style={{ marginInlineStart: "auto" }}><input placeholder="سبب الإلغاء" value={reason} onChange={(e) => setReason(e.target.value)} /><button className="btn" disabled={pending} onClick={() => run(setStatus(o.id, "cancelled", undefined, reason), "اتلغى")}>إلغاء الطلب</button></span>}
       </div>
-      <div className="noprint"><OrderClose o={{ id: o.id, status: o.status, pay_method: o.pay_method, loc: o.location_id, sub, fee: Number(o.delivery_fee), fee_orig: o.fee_orig, discount: Number(o.discount || 0), branch_discount: Number(o.branch_discount || 0), branch_discount_note: o.branch_discount_note, rider_note: o.rider_note, rider_id: o.rider_id }} onDone={(t) => { setMsg({ ok: true, t }); router.refresh(); }} /></div>
+      <div className="noprint"><OrderClose o={{ id: o.id, status: o.status, pay_method: o.pay_method, loc: o.location_id, sub, fee: Number(o.delivery_fee), fee_orig: o.fee_orig, discount: Number(o.discount || 0), branch_discount: Number(o.branch_discount || 0), branch_discount_note: o.branch_discount_note, rider_note: o.rider_note, rider_id: o.rider_id, tudzi_state: o.tudzi_state ?? null, tudzi_courier: o.tudzi_courier ?? null, tudzi_track: o.tudzi_track ?? null, tudzi_error: o.tudzi_error ?? null }} onDone={(t) => { setMsg({ ok: true, t }); router.refresh(); }} /></div>
       {msg && <div className={msg.ok ? "okmsg" : "badmsg"}>{msg.t}</div>}
     </>
   );

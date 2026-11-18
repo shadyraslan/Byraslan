@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
-import { saveRider, settleRider } from "./actions";
+import { saveRider, settleRider, saveTudzi, saveTudziCfg } from "./actions";
 
 type Rd = { id: number; name: string; phone: string | null; kind: string; location_id: string | null; active: boolean };
 type C = { rider_id: number; amount: number; at: string; settled_at: string | null; location_id: string | null; online_orders: { no: number } | null };
@@ -12,7 +12,7 @@ const money = (n: number) => Math.round(n * 100) / 100;
 export default async function Riders({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
   const sp = await searchParams;
   const me = await getMe();
-  if (!["riders.manage", "riders.settle", "orders.handle", "acc.view"].some((p) => can(me, p))) redirect("/dashboard");
+  if (!["riders.manage", "riders.settle", "orders.handle", "acc.view", "tudzi.manage"].some((p) => can(me, p))) redirect("/dashboard");
   const sb = await supabaseServer();
   const [{ data: rs }, { data: locs }, { data: cash }] = await Promise.all([
     sb.from("riders").select("id,name,phone,kind,location_id,active").order("active", { ascending: false }).order("name"),
@@ -20,6 +20,10 @@ export default async function Riders({ searchParams }: { searchParams: Promise<{
     sb.from("rider_cash").select("rider_id,amount,at,settled_at,location_id,online_orders(no)").or(`settled_at.is.null,settled_at.gte.${new Date(Date.now() - 7 * 864e5).toISOString()}`).order("at", { ascending: false }).limit(2000),
   ]);
   const R = (rs ?? []) as Rd[];
+  const { data: tl } = await sb.rpc("tudzi_link_list");
+  const TL = (tl ?? []) as { loc: string; name: string; ready: boolean; auto: boolean; active: boolean }[];
+  const { data: tcfg } = await sb.from("settings").select("value").eq("key", "tudzi").maybeSingle();
+  const fb = Number((tcfg?.value as { fallback_min?: number } | null)?.fallback_min ?? 10);
   const Cs = (cash ?? []) as unknown as C[];
   const LN = new Map((locs ?? []).map((l) => [l.id as string, l.name as string]));
   const edit = can(me, "riders.manage");
@@ -64,6 +68,30 @@ export default async function Riders({ searchParams }: { searchParams: Promise<{
         </table>
         {!R.length && <div className="muted">لسه مفيش طيارين — ضيفهم من فوق أو من شاشة الطلب وقت الخروج.</div>}
       </div>
+      {can(me, "tudzi.manage") && (
+        <div className="card" style={{ display: "grid", gap: 10 }}>
+          <h2 style={{ margin: 0 }}>🛵 التوصيل بتودزي</h2>
+          <div className="muted" style={{ fontSize: 13 }}>
+            لكل فرع: في تطبيق تودزي للمحل ← «حسابي» ← «اربط متجرك» ← WooCommerce ← اختار الفرع، وانسخ <b>رابط الـ Webhook</b> و<b>المفتاح (Secret)</b> وحطهم هنا.
+            بيتحفظوا في خزنة سرية ومش بيظهروا تاني. «أوتوماتيك» = الطلب يروح لتودزي أول ما الفرع يبدأ يجهّزه؛ من غيره الفرع بيدوس «ابعت لتودزي» بنفسه.
+          </div>
+          {TL.map((t) => (
+            <form key={t.loc} action={saveTudzi} className="row" style={{ alignItems: "end", borderTop: "1px solid var(--line)", paddingTop: 8 }}>
+              <input type="hidden" name="loc" value={t.loc} />
+              <b style={{ minWidth: 110, alignSelf: "center" }}>{t.name} {t.ready ? "✅" : "—"}</b>
+              <label className="fld" style={{ flex: 2, minWidth: 220 }}>رابط الـ Webhook<input name="url" dir="ltr" placeholder={t.ready ? "محفوظ — اكتب جديد لو هتغيّره" : "https://…/functions/v1/store-hook/…"} /></label>
+              <label className="fld" style={{ flex: 1, minWidth: 160 }}>المفتاح<input name="key" type="password" dir="ltr" autoComplete="off" placeholder={t.ready ? "محفوظ" : ""} /></label>
+              <label className="row" style={{ gap: 4 }}><input type="checkbox" name="auto" defaultChecked={t.auto} /> أوتوماتيك</label>
+              <label className="row" style={{ gap: 4 }}><input type="checkbox" name="active" defaultChecked={t.ready ? t.active : true} /> شغال</label>
+              <button className="btn pri">احفظ</button>
+            </form>
+          ))}
+          <form action={saveTudziCfg} className="row" style={{ alignItems: "end" }}>
+            <label className="fld">لو مفيش كابتن قبل خلال (دقيقة) نبّه الفرع<input name="fb" defaultValue={fb} inputMode="numeric" dir="ltr" style={{ width: 90 }} /></label>
+            <button className="btn">احفظ</button>
+          </form>
+        </div>
+      )}
     </>
   );
 }

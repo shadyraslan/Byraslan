@@ -14,7 +14,7 @@ export const NAV: NavGroup[] = [
   ] },
   { id: "orders", title: "الطلبات والتوصيل", icon: "app", color: "#0ea5e9", links: [
     { href: "/orders", label: "طلبات الأونلاين", icon: "orders", color: "#0ea5e9", perms: ["orders.handle"] },
-    { href: "/riders", label: "الطيارين وكاشهم", icon: "orders", color: "#7c3aed", perms: ["riders.manage", "riders.settle", "orders.handle", "acc.view"] },
+    { href: "/riders", label: "الطيارين وكاشهم", icon: "orders", color: "#7c3aed", perms: ["riders.manage", "riders.settle", "orders.handle", "acc.view", "tudzi.manage"] },
     { href: "/bookings", label: "تقارير الحجوزات", icon: "calendar", color: "#7c3aed", perms: ["orders.handle", "orders.booking", "cs.agent"] },
     { href: "/zones", label: "مناطق التوصيل", icon: "map", color: "#0891b2", perms: ["settings.edit"] },
     { href: "/notify", label: "إشعارات ورسايل العملاء", icon: "bell", color: "#f59e0b", perms: ["notify.send"] },
