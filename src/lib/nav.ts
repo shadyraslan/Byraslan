@@ -89,6 +89,7 @@ export const NAV: NavGroup[] = [
   ] },
   { id: "setup", title: "الإعداد", icon: "settings", color: "#525252", links: [
     { href: "/users", label: "الموظفين والصلاحيات", icon: "key", color: "#475569", perms: ["users.manage"] },
+    { href: "/users/report", label: "تقرير الصلاحيات", icon: "reports", color: "#475569", perms: ["users.manage"] },
     { href: "/locations", label: "المواقع والفروع", icon: "pin", color: "#059669", perms: ["stock.edit", "settings.edit"] },
     { href: "/settings", label: "الإعدادات", icon: "settings", color: "#525252", perms: ["settings.edit"] },
   ] },
