@@ -12,7 +12,7 @@ import OrdersPanel, { useOrders } from "./Orders";
 
 type Item = { id: number; name: string; unit: string; sold_by: string; arm: string; kind: string; fams?: number[]; plu: string | null; price: number };
 type Promo = { id: number; name: string; kind: string; value: number; max_off: number | null; auto: boolean; code: string | null; min_order: number; families: number[] | null; stackable: boolean; ends_at: string | null; bundle?: { item_id: number; qty: number }[] | null };
-type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number }[]; promos?: Promo[]; unknown_item?: number | null; can_unknown?: boolean; can_credit?: boolean; can_return?: boolean };
+type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number; exp?: string | null }[]; warn_days?: number; can_waste?: boolean; promos?: Promo[]; unknown_item?: number | null; can_unknown?: boolean; can_credit?: boolean; can_return?: boolean };
 type Line = { item_id: number; name: string; unit: string; box_sn: number | null; qty: number; unit_price: number; unknown_code?: string };
 type Sale = { client_id: string; shift: string; at: string; local_no: string; lines: Line[]; discount: number; cash: number; card: number; offline: boolean; promo_code?: string | null; credit?: number; credit_customer?: number | null; credit_name?: string | null; points_code?: string | null; points?: number; points_off?: number; points_earn?: number };
 type Done = Sale & { no?: number; conflicts?: string[]; total: number; change: number };
@@ -96,7 +96,7 @@ export default function Cashier() {
     setPtInfo(data as PtInfo);
   };
   const [rec, setRec] = useState<Done | null>(null);
-  const [view, setView] = useState<"sell" | "orders" | "list" | "return" | "close">("sell");
+  const [view, setView] = useState<"sell" | "orders" | "list" | "return" | "close" | "expiry">("sell");
   const [rets, setRets] = useState<Ret[]>([]);
   // كاش الطيارين اللي اتسلّم في الوردية دي (بيدخل الدرج)
   const [riderIn, setRiderIn] = useState(0);
@@ -258,6 +258,8 @@ export default function Cashier() {
       if (soldLocal.has(sn) || lines.some((l) => l.box_sn === sn)) return `العلبة #${sn} اتباعت قبل كده`;
       const b = snap.boxes.find((x) => x.sn === sn);
       if (!b) return `العلبة #${sn} مش في مخزون الفرع (حسب آخر تحديث ${hhmm(snap.at)})`;
+      // صلاحيتها خلصت: ممنوع تتباع
+      if (b.exp && new Date(b.exp).getTime() < Date.now()) return `⛔ صلاحية العلبة #${sn} خلصت — متتباعش، حطها على جنب وبلّغ المسؤول`;
       const it = item(b.item_id);
       if (!it) return `مفيش سعر لصنف العلبة #${sn} في الفرع`;
       return { item_id: it.id, name: it.name, unit: it.unit, box_sn: sn, qty: it.sold_by === "piece" || it.unit === "قطعة" ? 1 : b.weight, unit_price: it.price };
@@ -378,6 +380,10 @@ export default function Cashier() {
 
   // ---------- قفل الوردية ----------
   const retCash = rets.reduce((a, r) => a + Number(r.refund_cash), 0);
+  // الصلاحية في الفرع: اللي خلص أو هيخلص خلال أيام التنبيه (من آخر تحديث للعلب)
+  const expList = (snap?.boxes ?? []).filter((b) => b.exp && new Date(b.exp).getTime() < Date.now() + (snap?.warn_days ?? 1) * 864e5).sort((a, b) => String(a.exp).localeCompare(String(b.exp)));
+  const expGone = expList.filter((b) => new Date(String(b.exp)).getTime() < Date.now()).length;
+  const expN = expList.length;
   const expected = shift ? r2(shift.opening_cash + done.reduce((a, s) => a + s.cash - s.change, 0) - retCash + riderIn) : 0;
   const [closeErr, setCloseErr] = useState<string | null>(null);
   const closeShift = async () => {
@@ -451,7 +457,7 @@ export default function Cashier() {
     <>
       {bar}
       <div className="noprint" style={{ display: "flex", gap: 8, padding: "10px 16px", flexWrap: "wrap" }}>
-        {([["sell", "البيع"], ...(snap?.can_orders ? [["orders", `طلبات الأونلاين (${ord.orders.length})`]] : []), ["list", `فواتير الوردية (${done.length})`], ...(snap?.can_return ? [["return", `مرتجع${rets.length ? ` (${rets.length})` : ""}`]] : []), ["close", "اقفل الوردية"]] as [typeof view, string][]).map(([k, l]) => <button key={k} className={view === k ? "btn pri" : "btn"} style={k === "orders" && ord.fresh.length ? { background: "var(--bad)", color: "#fff", borderColor: "var(--bad)" } : undefined} onClick={() => setView(k)}>{l}</button>)}
+        {([["sell", "البيع"], ...(snap?.can_orders ? [["orders", `طلبات الأونلاين (${ord.orders.length})`]] : []), ["list", `فواتير الوردية (${done.length})`], ...(snap?.can_return ? [["return", `مرتجع${rets.length ? ` (${rets.length})` : ""}`]] : []), ["expiry", `الصلاحية${expN ? ` (${expN})` : ""}`], ["close", "اقفل الوردية"]] as [typeof view, string][]).map(([k, l]) => <button key={k} className={view === k ? "btn pri" : "btn"} style={(k === "orders" && ord.fresh.length) || (k === "expiry" && expGone) ? { background: "var(--bad)", color: "#fff", borderColor: "var(--bad)" } : undefined} onClick={() => setView(k)}>{l}</button>)}
         <button className="btn" onClick={() => shift && refreshSnap(shift.loc)} disabled={!online}>حدّث الأسعار والعلب</button>
         {syncErr && <span className="badmsg" style={{ margin: 0 }}>الرفع وقف: {syncErr}</span>}
       </div>
@@ -467,6 +473,21 @@ export default function Cashier() {
           {riderIn > 0 && <div className="muted" style={{ marginTop: 8 }}>كاش استلمته من الطيارين في الوردية دي: {f2(riderIn)} ج — اتضاف للمتوقع في الدرج</div>}
           {rets.length > 0 && <div className="muted" style={{ marginTop: 8 }}>مرتجعات الوردية: {rets.map((r) => `R-${r.no} (${f2(r.total)} ج)`).join(" · ")} — الكاش اللي اترجع {f2(retCash)} ج اتخصم من المتوقع في الدرج</div>}
         </div>)}
+      {view === "expiry" && (
+        <div style={{ padding: "0 16px" }}>
+          <div className="card" style={{ display: "grid", gap: 6 }}>
+            <b>الصلاحية في الفرع — اللي خلص أو هيخلص خلال {snap?.warn_days ?? 1} يوم ({expN})</b>
+            <div className="muted" style={{ fontSize: 13 }}>اللي صلاحيته خلصت الكاشير بيرفضه لو اتمسح. حط الأطباق دي على جنب{snap?.can_waste ? " وحوّلها هالك أو تبرعات من الداشبورد" : " وبلّغ المسؤول يحوّلها هالك أو تبرعات"}. (حسب آخر تحديث {snap ? hhmm(snap.at) : ""})</div>
+            {expList.map((b) => { const gone = new Date(String(b.exp)).getTime() < Date.now(); const h = Math.round((new Date(String(b.exp)).getTime() - Date.now()) / 36e5); return (
+              <div key={b.sn} className="row" style={{ justifyContent: "space-between", borderTop: "1px solid var(--line)", padding: "6px 0", color: gone ? "var(--bad)" : "#b7791f" }}>
+                <span><b className="num">#{b.sn}</b> · {snap?.items.find((i) => i.id === b.item_id)?.name ?? ""} · <span className="num">{b.weight}</span></span>
+                <b>{gone ? `خلصت من ${Math.abs(h) >= 24 ? `${Math.floor(Math.abs(h) / 24)} يوم` : `${Math.abs(h)} ساعة`}` : `فاضل ${h >= 24 ? `${Math.floor(h / 24)} يوم` : `${h} ساعة`}`}</b>
+              </div>); })}
+            {!expN && <div className="muted">مفيش حاجة صلاحيتها خلصت أو قربت 👍</div>}
+            {snap?.can_waste && shift && <a className="btn pri" href={`/stock/expiry?loc=${shift.loc}`} target="_blank" rel="noreferrer" style={{ display: "inline-grid", placeItems: "center", justifySelf: "start" }}>حوّلهم هالك / تبرعات</a>}
+          </div>
+        </div>
+      )}
       {view === "orders" && <OrdersPanel sb={sb} orders={ord.orders} ack={ord.ack} reload={ord.load} online={online} loc={shift?.loc ?? ""} shiftClient={shift?.client_id ?? null} />}
 
       {view === "sell" && !online && (
