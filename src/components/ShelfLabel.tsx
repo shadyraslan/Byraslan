@@ -23,7 +23,7 @@ export function LabelStyles() {
   .lbl .pr small{font-size:3mm;font-weight:700}
   .lbl .bc{display:flex;align-items:center;justify-content:space-between;padding:0 2.5mm 1mm}
   .lbl .bc svg{height:9mm;width:auto;max-width:42mm}
-  .lbl .bc .c{font-size:2.3mm;letter-spacing:.3mm;direction:ltr;color:#444}
+  .lbl .bc .c{font-size:2.3mm;letter-spacing:.3mm;direction:ltr;color:#444}.pd{font-size:2.1mm;opacity:.7;white-space:nowrap;direction:rtl;font-family:Arial,sans-serif}
   .lbl.offer{border:.6mm solid var(--oc)}
   .lbl.offer .bar{background:var(--oc);color:#fff}
   .lbl.offer .tag{background:#fff;color:var(--oc);border-radius:1mm;padding:0 1.5mm;font-weight:900}
@@ -55,6 +55,9 @@ export function LabelStyles() {
 }
 
 /** ملصق رف باي رسلان — عادي أو عرض (لون العرض + السعر قبل وبعد) */
+// تاريخ الطباعة على ملصق الرف — عشان يتعرف السعر ده من إمتى
+const printed = () => new Date().toLocaleDateString("en-GB", { timeZone: "Africa/Cairo", day: "2-digit", month: "2-digit", year: "2-digit" });
+
 export function ShelfLabel({ d, branch, offer }: { d: LabelData; branch?: string; offer?: OfferInfo | null }) {
   const save = offer && d.old && d.price != null && d.old > d.price ? d.old - d.price : 0;
   return (
@@ -77,6 +80,7 @@ export function ShelfLabel({ d, branch, offer }: { d: LabelData; branch?: string
       <div className="bc">
         {d.code ? <span dangerouslySetInnerHTML={{ __html: barcodeSvg(d.code, 40, 1) }} /> : <span />}
         <span className="c">{d.code ?? ""}</span>
+        <span className="pd">طُبع {printed()}</span>
       </div>
     </div>
   );
