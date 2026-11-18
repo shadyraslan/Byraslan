@@ -33,7 +33,7 @@ export default async function Ledger({ searchParams }: { searchParams: Promise<{
   const bal = (n: number) => (Math.abs(n) < 0.005 ? "0" : t === "employee" ? (n < 0 ? `عليه ${money(-n)} ج` : `ليه ${money(n)} ج`) : n > 0 ? `علينا ${money(n)} ج` : `لينا ${money(-n)} ج`);
   return (
     <>
-      <div className="top"><h1>كارت الحساب{name ? ` — ${name}` : ""}</h1>{r && <Tools name={`${T[t]}-${name}`} rows={r.lines.map((l) => ({ "التاريخ": new Date(l.at).toLocaleString("ar-EG", { timeZone: "Africa/Cairo" }), "البيان": l.kind, "المستند": l.ref, "التفاصيل": l.detail ?? "", "مين": l.who ?? "", "فين": l.loc ?? "", "له": l.info ? "" : l.lah, "عليه": l.info ? "" : l.alayh, "الرصيد": l.bal }))} />}</div>
+      <div className="top"><h1>كارت الحساب{name ? ` — ${name}` : ""}</h1>{r && <Tools print={`/print/ledger?${new URLSearchParams({ t, id, from, to })}`} name={`${T[t]}-${name}`} rows={r.lines.map((l) => ({ "التاريخ": new Date(l.at).toLocaleString("ar-EG", { timeZone: "Africa/Cairo" }), "البيان": l.kind, "المستند": l.ref, "التفاصيل": l.detail ?? "", "مين": l.who ?? "", "فين": l.loc ?? "", "له": l.info ? "" : l.lah, "عليه": l.info ? "" : l.alayh, "الرصيد": l.bal }))} />}</div>
       <form className="card row" style={{ alignItems: "end" }}>
         <label className="fld">النوع<select name="t" defaultValue={t}>{types.map((k) => <option key={k} value={k}>{T[k]}</option>)}</select></label>
         {t !== "customer" ? <label className="fld" style={{ flex: 1 }}>الطرف<select name="id" defaultValue={id}>{P.map((p) => <option key={String(p.id)} value={String(p.id)}>{p.name}</option>)}</select></label>
@@ -43,30 +43,60 @@ export default async function Ledger({ searchParams }: { searchParams: Promise<{
         <button className="btn pri">اعرض</button>
       </form>
       {error && <div className="badmsg">{error.message}</div>}
-      {r && (
-        <div className="card" style={{ overflowX: "auto" }}>
-          <div className="row" style={{ justifyContent: "space-between" }}><span>أول المدة: <b>{bal(Number(r.opening))}</b></span><span>آخر المدة: <b>{bal(Number(r.closing))}</b></span></div>
-          <table>
-            <thead><tr><th>التاريخ</th><th>البيان</th><th>التفاصيل</th><th>مين / فين</th><th>له</th><th>عليه</th><th>الرصيد</th></tr></thead>
-            <tbody>
-              {r.lines.map((l, i) => (
-                <tr key={i} style={{ opacity: l.info ? 0.75 : 1 }}>
-                  <td className="muted" style={{ whiteSpace: "nowrap" }}>{new Date(l.at).toLocaleString("ar-EG", { timeZone: "Africa/Cairo", day: "numeric", month: "numeric", year: "2-digit", hour: "numeric", minute: "2-digit" })}</td>
-                  <td><b>{l.kind}</b><div className="muted" style={{ fontSize: 12 }}>{l.link ? <Link href={l.link}>{l.ref}</Link> : l.ref}</div></td>
-                  <td style={{ fontSize: 13, maxWidth: 360 }}>{l.detail}</td>
-                  <td style={{ fontSize: 13 }}>{l.who}{l.loc ? <div className="muted">{l.loc}</div> : null}</td>
-                  <td className="num">{!l.info && Number(l.lah) ? money(Number(l.lah)) : ""}</td>
-                  <td className="num">{!l.info && Number(l.alayh) ? money(Number(l.alayh)) : l.info && Number(l.alayh) ? <span className="muted">{money(Number(l.alayh))}</span> : ""}</td>
-                  <td className="num">{l.info ? <span className="muted">للعلم</span> : bal(Number(l.bal))}</td>
-                </tr>
-              ))}
-              {!r.lines.length && <tr><td colSpan={7} className="muted">مفيش حركات في الفترة دي</td></tr>}
-            </tbody>
-          </table>
-          <div className="note">{t === "employee" ? "\"عليه\" = سلف وعهد ومشتريات آجل، \"له\" = اللي اتخصم أو اترد. المرتبات والجزاءات والعهد العينية ظاهرة للعلم ومش داخلة في الرصيد."
-            : t === "customer" ? "طلبات العميل للعلم (بتتدفع عند الاستلام)." : "\"له\" = حق الطرف عندنا (استلامات/أصناف)، \"عليه\" = اللي اتدفعله أو اتباعله."}</div>
-        </div>
-      )}
+      {r && (() => {
+        const L = r.lines;
+        const sumLah = L.filter((l) => !l.info).reduce((a, l) => a + Number(l.lah), 0);
+        const sumAl = L.filter((l) => !l.info).reduce((a, l) => a + Number(l.alayh), 0);
+        const lahLbl = t === "employee" ? "اتخصم / رجّعه" : "له (حقه)";
+        const alLbl = t === "employee" ? "عليه (خده)" : t === "customer" ? "عليه (اشترى)" : "عليه (اتدفعله)";
+        return (
+          <>
+            <div className="lg-sum">
+              <div><span>أول المدة</span><b>{bal(Number(r.opening))}</b></div>
+              <div><span>{lahLbl}</span><b className="lg-in">{money(sumLah)} ج</b></div>
+              <div><span>{alLbl}</span><b className="lg-out">{money(sumAl)} ج</b></div>
+              <div className="lg-end"><span>الرصيد آخر المدة</span><b>{bal(Number(r.closing))}</b></div>
+            </div>
+            <div className="card" style={{ padding: 0 }}>
+              {L.map((l, i) => {
+                const amt = l.info ? Number(l.lah) || Number(l.alayh) : Number(l.lah) || Number(l.alayh);
+                const isIn = !l.info && Number(l.lah) > 0;
+                return (
+                  <div key={i} className={`lg-row${l.info ? " lg-info" : ""}`}>
+                    <div className="lg-main">
+                      <div className="lg-top"><b>{l.kind}</b> <span className="muted">· {l.link ? <Link href={l.link}>{l.ref}</Link> : l.ref}</span></div>
+                      {l.detail && <div className="lg-detail">{l.detail}</div>}
+                      <div className="muted lg-meta">{new Date(l.at).toLocaleString("ar-EG", { timeZone: "Africa/Cairo", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" })}{l.who ? ` · ${l.who}` : ""}{l.loc ? ` · ${l.loc}` : ""}</div>
+                    </div>
+                    <div className="lg-amt">
+                      {amt ? <b className={l.info ? "muted" : isIn ? "lg-in" : "lg-out"}>{l.info ? "" : isIn ? "+" : "−"}{money(amt)} ج</b> : null}
+                      <span className="lg-tag">{l.info ? "للعلم" : isIn ? lahLbl : alLbl}</span>
+                      {!l.info && <span className="lg-bal">الرصيد: {bal(Number(l.bal))}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+              {!L.length && <div className="muted" style={{ padding: 16 }}>مفيش حركات في الفترة دي</div>}
+            </div>
+            <div className="note">{t === "employee" ? "\"عليه\" = سلف وعهد ومشتريات آجل، \"له\" = اللي اتخصم أو اترد. المرتبات والجزاءات والعهد العينية ظاهرة للعلم ومش داخلة في الرصيد."
+              : t === "customer" ? "طلبات العميل للعلم (بتتدفع عند الاستلام)." : "\"له\" = حق الطرف عندنا (استلامات/أصناف)، \"عليه\" = اللي اتدفعله أو اتباعله."}</div>
+            <style>{`
+              .lg-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+              .lg-sum>div{background:var(--card,#fff);border:1px solid var(--line,#e5e5e5);border-radius:14px;padding:10px 12px;display:grid;gap:2px}
+              .lg-sum span{font-size:12.5px;opacity:.7}.lg-sum b{font-size:17px}
+              .lg-end{border-color:#f5c800!important;border-width:2px!important}
+              .lg-in{color:#16a34a}.lg-out{color:#dc2626}
+              .lg-row{display:flex;gap:12px;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line,#eee)}
+              .lg-row:last-child{border-bottom:0}.lg-info{opacity:.7}
+              .lg-main{flex:1;min-width:0}.lg-top{font-size:15px}.lg-detail{font-size:13.5px;margin-top:2px;overflow-wrap:anywhere}
+              .lg-meta{font-size:12px;margin-top:3px}
+              .lg-amt{display:grid;justify-items:end;align-content:start;gap:1px;white-space:nowrap;text-align:end}
+              .lg-amt b{font-size:16px}.lg-tag{font-size:11.5px;opacity:.65}.lg-bal{font-size:12px;opacity:.8}
+              @media (max-width:640px){.lg-sum{grid-template-columns:1fr 1fr}.lg-sum b{font-size:15px}}
+            `}</style>
+          </>
+        );
+      })()}
     </>
   );
 }
