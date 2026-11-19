@@ -29,6 +29,7 @@ export const NAV: NavGroup[] = [
     { href: "/offers/campaigns", label: "مهرجانات التخفيضات", icon: "tag", color: "#ea580c", perms: ["promo.edit", "promo.approve", "promo.colors", "labels.hang", "pos.shift", "prices.edit"] },
   ] },
   { id: "factory", title: "المصنع والمخزون", icon: "factory", color: "#dc2626", links: [
+    { href: "/production/plan", label: "خطة الإنتاج (من طلبات الفروع)", icon: "factory", color: "#7c2d12", perms: ["prod.orders", "stock.view", "trips.load"] },
     { href: "/production", label: "أوامر الإنتاج", icon: "orders", color: "#b91c1c", perms: ["prod.orders"] },
     { href: "/station", label: "تابلت الغرف", icon: "factory", color: "#ea580c", perms: ["prod.orders"] },
     { href: "/pack", label: "محطة التغليف", icon: "box", color: "#dc2626", perms: ["prod.pack"] },
@@ -39,6 +40,7 @@ export const NAV: NavGroup[] = [
     { href: "/stock/dispose", label: "هالك وتبرعات", icon: "trash", color: "#dc2626", perms: ["stock.waste"] },
     { href: "/stock/expiry", label: "الصلاحية (خلصت / قربت)", icon: "warning", color: "#dc2626", perms: ["stock.view", "stock.waste", "stock.donate"] },
     { href: "/stock/low", label: "النواقص (تحت الحد الأدنى)", icon: "stock", color: "#d97706", perms: ["stock.view", "prod.orders"] },
+    { href: "/stock/replenish", label: "طلبات الفروع الأوتوماتيك", icon: "truck", color: "#0d9488", perms: ["stock.view", "prod.orders", "trips.load", "replenish.manage", "replenish.approve"] },
     { href: "/boxes", label: "تتبّع العلبة", icon: "search", color: "#0891b2", perms: ["stock.view"] },
     { href: "/trace", label: "التتبّع باللوط (من المورد للعميل)", icon: "search", color: "#0e7490", perms: ["stock.view", "prod.orders", "stock.recall"] },
   ] },

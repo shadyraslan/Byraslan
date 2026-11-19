@@ -1,11 +1,13 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { supabaseBrowser } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import ScanInput from "@/components/ScanInput";
 import { boxSn, crateId } from "@/lib/scan";
 import { crateOpen, loadBox, unloadBox, tripDepart, tripState, type CrateState } from "../actions";
 
 type Loc = { id: string; name: string };
+type LL = { loc: string; loc_name: string; item_id: number; name: string; unit: string; req: number; loaded: number; loaded_n: number; left: number; ready: number; ready_n: number };
 
 export default function Loading({ trip, branches, initial }: { trip: number; branches: Loc[]; initial: CrateState[] }) {
   const router = useRouter();
@@ -15,7 +17,12 @@ export default function Loading({ trip, branches, initial }: { trip: number; bra
   const [pending, start] = useTransition();
   const ln = (id: string | null) => branches.find((b) => b.id === id)?.name ?? id ?? "";
   const bad = (t: string) => { setMsg({ ok: false, t }); try { navigator.vibrate?.(200); } catch {} };
-  const refresh = async () => setState(await tripState(trip));
+  const sb = supabaseBrowser();
+  const [list, setList] = useState<LL[]>([]);
+  const [shortWhy, setShortWhy] = useState("");
+  const loadList = async () => { const { data } = await sb.rpc("trip_loading_list", { p_trip: trip }); setList((data ?? []) as LL[]); };
+  useEffect(() => { loadList(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const refresh = async () => { setState(await tripState(trip)); loadList(); };
 
   const onScan = (raw: string) => {
     const cr = crateId(raw);
@@ -61,8 +68,14 @@ export default function Loading({ trip, branches, initial }: { trip: number; bra
       await refresh();
     });
 
+  const shortReady = list.filter((x) => x.left > 0.009 && x.ready > 0.009);
   const depart = () =>
     start(async () => {
+      if (shortReady.length) {
+        if (shortWhy.trim().length < 3) return bad("فيه أصناف مطلوبة وجاهزة في المصنع ومش متحمّلة — حمّلها أو اكتب السبب");
+        const { error } = await sb.rpc("trip_short_note", { p_trip: trip, p_note: shortWhy });
+        if (error) return bad(error.message.replace(/^.*?ERROR:\s*/, ""));
+      }
       const r = await tripDepart(trip);
       if (!r.ok) return bad(r.error);
       router.push("/transfers");
@@ -88,6 +101,24 @@ export default function Loading({ trip, branches, initial }: { trip: number; bra
           </div>
         )}
         <div className="muted" style={{ fontSize: 12.5 }}>الصندوق بيتحدد لفرع واحد. العلبة لازم تكون في مخزون المصنع وصلاحيتها أكتر من يوم، وأي علبة اتحمّلت قبل كده بتترفض.</div>
+      </div>
+
+      <div className="card">
+        <h2>قايمة التحميل (طلبات الفروع)</h2>
+        {!list.length && <div className="muted">مفيش طلبات فروع عليها الدور — حمّل حسب التحويل اليدوي.</div>}
+        {Object.entries(list.reduce<Record<string, LL[]>>((m, x) => ((m[x.loc_name] ??= []).push(x), m), {})).map(([b, L]) => (
+          <div key={b} style={{ marginBottom: 8 }}>
+            <b>{b}</b>
+            <table><tbody>{L.map((x) => (
+              <tr key={x.item_id} style={{ background: x.left > 0.009 && x.ready > 0.009 ? "color-mix(in srgb, var(--bad) 8%, transparent)" : undefined }}>
+                <td>{x.name}</td>
+                <td className="num">مطلوب {x.req} {x.unit}</td>
+                <td className="num" style={{ color: x.left <= 0.009 ? "var(--good)" : undefined }}>اتحمّل {x.loaded} ({x.loaded_n} علبة){x.left <= 0.009 ? " ✓" : ""}</td>
+                <td className="num">{x.left > 0.009 ? (x.ready > 0.009 ? <b style={{ color: "var(--bad)" }}>فاضل {x.left} — جاهز في المصنع {x.ready} ({x.ready_n} علبة)</b> : <span className="muted">فاضل {x.left} — مش جاهز في المصنع</span>) : ""}</td>
+              </tr>))}</tbody></table>
+          </div>
+        ))}
+        {shortReady.length > 0 && <input value={shortWhy} onChange={(e) => setShortWhy(e.target.value)} placeholder="سبب إن فيه حاجة جاهزة مش هتتحمّل (إجباري قبل الخروج)" />}
       </div>
 
       <div className="card">
