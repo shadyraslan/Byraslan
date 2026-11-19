@@ -8,10 +8,12 @@ import Bars from "@/components/Bars";
 type Ln = { grp: string; line: string; rostos: number; market: number; shared: number; total: number };
 type Br = { loc: string; name: string | null; rev: number; cogs: number; loss: number; exp: number; net: number };
 type Rep = { direct: { n: number; v: number; avg: number; disc: number }; online: { n: number; v: number; avg: number; cancel: number }; top: { name: string; unit: string; qty: number; v: number }[]; hours: { h: number; n: number; v: number }[]; days: { d: string; v: number }[] };
-const G: Record<string, string> = { rev: "الإيرادات", cogs: "تكلفة المبيعات", loss: "الهالك والتبرعات والجرد", exp: "المصروفات والمرتبات" };
+const G: Record<string, string> = { rev: "الإيرادات", cogs: "تكلفة المبيعات", loss: "الهالك والتبرعات والجرد والتعويضات", exp: "المصروفات والمرتبات" };
 const SRC: Record<string, string> = {
   "مبيعات الفروع المباشرة": "فواتير الكاشير", "خصومات الفروع": "خصم الفاتورة متوزّع على أصنافها", "مبيعات الأونلاين": "الطلبات اللي اتسلّمت", "خصومات وعروض الأونلاين": "العروض والبروموكود",
   "إيراد التوصيل": "رسوم التوصيل", "تكلفة المبيعات": "تكلفة الصنف × الكمية", "الهالك": "حركات الهالك بالتكلفة", "التبرعات": "حركات التبرع بالتكلفة", "فروق الجرد": "الجرد المعتمد بالتكلفة", "المرتبات": "كشف المرتبات (إجمالي)",
+  "خصم الفرع على الطلبات": "خصم الفرع وقت التسليم", "استبدال نقاط في الفروع": "النقاط اللي اتدفع بيها في الكاشير", "مرتجعات الأونلاين": "مرتجع الطلبات اللي اتسلّمت",
+  "هدايا وتعويضات أصناف (بالتكلفة)": "هدايا الكاشير والطلبات + طلبات التعويض ببلاش", "تعويضات فلوس للعملاء": "رصيد / كاش / تحويل",
 };
 const n = (x: number) => <span style={{ color: x < 0 ? "var(--bad)" : undefined }}>{money(x)}</span>;
 
