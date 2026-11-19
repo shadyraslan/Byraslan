@@ -19,9 +19,19 @@ export async function createOrder(_: unknown, fd: FormData): Promise<Result<{ id
 export async function saveRoute(fd: FormData) {
   await need("prod.orders");
   const sb = await supabaseServer();
-  const steps = fd.getAll("step").map(String).filter(Boolean);
+  const raw = fd.getAll("step").map(String);
+  const ys = fd.getAll("yield").map(String);
+  const steps: string[] = [], yields: number[] = [];
+  raw.forEach((s, i) => { if (s) { steps.push(s); yields.push(Number(ys[i]) || 100); } });
   if (!steps.length) return;
-  await sb.rpc("set_route", { p_item: Number(fd.get("item")), p_sections: steps });
+  await sb.rpc("set_route2", { p_item: Number(fd.get("item")), p_sections: steps, p_yields: yields });
+  revalidatePath("/production/routes");
+}
+
+export async function saveYieldTol(fd: FormData) {
+  await need("settings.edit");
+  const sb = await supabaseServer();
+  await sb.from("settings").upsert({ key: "prod_yield", value: { tol_pct: Math.min(Math.max(Number(fd.get("tol") || 5), 0), 50) }, updated_at: new Date().toISOString() });
   revalidatePath("/production/routes");
 }
 

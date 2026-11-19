@@ -4,7 +4,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import Station, { type Job } from "./Station";
 
-type S = { order_id: number; step: number; section_id: string; status: string; in_weight: number | null; out_weight: number | null; started_at: string | null };
+type S = { order_id: number; step: number; section_id: string; status: string; yield_pct?: number; in_weight: number | null; out_weight: number | null; started_at: string | null };
 type O = { id: number; no: number; qty: number; status: string; items: { name: string; unit: string } | { name: string; unit: string }[] | null; prod_steps: S[] };
 const one = <X,>(v: X | X[] | null | undefined): X | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 
@@ -15,7 +15,7 @@ export default async function StationPage({ searchParams }: { searchParams: Prom
   const sb = await supabaseServer();
   const [{ data: secs }, { data: orders }] = await Promise.all([
     sb.from("locations").select("id,name").eq("type", "section").eq("active", true).order("sort"),
-    sb.from("prod_orders").select("id,no,qty,status,items(name,unit),prod_steps(order_id,step,section_id,status,in_weight,out_weight,started_at)").in("status", ["planned", "running"]).order("due").order("id"),
+    sb.from("prod_orders").select("id,no,qty,status,items(name,unit),prod_steps(order_id,step,section_id,status,yield_pct,in_weight,out_weight,started_at)").in("status", ["planned", "running"]).order("due").order("id"),
   ]);
   // اللوطات الداخلة في كل أمر (أول غرفة بتسجّلها)
   const ids = ((orders ?? []) as unknown as O[]).map((o) => o.id);
@@ -30,7 +30,7 @@ export default async function StationPage({ searchParams }: { searchParams: Prom
       if (!cur || cur.section_id !== room) continue;
       const prev = steps.filter((s) => s.step < cur.step).pop();
       const it = one(o.items);
-      jobs.push({ order: o.id, no: o.no, step: cur.step, item: it?.name ?? "", unit: it?.unit ?? "", qty: Number(o.qty), status: cur.status, in_weight: cur.in_weight, prev_out: prev?.out_weight ?? null, last: steps[steps.length - 1].step === cur.step, started: cur.started_at, first: steps[0].step === cur.step, lots: lotsOf(o.id) });
+      jobs.push({ order: o.id, no: o.no, step: cur.step, item: it?.name ?? "", unit: it?.unit ?? "", qty: Number(o.qty), status: cur.status, in_weight: cur.in_weight, yield_pct: Number(cur.yield_pct ?? 100), prev_out: prev?.out_weight ?? null, last: steps[steps.length - 1].step === cur.step, started: cur.started_at, first: steps[0].step === cur.step, lots: lotsOf(o.id) });
     }
   const roomName = (secs ?? []).find((s) => s.id === room)?.name;
   return (

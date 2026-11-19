@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { stepStart, stepFinish } from "../production/actions";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
-export type Job = { order: number; no: number; step: number; item: string; unit: string; qty: number; status: string; in_weight: number | null; prev_out: number | null; last: boolean; started?: string | null; first?: boolean; lots?: { code: string; qty: number | null; item: string; supplier: string }[] };
+export type Job = { order: number; no: number; step: number; item: string; unit: string; qty: number; status: string; in_weight: number | null; yield_pct?: number; prev_out: number | null; last: boolean; started?: string | null; first?: boolean; lots?: { code: string; qty: number | null; item: string; supplier: string }[] };
 
 function Timer({ from }: { from: string }) {
   const [now, setNow] = useState(() => Date.now());
@@ -74,7 +74,7 @@ export default function Station({ jobs }: { jobs: Job[] }) {
           return (
             <div key={k} className="card job" style={j.status === "running" ? { borderColor: "var(--y)", borderWidth: 2 } : {}}>
               <div className="row" style={{ justifyContent: "space-between" }}><b style={{ fontSize: 18 }}>{j.item}</b><span className="pill num">#{j.no}</span></div>
-              <div className="muted">المطلوب {j.qty} {j.unit}{j.prev_out ? ` · جاي من الغرفة اللي قبلها ${j.prev_out} كجم` : ""}{j.in_weight ? ` · دخل ${j.in_weight} كجم` : ""}</div>
+              <div className="muted">المطلوب {j.qty} {j.unit}{j.prev_out ? ` · جاي من الغرفة اللي قبلها ${j.prev_out} كجم` : ""}{j.in_weight ? ` · دخل ${j.in_weight} كجم` : ""}{j.in_weight && j.yield_pct && j.yield_pct !== 100 ? ` · المتوقع يطلع ≈ ${Math.round(j.in_weight * j.yield_pct) / 100} كجم (${j.yield_pct}%)` : ""}</div>
               {j.first && <Lots j={j} onDone={() => router.refresh()} />}
               {j.status === "waiting" ? (
                 <>

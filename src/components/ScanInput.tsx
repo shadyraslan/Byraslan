@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 /**
  * خانة مسح: أول ما الماسح يقرا الباركود/QR بيتسجّل لوحده — من غير Enter ولا زرار.
  * الماسح بيكتب بسرعة جدًا (< 45ms بين كل حرف)؛ لو ماباعتش Enter بنسجّل بعد 90ms سكوت.
- * لو بعت Enter بنسجّل مرة واحدة بس. الكتابة باليد محتاجة Enter.
+ * لو بعت Enter بنسجّل مرة واحدة بس. الكتابة باليد: اكتب الرقم (مع # أو من غيرها) ودوس Enter أو زرار ✓.
  */
 export default function ScanInput({ onScan, placeholder, autoFocus = true }: { onScan: (code: string) => void; placeholder?: string; autoFocus?: boolean }) {
   const ref = useRef<HTMLInputElement>(null);
@@ -27,6 +27,7 @@ export default function ScanInput({ onScan, placeholder, autoFocus = true }: { o
   };
 
   return (
+    <div style={{ display: "flex", gap: 6, alignItems: "stretch" }}>
     <input
       ref={ref}
       className="scan"
@@ -47,5 +48,7 @@ export default function ScanInput({ onScan, placeholder, autoFocus = true }: { o
         if (e.key === "Enter") { e.preventDefault(); fire(); }
       }}
     />
+    <button type="button" className="btn" title="لو بتكتب الرقم بإيدك" onClick={fire} style={{ height: 52, minWidth: 64, fontWeight: 800 }}>✓</button>
+    </div>
   );
 }

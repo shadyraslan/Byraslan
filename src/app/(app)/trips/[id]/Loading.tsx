@@ -88,11 +88,24 @@ export default function Loading({ trip, branches, initial }: { trip: number; bra
   return (
     <>
       <div className="card" style={{ border: "2px solid var(--y)" }}>
-        <h2 style={{ fontSize: 17 }}>{!cur ? "1) امسح الصندوق البلاستيك" : !cur.to ? `📦 ${cur.crate} — لأنهي فرع؟` : `📦 ${cur.crate} ← ${ln(cur.to)} · ${c?.boxes.length ?? 0} علبة`}</h2>
+        <h2 style={{ fontSize: 17 }}>{!cur ? "1) امسح الصندوق البلاستيك" : !cur.to ? `📦 ${cur.crate} — لأنهي فرع؟` : `${cur.crate.startsWith("NC-") ? "من غير صندوق" : `📦 ${cur.crate}`} ← ${ln(cur.to)} · ${c?.boxes.length ?? 0} علبة`}</h2>
         {cur && !cur.to && (
           <div className="row">{branches.map((b) => <button key={b.id} className="btn pri" onClick={() => pick(b.id)} disabled={pending} style={{ height: 52, minWidth: 130, fontSize: 16 }}>{b.name}</button>)}</div>
         )}
-        <ScanInput onScan={onScan} placeholder={!cur ? "امسح الصندوق" : "امسح العلبة (أو صندوق تاني)"} />
+        {!cur && (
+          <div className="row" style={{ gap: 6 }}>
+            <span className="muted">أو من غير صندوق:</span>
+            {branches.filter((b) => b.id !== "factory").map((b) => <button key={b.id} className="btn" disabled={pending} onClick={() => start(async () => {
+              const id = `NC-${b.id}`;
+              const r = await crateOpen(trip, id, b.id);
+              if (!r.ok) return bad(r.error);
+              setCur({ crate: id, to: b.id });
+              setMsg({ ok: true, t: `${b.name} من غير صندوق — امسح العلب أو اكتب أرقامها` });
+              await refresh();
+            })}>{b.name}</button>)}
+          </div>
+        )}
+        <ScanInput onScan={onScan} placeholder={!cur ? "امسح الصندوق" : "امسح العلبة أو اكتب رقمها (أو صندوق تاني)"} />
         {msg && <div className={msg.ok ? "okmsg" : "badmsg"}>{msg.t}</div>}
         {cur?.to && (
           <div className="row">

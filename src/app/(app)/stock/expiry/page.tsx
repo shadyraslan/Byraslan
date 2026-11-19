@@ -21,7 +21,7 @@ async function saveCfg(fd: FormData) {
   "use server";
   await need("settings.edit");
   const sb = await supabaseServer();
-  await sb.from("settings").upsert({ key: "expiry", value: { warn_days: Math.max(Number(fd.get("wd") || 1), 0), notify: fd.get("notify") === "on" }, updated_at: new Date().toISOString() });
+  await sb.from("settings").upsert({ key: "expiry", value: { warn_days: Math.max(Number(fd.get("wd") || 1), 0), notify: fd.get("notify") === "on", waste_days: Math.max(Number(fd.get("xd") ?? 1), 0) }, updated_at: new Date().toISOString() });
   revalidatePath("/stock/expiry");
 }
 
@@ -128,6 +128,7 @@ export default async function Expiry({ searchParams }: { searchParams: Promise<{
       {can(me, "settings.edit") && (
         <form action={saveCfg} className="card row" style={{ alignItems: "end" }}>
           <label className="fld">«قربت» يعني فاضل أقل من (يوم)<input name="wd" defaultValue={wd} inputMode="numeric" dir="ltr" style={{ width: 80 }} /></label>
+          <label className="fld">الفرع يهلك/يتبرّع باللي فاضله (يوم أو أقل)<input name="xd" defaultValue={(cfg as { waste_days?: number }).waste_days ?? 1} inputMode="numeric" dir="ltr" style={{ width: 80 }} /></label>
           <label className="row" style={{ gap: 6 }}><input type="checkbox" name="notify" defaultChecked={cfg.notify !== false} /> رسالة كل يوم الصبح للفرع (اللي معاه صلاحية الهالك أو التبرعات)</label>
           <button className="btn">احفظ</button>
         </form>

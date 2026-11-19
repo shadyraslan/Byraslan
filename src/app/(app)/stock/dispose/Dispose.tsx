@@ -1,5 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
+import { supabaseBrowser } from "@/lib/supabase/client";
 import ScanInput from "@/components/ScanInput";
 import { boxSn } from "@/lib/scan";
 import { checkBox, type BoxInfo } from "../../transfers/actions";
@@ -9,7 +10,8 @@ type Loc = { id: string; name: string };
 const WASTE = ["انتهت الصلاحية", "اتلف في التخزين", "مرتجع عميل تالف", "عطل تلاجة", "سبب تاني"];
 const DON = ["قربت تخلص وسليمة", "مرتجع عميل سليم", "طلب اترفض على الباب", "زيادة عن البيع", "سبب تاني"];
 
-export default function Dispose({ locs, canWaste, canDonate }: { locs: Loc[]; canWaste: boolean; canDonate: boolean }) {
+export default function Dispose({ locs, canWaste, canDonate, wdays }: { locs: Loc[]; canWaste: boolean; canDonate: boolean; wdays: number }) {
+  const sb = supabaseBrowser();
   const [loc, setLoc] = useState(locs[0]?.id ?? "");
   const [kind, setKind] = useState<"waste" | "donate">(canWaste ? "waste" : "donate");
   const [why, setWhy] = useState((canWaste ? WASTE : DON)[0]);
@@ -30,6 +32,16 @@ export default function Dispose({ locs, canWaste, canDonate }: { locs: Loc[]; ca
       setMsg({ ok: true, t: `✓ #${sn} ${box.item}` });
     });
   };
+
+  const all = () =>
+    start(async () => {
+      const { data, error } = await sb.rpc("dispose_due", { p_loc: loc });
+      if (error) { setMsg({ ok: false, t: error.message.replace(/^.*?ERROR:\s*/, "") }); return; }
+      const L = (data ?? []) as { sn: number; item: string; weight: number; unit: string; expired: boolean }[];
+      if (!L.length) { setMsg({ ok: true, t: `مفيش أطباق صلاحيتها خلصت أو فاضلها ${wdays} يوم أو أقل في المكان ده` }); return; }
+      setBoxes(L.map((b) => ({ sn: b.sn, item: `${b.item}${b.expired ? " (خلصت)" : " (قربت)"}`, weight: b.weight, unit: b.unit })));
+      setMsg({ ok: true, t: `${L.length} طبق جاهزين — راجعهم ودوس الزرار الأصفر` });
+    });
 
   const go = () =>
     start(async () => {
@@ -53,9 +65,10 @@ export default function Dispose({ locs, canWaste, canDonate }: { locs: Loc[]; ca
       </div>
       <div className="card" style={{ border: "2px solid var(--y)" }}>
         <h2>امسح العلب <span className="pill num">{boxes.length}</span></h2>
-        <ScanInput onScan={onScan} placeholder="امسح QR العلبة" />
+        <ScanInput onScan={onScan} placeholder="امسح QR العلبة أو اكتب رقمها" />
+        <button className="btn" onClick={all} disabled={pending || !loc} style={{ height: 44, justifySelf: "start" }}>📋 هات كل الأطباق اللي خلصت أو فاضلها {wdays} يوم أو أقل</button>
         {msg && <div className={msg.ok ? "okmsg" : "badmsg"}>{msg.t}</div>}
-        <div className="row" style={{ gap: 6 }}>{boxes.map((b) => <span key={b.sn} className="pill">#{b.sn} {b.item}</span>)}</div>
+        <div className="row" style={{ gap: 6 }}>{boxes.map((b) => <span key={b.sn} className="pill">#{b.sn} {b.item} <button className="btn" style={{ height: 22, padding: "0 6px", marginInlineStart: 4 }} onClick={() => setBoxes((L) => L.filter((x) => x.sn !== b.sn))}>✕</button></span>)}</div>
         <button className="btn pri" onClick={go} disabled={pending || !boxes.length} style={{ height: 48 }}>{kind === "waste" ? `سجّل ${boxes.length} علبة هالك` : `حوّل ${boxes.length} علبة للتبرعات`}</button>
       </div>
     </>

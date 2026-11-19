@@ -15,6 +15,12 @@ export default async function Plan() {
   const { data, error } = await sb.rpc("prod_plan");
   const P = (data ?? []) as P[];
   const todo = P.filter((p) => p.make > 0);
+  const [{ data: prods }, { data: mins }] = await Promise.all([
+    sb.from("items").select("id,name").eq("active", true).eq("kind", "product").order("name"),
+    sb.from("stock_min").select("item_id,min_qty").gt("min_qty", 0),
+  ]);
+  const hasMin = new Set((mins ?? []).map((m) => Number(m.item_id)));
+  const noMin = (prods ?? []).filter((i) => !hasMin.has(Number(i.id)));
   return (
     <>
       <div className="top"><h1>خطة الإنتاج {todo.length ? `· ${todo.length} صنف محتاج يتعمل` : ""}</h1></div>
@@ -38,6 +44,13 @@ export default async function Plan() {
           </tbody>
         </table>
       </div>
+      {noMin.length > 0 && (
+        <div className="card" style={{ borderColor: "var(--bad)" }}>
+          <h2>منتجات مالهاش حد أدنى في أي مكان ({noMin.length})</h2>
+          <div className="muted" style={{ marginBottom: 6 }}>دول مش هيتطلبوا لوحدهم ولا هيدخلوا الخطة لحد ما تحطلهم حد أدنى في الفروع (أو في المصنع) من صفحة الصنف.</div>
+          <div className="row" style={{ gap: 6 }}>{noMin.map((i) => <Link key={i.id} className="pill" href={`/items/${i.id}`}>{i.name}</Link>)}</div>
+        </div>
+      )}
     </>
   );
 }
