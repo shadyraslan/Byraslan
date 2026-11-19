@@ -3,12 +3,13 @@ import { useEffect, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import ScanInput from "@/components/ScanInput";
 import OrderClose from "@/components/OrderClose";
+import OrderFix from "@/components/OrderFix";
 
 /* طلبات الأونلاين جوه الكاشير: بتتحدّث كل 10 ثواني، والطلب الجديد بيرن لحد ما حد يفتحه */
 
 export type OOrder = {
   id: number; no: number; status: string; created_at: string; pay: string; address: string | null; note: string | null; fee: number; discount: number; est: number; driver: string | null; tudzi_state?: string | null; tudzi_courier?: { courier?: { name?: string; phone?: string; plate?: string; vehicle?: string } } | null; tudzi_track?: string | null; tudzi_error?: string | null; rider_id?: number | null; rider_note?: string | null; fee_orig?: number | null; branch_discount?: number; branch_discount_note?: string | null; floor?: string | null; apt?: string | null; landmark?: string | null; booking?: boolean; scheduled_for?: string | null; slot?: string | null; deposit?: number; deposit_paid?: boolean; lat?: number | null; lng?: number | null; pin_far?: boolean; pin_km?: number | null;
-  customer: string; phone: string; lines: { line: number; name: string; unit: string; qty: number; prepared: number; price: number; note?: string | null }[]; boxes: number[];
+  customer: string; customer_id: number; phone: string; lines: { line: number; item_id: number; gift?: boolean; name: string; unit: string; qty: number; prepared: number; price: number; note?: string | null }[]; boxes: number[];
 };
 const ST: Record<string, string> = { new: "جديد", accepted: "اتقبل", preparing: "بيتحضّر", ready: "جاهز", out: "مع الطيار" };
 const PAY: Record<string, string> = { cash: "كاش", card: "فيزا", instapay: "إنستاباي", wallet: "محفظة", credit: "آجل" };
@@ -119,6 +120,7 @@ export default function OrdersPanel({ sb, orders, ack, reload, online, loc, shif
               {o.driver && o.status === "out" && <span className="muted">مع الطيار: <b>{o.driver}</b></span>}
             </div>
             <OrderClose key={o.id + o.status} o={{ id: o.id, status: o.status, pay_method: o.pay, loc, sub: o.lines.reduce((a, l) => a + (l.prepared || 0) * l.price, 0), fee: o.fee, fee_orig: o.fee_orig ?? null, discount: o.discount, branch_discount: Number(o.branch_discount ?? 0), branch_discount_note: o.branch_discount_note ?? null, rider_note: o.rider_note ?? null, rider_id: o.rider_id ?? null, tudzi_state: o.tudzi_state ?? null, tudzi_courier: o.tudzi_courier ?? null, tudzi_track: o.tudzi_track ?? null, tudzi_error: o.tudzi_error ?? null }} onDone={(t) => { setMsg({ ok: true, t }); reload(); }} />
+            <OrderFix key={"f" + o.id + o.status} order={o.id} status={o.status} customerId={o.customer_id} shiftClient={shiftClient} lines={o.lines} onDone={(t) => { setMsg({ ok: true, t }); reload(); }} />
             {msg && <div className={msg.ok ? "okmsg" : "badmsg"}>{msg.t}</div>}
           </div>
         )}

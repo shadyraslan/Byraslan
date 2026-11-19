@@ -12,7 +12,7 @@ export type CloseO = {
 const TZ: Record<string, string> = { sent: "اتبعت لتودزي…", searching: "بيدوّر على كابتن", accepted: "كابتن قبل وجاي الفرع", at_pickup: "الكابتن وصل الفرع", picked: "الكابتن استلم وفي الطريق",
   done: "اتسلّم للعميل", cancelling: "بيتلغى من تودزي…", cancelled: "اتلغى من تودزي", nocourier: "مفيش كابتن قبل", failed: "تودزي ماقبلش الطلب", returned: "رجع مع الكابتن" };
 type Rider = { id: number; name: string; kind: string; location_id: string | null };
-const METHODS: [string, string][] = [["cash", "كاش"], ["instapay", "إنستاباي"], ["wallet", "محفظة"], ["card", "فيزا"]];
+const METHODS: [string, string][] = [["cash", "كاش"], ["instapay", "إنستاباي"], ["wallet", "محفظة"], ["card", "فيزا"], ["balance", "من رصيد العميل"]];
 const KIND: Record<string, string> = { own: "طيارنا", tudzi: "تودزي", other: "خارجي" };
 const r2 = (n: number) => Math.round(n * 100) / 100;
 

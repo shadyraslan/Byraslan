@@ -8,6 +8,7 @@ export const NAV: NavGroup[] = [
     { href: "/cs/new", label: "طلب أو حجز جديد", icon: "phone", color: "#059669", perms: ["cs.agent", "orders.handle"] },
     { href: "/cs/orders", label: "متابعة الطلبات وتعديل الحجوزات", icon: "search", color: "#0ea5e9", perms: ["cs.agent", "orders.handle"] },
     { href: "/cs/customers", label: "العملاء", icon: "hr", color: "#7c3aed", perms: ["cs.agent", "orders.handle"] },
+    { href: "/cs/balances", label: "أرصدة العملاء والتعويضات", icon: "money", color: "#16a34a", perms: ["cs.agent", "orders.handle", "acc.view", "cust.settle", "comp.money"] },
     { href: "/credit", label: "حسابات الآجل (جملة وشركات)", icon: "wallet", color: "#2563eb", perms: ["credit.view", "credit.open", "credit.collect"] },
     { href: "/loyalty", label: "نقاط العملاء", icon: "star", color: "#ca8a04", perms: ["loyalty.edit", "loyalty.adjust", "cs.agent"] },
     { href: "/complaints", label: "الشكاوى والتعويضات", icon: "warning", color: "#e11d48", perms: ["orders.handle", "cs.agent", "complaints.add", "complaints.resolve", "complaints.close"] },

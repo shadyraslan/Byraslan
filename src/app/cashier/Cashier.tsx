@@ -1,5 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import SettleBox from "@/components/SettleBox";
+import CompBox from "@/components/CompBox";
 import ScanInput from "@/components/ScanInput";
 import ReturnBox, { type Ret } from "@/components/ReturnBox";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -12,10 +14,10 @@ import OrdersPanel, { useOrders } from "./Orders";
 
 type Item = { id: number; name: string; unit: string; sold_by: string; arm: string; kind: string; fams?: number[]; plu: string | null; price: number };
 type Promo = { id: number; name: string; kind: string; value: number; max_off: number | null; auto: boolean; code: string | null; min_order: number; families: number[] | null; stackable: boolean; ends_at: string | null; bundle?: { item_id: number; qty: number }[] | null };
-type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number; exp?: string | null }[]; warn_days?: number; can_waste?: boolean; promos?: Promo[]; unknown_item?: number | null; can_unknown?: boolean; can_credit?: boolean; can_return?: boolean; can_void?: boolean };
-type Line = { item_id: number; name: string; unit: string; box_sn: number | null; qty: number; unit_price: number; unknown_code?: string };
+type Snap = { loc: string; name: string; at: string; refresh_min?: number; can_discount: boolean; can_orders?: boolean; scale: { prefix: string; plu_digits: number; weight_digits: number; decimals: number } | null; items: Item[]; barcodes: { code: string; item_id: number }[]; boxes: { sn: number; item_id: number; weight: number; exp?: string | null }[]; warn_days?: number; can_waste?: boolean; promos?: Promo[]; unknown_item?: number | null; can_unknown?: boolean; can_credit?: boolean; can_return?: boolean; can_void?: boolean; can_due?: boolean; can_settle?: boolean; can_gift?: boolean; can_comp?: boolean };
+type Line = { item_id: number; name: string; unit: string; box_sn: number | null; qty: number; unit_price: number; unknown_code?: string; gift?: boolean; list_price?: number };
 type Sale = { client_id: string; shift: string; at: string; local_no: string; lines: Line[]; discount: number; cash: number; card: number; offline: boolean; promo_code?: string | null; credit?: number; credit_customer?: number | null; credit_name?: string | null; points_code?: string | null; points?: number; points_off?: number; points_earn?: number };
-type Done = Sale & { no?: number; conflicts?: string[]; total: number; change: number; voided?: string };
+type Done = Sale & { no?: number; conflicts?: string[]; total: number; change: number; voided?: string; bal_name?: string; bal_use?: number; bal_due?: number; bal_over?: number };
 type Shift = { client_id: string; loc: string; loc_name: string; opening_cash: number; opened_at: string; server_id?: number; closing?: { counted: number; closed_at: string } };
 type Me = { id: string; name: string; home: string | null };
 
@@ -71,6 +73,28 @@ export default function Cashier() {
   };
   // آجل لعميل جملة/شركة
   type CrInfo = { customer_id: number; name: string | null; company: string | null; available: number; balance: number; overdue: number; blocked: string | null };
+  // رصيد العميل: يستخدم رصيده / الباقي يتساب رصيد / فاضل عليه
+  const [bPhone, setBPhone] = useState("");
+  const [bInfo, setBInfo] = useState<{ id: number; name: string; balance: number } | null>(null);
+  const [bNew, setBNew] = useState<string | null>(null);
+  const [bUse, setBUse] = useState(false);
+  const [bKeep, setBKeep] = useState(false);
+  const [bDue, setBDue] = useState(false);
+  const [bErr, setBErr] = useState<string | null>(null);
+  const findBal = async () => {
+    setBErr(null); setBNew(null);
+    if (!bPhone.trim()) return setBInfo(null);
+    const { data, error } = await sb.rpc("pos_customer", { p_phone: bPhone });
+    if (error) return setBErr(errText(error));
+    const d = data as { found: boolean; id?: number; name?: string; balance?: number };
+    if (!d.found) { setBInfo(null); setBNew(""); return; }
+    setBInfo({ id: Number(d.id), name: String(d.name ?? ""), balance: Number(d.balance ?? 0) });
+  };
+  const addBalCust = async () => {
+    const { data, error } = await sb.rpc("pos_customer_add", { p_phone: bPhone, p_name: bNew ?? "" });
+    if (error) return setBErr(errText(error));
+    setBInfo({ id: Number(data), name: bNew || "عميل الفرع", balance: 0 }); setBNew(null);
+  };
   const [crPhone, setCrPhone] = useState("");
   const [crAmt, setCrAmt] = useState("");
   const [crInfo, setCrInfo] = useState<CrInfo | null>(null);
@@ -116,6 +140,9 @@ export default function Cashier() {
   const [expDays, setExpDays] = useState<number | null>(null);
   // كاش الطيارين اللي اتسلّم في الوردية دي (بيدخل الدرج)
   const [riderIn, setRiderIn] = useState(0);
+  // تسويات العملاء الكاش في الوردية (استلام + / رد − / تعويض كاش)
+  const [custTick, setCustTick] = useState(0);
+  const [custCash, setCustCash] = useState<{ cash: number; rows: { kind: string; amount: number; cash: number; note: string | null; customers: { name: string; phone: string } | null }[] }>({ cash: 0, rows: [] });
   const [retKey, setRetKey] = useState(0);
   const [counted, setCounted] = useState("");
   const [openLoc, setOpenLoc] = useState("");
@@ -193,7 +220,7 @@ export default function Cashier() {
     try {
       const batch = ob.slice(0, 50);
       const shPayload = [{ client_id: sh.client_id, opening_cash: sh.opening_cash, opened_at: sh.opened_at, ...(sh.closing && batch.length === ob.length ? { counted: sh.closing.counted, closed_at: sh.closing.closed_at } : {}) }];
-      const { data, error } = await sb.rpc("pos_sync", { p_loc: sh.loc, p_shifts: shPayload, p_sales: batch.map(({ lines, ...s }) => ({ ...s, lines: lines.map(({ item_id, box_sn, qty, unit_price, unknown_code }) => ({ item_id, box_sn, qty, unit_price, unknown_code })) })) });
+      const { data, error } = await sb.rpc("pos_sync", { p_loc: sh.loc, p_shifts: shPayload, p_sales: batch.map(({ lines, ...s }) => ({ ...s, lines: lines.map(({ item_id, box_sn, qty, unit_price, unknown_code, gift, list_price }) => ({ item_id, box_sn, qty, unit_price, unknown_code, gift, list_price })) })) });
       if (error) throw new Error(error.message);
       const r = data as { shifts: { client_id: string; id: number }[]; sales: { client_id: string; no: number; conflicts?: string[] }[] };
       const ok = new Map(r.sales.map((x) => [x.client_id, x]));
@@ -359,7 +386,11 @@ export default function Cashier() {
   const ptOff = r2(ptMax * (Number(ptInfo?.point_value) || 0));
   const ptEarn = ptInfo && !ptInfo.no_points && !crInfo ? Math.floor(Math.max(total - ptOff, 0) / (Number(ptInfo.earn_per) || 10) * (ptInfo.tier === "vip" ? Number(ptInfo.vip_mult) || 1 : 1)) : 0;
   const cr = crInfo ? (crAmt === "" ? Math.max(total - (Number(card) || 0) - st - ptOff - (Number(cash) || 0), 0) : Number(crAmt) || 0) : 0;
-  const paid = (Number(cash) || 0) + (Number(card) || 0) + st + cr + ptOff;
+  const bUseAmt = bInfo && bUse && bInfo.balance > 0 ? Math.min(bInfo.balance, Math.max(r2(total - (Number(card) || 0) - st - cr - ptOff), 0)) : 0;
+  const paid0 = (Number(cash) || 0) + (Number(card) || 0) + st + cr + ptOff + bUseAmt;
+  const bDueAmt = bInfo && bDue && cash !== "" && paid0 < total ? r2(total - paid0) : 0;
+  const bOverAmt = bInfo && bKeep && paid0 > total ? r2(paid0 - total) : 0;
+  const paid = paid0 + bDueAmt - bOverAmt;
   const pay = async () => {
     if (!shift || !lines.length) return bad("الفاتورة فاضية");
     if (!navigator.onLine) return bad(OFF);
@@ -372,27 +403,34 @@ export default function Cashier() {
     if (crInfo && cr > crInfo.available) return bad(`المتاح آجل للعميل ${f2(crInfo.available)} ج بس`);
     if (cr + st > total - k) return bad("الآجل أكبر من الباقي من الفاتورة");
     if (ptCode && !ptInfo) return bad("اتأكد من كود النقاط الأول");
-    const c = cash ? Number(cash) || 0 : Math.max(total - k - st - cr - ptOff, 0);
-    if (c + k + st + cr + ptOff < total) return bad(`المدفوع أقل من الإجمالي (${f2(total)} ج)`);
+    if ((bUse || bKeep || bDue) && !bInfo) return bad("دوّر على العميل برقم موبايله الأول (رصيد العميل)");
+    const c = cash ? Number(cash) || 0 : Math.max(total - k - st - cr - ptOff - bUseAmt, 0);
+    if (c + k + st + cr + ptOff + bUseAmt + bDueAmt < total) return bad(`المدفوع أقل من الإجمالي (${f2(total)} ج) — لو العميل هيكمّل بعدين علّم «فاضل عليه»`);
     if (k > total) return bad("الفيزا أكتر من الإجمالي");
     const s: Sale = { client_id: uuid(), shift: shift.client_id, at: new Date().toISOString(), local_no: "", lines, discount: d, cash: c, card: k, offline: false, promo_code: pcode.trim().toUpperCase() || null, credit: cr, credit_customer: crInfo?.customer_id ?? null, credit_name: crInfo ? crInfo.company ?? crInfo.name : null, points_code: ptInfo ? ptCode.replace(/\D/g, "") : null, points: ptMax, points_off: ptOff, points_earn: ptEarn };
     setWorking(true);
     const { data, error } = await sb.rpc("pos_sync", { p_loc: shift.loc, p_shifts: [{ client_id: shift.client_id, opening_cash: shift.opening_cash, opened_at: shift.opened_at }],
-      p_sales: [{ ...s, staff: st, staff_id: stInfo?.id ?? null, lines: lines.map(({ item_id, box_sn, qty, unit_price, unknown_code }) => ({ item_id, box_sn, qty, unit_price, unknown_code })) }] });
+      p_sales: [{ ...s, staff: st, staff_id: stInfo?.id ?? null, bal_cust: bInfo?.id ?? null, bal_use: bUseAmt, bal_due: bDueAmt, bal_over: bOverAmt, lines: lines.map(({ item_id, box_sn, qty, unit_price, unknown_code, gift, list_price }) => ({ item_id, box_sn, qty, unit_price, unknown_code, gift, list_price })) }] });
     setWorking(false);
     if (error) return bad(`الفاتورة ماتسجلتش: ${errText(error)}`);
     const r = (data as { sales: { no: number; conflicts?: string[] }[] }).sales[0];
-    const dn: Done = { ...s, no: r?.no, conflicts: r?.conflicts ?? [], total: totalOf(s), change: r2(Math.max(c + k + st + cr + ptOff - totalOf(s), 0)) };
+    const dn: Done = { ...s, no: r?.no, conflicts: r?.conflicts ?? [], total: totalOf(s), change: r2(Math.max(c + k + st + cr + ptOff + bUseAmt + bDueAmt - bOverAmt - totalOf(s), 0)), bal_name: bInfo?.name, bal_use: bUseAmt, bal_due: bDueAmt, bal_over: bOverAmt };
     const all = [dn, ...((await kv.get<Done[]>("done")) ?? [])].slice(0, 300); await kv.set("done", all); setDone(all);
-    setRec(dn); setLines([]); setDisc(""); setPcode(""); setCash(""); setExch(null); setCard(""); setStPhone(""); setStAmt(""); setStInfo(null); setCrPhone(""); setCrAmt(""); setCrInfo(null); setPtCode(""); setPtInfo(null); setPtUse(false); setMsg(null);
+    setRec(dn); setLines([]); setDisc(""); setPcode(""); setCash(""); setExch(null); setCard(""); setStPhone(""); setStAmt(""); setStInfo(null); setCrPhone(""); setCrAmt(""); setCrInfo(null); setPtCode(""); setPtInfo(null); setPtUse(false); setMsg(null); setBPhone(""); setBInfo(null); setBUse(false); setBKeep(false); setBDue(false); setBNew(null);
     setTimeout(() => window.print(), 80);
   };
 
   useEffect(() => {
     const sid = shift?.server_id; if (!sid || !online) return;
-    const f = () => sb.from("rider_cash").select("amount").eq("shift_id", sid).then(({ data }) => setRiderIn(r2((data ?? []).reduce((a, x) => a + Number(x.amount), 0))));
+    const f = () => {
+      sb.from("rider_cash").select("amount").eq("shift_id", sid).then(({ data }) => setRiderIn(r2((data ?? []).reduce((a, x) => a + Number(x.amount), 0))));
+      sb.from("cust_balance").select("kind,amount,cash,note,customers(name,phone)").eq("shift_id", sid).order("at").then(({ data }) => {
+        const rows = (data ?? []) as unknown as { kind: string; amount: number; cash: number; note: string | null; customers: { name: string; phone: string } | null }[];
+        setCustCash({ cash: r2(rows.reduce((a, x) => a + Number(x.cash), 0)), rows });
+      });
+    };
     f(); const t = setInterval(f, 30000); return () => clearInterval(t);
-  }, [shift?.server_id, online, view]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [shift?.server_id, online, view, custTick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------- قفل الوردية ----------
   const retCash = rets.reduce((a, r) => a + Number(r.refund_cash), 0);
@@ -400,7 +438,7 @@ export default function Cashier() {
   const expList = (snap?.boxes ?? []).filter((b) => b.exp && new Date(b.exp).getTime() < Date.now() + (expDays ?? snap?.warn_days ?? 1) * 864e5).sort((a, b) => String(a.exp).localeCompare(String(b.exp)));
   const expGone = expList.filter((b) => new Date(String(b.exp)).getTime() < Date.now()).length;
   const expN = expList.length;
-  const expected = shift ? r2(shift.opening_cash + done.reduce((a, s) => a + s.cash - s.change, 0) - retCash + riderIn) : 0;
+  const expected = shift ? r2(shift.opening_cash + done.reduce((a, s) => a + s.cash - s.change, 0) - retCash + riderIn + custCash.cash) : 0;
   const [closeErr, setCloseErr] = useState<string | null>(null);
   const closeShift = async () => {
     if (!shift) return;
@@ -536,7 +574,7 @@ export default function Cashier() {
               <tbody>
                 {lines.map((l, i) => (
                   <tr key={i}>
-                    <td><b>{l.name}</b>{l.box_sn && <span className="muted num"> #{l.box_sn}</span>}</td>
+                    <td><b>{l.name}</b>{l.box_sn && <span className="muted num"> #{l.box_sn}</span>}{l.gift && <div style={{ color: "var(--good)", fontSize: 12.5, fontWeight: 700 }}>🎁 هدية (سعرها {f2(r2(l.qty * (l.list_price ?? 0)))})</div>}</td>
                     <td className="num">{l.box_sn || !Number.isInteger(l.qty) ? `${l.qty} ${l.unit}` : (
                       <span className="row" style={{ gap: 4, flexWrap: "nowrap" }}>
                         <button className="btn" style={{ height: 28, width: 28, padding: 0 }} onClick={() => setLines((L) => L.map((x, j) => (j === i ? { ...x, qty: Math.max(1, x.qty - 1) } : x)))}>−</button>
@@ -545,7 +583,9 @@ export default function Cashier() {
                       </span>)}</td>
                     <td className="num">{f2(l.unit_price)}</td>
                     <td className="num"><b>{f2(r2(l.qty * l.unit_price))}</b></td>
-                    <td><button className="btn" style={{ height: 28 }} onClick={() => setLines((L) => L.filter((_, j) => j !== i))}>×</button></td>
+                    <td className="row" style={{ gap: 4, flexWrap: "nowrap" }}>
+                      {snap?.can_gift && !l.unknown_code && <button className={l.gift ? "btn pri" : "btn"} title="هدية ببلاش للعميل" style={{ height: 28, padding: "0 6px" }} onClick={() => setLines((L) => L.map((x, j) => (j === i ? (x.gift ? { ...x, gift: false, unit_price: x.list_price ?? x.unit_price, list_price: undefined } : { ...x, gift: true, list_price: x.unit_price, unit_price: 0 }) : x)))}>🎁</button>}
+                      <button className="btn" style={{ height: 28 }} onClick={() => setLines((L) => L.filter((_, j) => j !== i))}>×</button></td>
                   </tr>
                 ))}
                 {!lines.length && <tr><td colSpan={5} className="muted">امسح أول صنف</td></tr>}
@@ -598,6 +638,42 @@ export default function Cashier() {
                 <div className="muted" style={{ fontSize: 12 }}>لو سبت المبلغ فاضي، الباقي كله بيتسجّل آجل.</div>
                 {crErr && <div className="badmsg">{crErr}</div>}
               </details>)}
+            <details open={!!bPhone}>
+              <summary style={{ cursor: "pointer" }}>رصيد العميل {bInfo ? `— ${bInfo.name} (${bInfo.balance >= 0 ? `ليه ${f2(bInfo.balance)}` : `عليه ${f2(-bInfo.balance)}`} ج)` : "(دفع زيادة / أقل / رصيد)"}</summary>
+              <div className="row" style={{ gap: 6, marginTop: 6 }}>
+                <input value={bPhone} onChange={(e) => { setBPhone(e.target.value); setBInfo(null); }} onBlur={findBal} placeholder="موبايل العميل" inputMode="tel" dir="ltr" style={{ flex: 1 }} />
+                <button className="btn" onClick={findBal} style={{ height: 40 }}>دوّر</button>
+              </div>
+              {bNew !== null && (
+                <div className="row" style={{ gap: 6, marginTop: 6 }}>
+                  <input value={bNew} onChange={(e) => setBNew(e.target.value)} placeholder="عميل جديد — اسمه" style={{ flex: 1 }} />
+                  <button className="btn pri" onClick={addBalCust} style={{ height: 40 }}>سجّله</button>
+                </div>
+              )}
+              {bInfo && (
+                <div style={{ display: "grid", gap: 4, marginTop: 6 }}>
+                  {bInfo.balance > 0 && <label className="row" style={{ gap: 6 }}><input type="checkbox" checked={bUse} onChange={(e) => setBUse(e.target.checked)} /> يدفع من رصيده ({f2(Math.min(bInfo.balance, total))} ج)</label>}
+                  <label className="row" style={{ gap: 6 }}><input type="checkbox" checked={bKeep} onChange={(e) => { setBKeep(e.target.checked); if (e.target.checked) setBDue(false); }} /> دفع زيادة — الباقي يتساب رصيد ليه بدل ما ياخده</label>
+                  {snap?.can_due && <label className="row" style={{ gap: 6 }}><input type="checkbox" checked={bDue} onChange={(e) => { setBDue(e.target.checked); if (e.target.checked) setBKeep(false); }} /> دفع أقل — الباقي يتسجّل عليه (اكتب اللي دفعه في خانة الكاش)</label>}
+                  {bUseAmt > 0 && <div className="muted">هيتخصم من رصيده {f2(bUseAmt)} ج</div>}
+                  {bOverAmt > 0 && <div className="okmsg">هيتساب رصيد للعميل: {f2(bOverAmt)} ج (مش هياخد باقي)</div>}
+                  {bDueAmt > 0 && <div className="badmsg">هيتسجّل على العميل: {f2(bDueAmt)} ج لحد ما يسدّد</div>}
+                  {bInfo.balance !== 0 && online && (
+                    <details style={{ marginTop: 4 }}>
+                      <summary style={{ cursor: "pointer", fontWeight: 700 }}>سوّي رصيده من غير فاتورة</summary>
+                      <SettleBox key={bInfo.id + ":" + bInfo.balance} customerId={bInfo.id} balance={bInfo.balance} shiftClient={shift?.client_id ?? null} onDone={(b) => { setBInfo({ ...bInfo, balance: b }); setCustTick((x) => x + 1); }} />
+                    </details>
+                  )}
+                  {snap?.can_comp && online && (
+                    <details style={{ marginTop: 4 }}>
+                      <summary style={{ cursor: "pointer", fontWeight: 700 }}>تعويض للعميل (فلوس / أصناف / هدية)</summary>
+                      <CompBox customerId={bInfo.id} shiftClient={shift?.client_id ?? null} onDone={() => { setCustTick((x) => x + 1); findBal(); }} />
+                    </details>
+                  )}
+                </div>
+              )}
+              {bErr && <div className="badmsg">{bErr}</div>}
+            </details>
             {paid > total && <div className="okmsg">الباقي للعميل: {f2(paid - total)} ج</div>}
             <button className="btn pri" onClick={pay} disabled={!lines.length || !online || working} style={{ height: 56, fontSize: 18 }}>{working ? "بيسجّل…" : `ادفع ${f2(total)} ج`}</button>
           </div>
@@ -640,6 +716,21 @@ export default function Cashier() {
       {view === "close" && (
         <div className="card noprint" style={{ margin: "0 16px", display: "grid", gap: 10, maxWidth: 560 }}>
           <div>فتحت بـ <b className="num">{f2(shift.opening_cash)}</b> · كاش الفواتير <b className="num">{f2(expected - shift.opening_cash)}</b> · {done.length} فاتورة</div>
+          {(() => {
+            const ov = done.filter((x) => x.bal_over && !x.voided), du = done.filter((x) => x.bal_due && !x.voided);
+            const st = custCash.rows.filter((x) => !["over", "under", "use"].includes(x.kind));
+            if (!ov.length && !du.length && !st.length) return null;
+            const K: Record<string, string> = { settle_in: "سدّد اللي عليه", settle_out: "رجعناله رصيده", comp: "تعويض كاش", refund: "رد مرتجع" };
+            return (
+              <div style={{ border: "1px solid var(--line)", borderRadius: 12, padding: 10, display: "grid", gap: 4 }}>
+                <b>أرصدة العملاء في الوردية دي</b>
+                {ov.map((x) => <div key={x.client_id} style={{ color: "#16a34a" }}>دفع زيادة: {x.bal_name} — {f2(x.bal_over!)} ج اتسابوا رصيد (فاتورة #{x.no ?? x.local_no})</div>)}
+                {du.map((x) => <div key={x.client_id} style={{ color: "var(--bad)" }}>دفع أقل: {x.bal_name} — فاضل عليه {f2(x.bal_due!)} ج (فاتورة #{x.no ?? x.local_no})</div>)}
+                {st.map((x, i) => <div key={i}>{K[x.kind] ?? x.kind}: {x.customers?.name} — {Number(x.cash) >= 0 ? "دخل الدرج" : "خرج من الدرج"} {f2(Math.abs(Number(x.cash)))} ج</div>)}
+                <div className="muted" style={{ fontSize: 12.5 }}>الزيادة فضلت في الدرج ومحسوبة في المتوقع، والأقل مش في الدرج — والاتنين متسجّلين على العميل لحد التسوية.</div>
+              </div>
+            );
+          })()}
           <label className="fld">الكاش اللي في الدرج كام؟<input value={counted} onChange={(e) => setCounted(e.target.value)} inputMode="decimal" dir="ltr" autoFocus /></label>
           <button className="btn pri" style={{ height: 50 }} disabled={counted === "" || !online || working} onClick={closeShift}>اقفل الوردية</button>
           {(closeErr || !online) && <div className="badmsg">{closeErr ?? OFF}</div>}
@@ -650,7 +741,7 @@ export default function Cashier() {
       {rec && (
         <div className="receipt onlyprint">
           <div style={{ textAlign: "center" }}><img src="/logo.png" alt="" style={{ width: 120, filter: "invert(1)" }} /><div>{shift.loc_name}</div><div>فاتورة {rec.no ? `#${rec.no}` : rec.local_no} · {new Date(rec.at).toLocaleString("en-GB")}</div></div>
-          <table><tbody>{rec.lines.map((l, i) => <tr key={i}><td>{l.name}{l.box_sn ? ` #${l.box_sn}` : ""}<br />{l.qty} × {f2(l.unit_price)}</td><td style={{ textAlign: "left" }}>{f2(r2(l.qty * l.unit_price))}</td></tr>)}</tbody></table>
+          <table><tbody>{rec.lines.map((l, i) => <tr key={i}><td>{l.name}{l.box_sn ? ` #${l.box_sn}` : ""}{l.gift ? " 🎁 هدية" : ""}<br />{l.qty} × {f2(l.unit_price)}</td><td style={{ textAlign: "left" }}>{f2(r2(l.qty * l.unit_price))}</td></tr>)}</tbody></table>
           {rec.discount > 0 && <div className="rrow"><span>خصم</span><span>-{f2(rec.discount)}</span></div>}
           <div className="rrow" style={{ fontWeight: 800, fontSize: "12pt" }}><span>الإجمالي</span><span>{f2(rec.total)}</span></div>
           {rec.cash > 0 && <div className="rrow"><span>كاش</span><span>{f2(rec.cash)}</span></div>}
@@ -659,6 +750,9 @@ export default function Cashier() {
           {!!rec.points_earn && <div className="rrow"><span>كسبت نقاط</span><span>+{rec.points_earn}</span></div>}
           {!!rec.credit && <div className="rrow"><span>آجل على {rec.credit_name ?? "حساب العميل"}</span><span>{f2(rec.credit)}</span></div>}
           {!!rec.credit && <div style={{ marginTop: 10, borderTop: "1px dashed #000", paddingTop: 14, textAlign: "center", fontSize: 12 }}>توقيع المستلم: ..................</div>}
+          {!!(rec as Done).bal_use && <div className="rrow"><span>من رصيد {(rec as Done).bal_name}</span><span>{f2((rec as Done).bal_use!)}</span></div>}
+          {!!(rec as Done).bal_due && <div className="rrow"><span>فاضل على {(rec as Done).bal_name}</span><span>{f2((rec as Done).bal_due!)}</span></div>}
+          {!!(rec as Done).bal_over && <div className="rrow"><span>اتساب رصيد لـ {(rec as Done).bal_name}</span><span>{f2((rec as Done).bal_over!)}</span></div>}
           {rec.change > 0 && <div className="rrow"><span>الباقي</span><span>{f2(rec.change)}</span></div>}
           <div style={{ textAlign: "center", marginTop: 6 }}>شكرًا لزيارتك — {me.name}</div>
         </div>

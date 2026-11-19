@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import { editCustomer, saveAddress, removeAddress } from "../../actions";
+import CustMoney from "./CustMoney";
 
 type A = { id: number; label: string | null; address: string; floor: string | null; apt: string | null; landmark: string | null; district_id: number | null; is_default: boolean };
 type O = { no: number; token: string; status: string; created_at: string; total: number | null; est_total: number | null };
@@ -19,12 +20,14 @@ export default async function Customer({ params, searchParams }: { params: Promi
   const cid = Number(id);
   const { data: c } = await sb.from("customers").select("id,phone,name,notes,company,tax_no,tier,created_at,auth_id").eq("id", cid).maybeSingle();
   if (!c) notFound();
-  const [{ data: addrs }, { data: dists }, { data: orders }, pts, cr] = await Promise.all([
+  const [{ data: addrs }, { data: dists }, { data: orders }, pts, cr, bal, { data: bmoves }] = await Promise.all([
     sb.from("customer_addresses").select("id,label,address,floor,apt,landmark,district_id,is_default").eq("customer_id", cid).eq("active", true).order("is_default", { ascending: false }).order("id", { ascending: false }),
     sb.from("districts").select("id,name,city").eq("active", true).order("city").order("name"),
     sb.from("online_orders").select("no,token,status,created_at,total,est_total").eq("customer_id", cid).order("created_at", { ascending: false }).limit(10),
     sb.rpc("points_balance", { p_cust: cid }),
     sb.rpc("credit_state", { p_cust: cid }),
+    sb.rpc("cust_balance_of", { p_cust: cid }),
+    sb.from("cust_balance").select("kind,amount,method,note,at").eq("customer_id", cid).order("at", { ascending: false }).limit(30),
   ]);
   const A = (addrs ?? []) as A[];
   const D = dists ?? [];
@@ -63,6 +66,7 @@ export default async function Customer({ params, searchParams }: { params: Promi
           <Link className="btn" href={`/accounts/ledger?t=customer&id=${c.id}`}>كارته</Link>
         </div>
       </div>
+      <CustMoney id={cid} balance={Number(bal.data ?? 0)} moves={((bmoves ?? []) as { kind: string; amount: number; method: string | null; note: string | null; at: string }[]).map((m) => ({ ...m, amount: Number(m.amount) }))} canSettle={can(me, "cust.settle")} canComp={["comp.money", "comp.items", "comp.gift"].some((p) => can(me, p))} />
       <form action={editCustomer} className="card" style={{ display: "grid", gap: 8 }}>
         <h2 style={{ margin: 0 }}>بياناته</h2>
         <input type="hidden" name="id" value={cid} />
