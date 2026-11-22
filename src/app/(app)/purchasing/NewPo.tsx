@@ -5,11 +5,12 @@ import { createPo, type PoLine } from "./actions";
 
 type It = { id: number; name: string; unit: string; prices: Record<number, number> };
 
-export default function NewPo({ suppliers, items }: { suppliers: { id: number; name: string }[]; items: It[] }) {
+export default function NewPo({ suppliers, items, locs }: { suppliers: { id: number; name: string }[]; items: It[]; locs: { id: string; name: string }[] }) {
   const router = useRouter();
   const [sup, setSup] = useState(0);
   const [exp, setExp] = useState("");
   const [note, setNote] = useState("");
+  const [loc, setLoc] = useState("main");
   const [lines, setLines] = useState<PoLine[]>([{ item_id: 0, qty: 0, price: 0 }]);
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [pending, start] = useTransition();
@@ -20,6 +21,7 @@ export default function NewPo({ suppliers, items }: { suppliers: { id: number; n
       <h2>أمر توريد جديد</h2>
       <div className="row">
         <label className="fld">المورد<select value={sup} onChange={(e) => setSup(Number(e.target.value))}><option value={0}>—</option>{suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+        <label className="fld">هيوصل فين<select value={loc} onChange={(e) => setLoc(e.target.value)}>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
         <label className="fld">ميعاد الوصول<input type="date" value={exp} onChange={(e) => setExp(e.target.value)} /></label>
         <label className="fld" style={{ flex: "1 1 200px" }}>ملاحظة<input value={note} onChange={(e) => setNote(e.target.value)} /></label>
       </div>
@@ -37,11 +39,19 @@ export default function NewPo({ suppliers, items }: { suppliers: { id: number; n
         <button className="btn" onClick={() => setLines((L) => [...L, { item_id: 0, qty: 0, price: 0 }])}>+ صنف</button>
         <b className="num">الإجمالي {total.toLocaleString("en-US")} ج</b>
       </div>
-      <button className="btn pri" disabled={pending} onClick={() => start(async () => {
-        const r = await createPo(sup, exp, note, lines);
-        if (!r.ok) return setMsg({ ok: false, t: r.error });
-        setMsg({ ok: true, t: "اتعمل أمر التوريد" }); setLines([{ item_id: 0, qty: 0, price: 0 }]); router.refresh();
-      })}>اعمل أمر التوريد</button>
+      <div className="row">
+        <button className="btn pri" disabled={pending} onClick={() => start(async () => {
+          const r = await createPo(sup, exp, note, lines, loc);
+          if (!r.ok) return setMsg({ ok: false, t: r.error });
+          setMsg({ ok: true, t: "اتعمل أمر التوريد" }); setLines([{ item_id: 0, qty: 0, price: 0 }]); router.refresh();
+        })}>اعمل أمر التوريد</button>
+        {/* المورد واقف على الباب (السوبر ماركت): نعمل الأمر ونفتح الاستلام على طول */}
+        <button className="btn" disabled={pending} onClick={() => start(async () => {
+          const r = await createPo(sup, new Date().toISOString().slice(0, 10), note || "استلام مباشر", lines, loc);
+          if (!r.ok) return setMsg({ ok: false, t: r.error });
+          router.push(`/purchasing/receive/${r.id}`);
+        })}>المورد وصل — استلم دلوقتي</button>
+      </div>
       {msg && <div className={msg.ok ? "okmsg" : "badmsg"}>{msg.t}</div>}
     </div>
   );

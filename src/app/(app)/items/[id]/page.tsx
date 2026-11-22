@@ -21,6 +21,7 @@ export default async function Item({ params, searchParams }: { params: Promise<{
   const sb = await supabaseServer();
   const iid = Number(id);
   const { data: it } = await sb.from("items").select("id,name,unit,kind,arm,photo,code,shelf_days,scale_plu,sold_by").eq("id", iid).maybeSingle();
+  const buy = !!it && (["raw", "mix", "pack", "semi"].includes(it.kind as string) || it.arm === "market");
   if (!it) notFound();
   const [{ data: st }, { data: bx }, { data: locs }, { data: mins }, { data: bcs }] = await Promise.all([
     sb.from("stock_by_location").select("location_id,qty,boxes").eq("item_id", iid),
@@ -42,7 +43,7 @@ export default async function Item({ params, searchParams }: { params: Promise<{
   const total = S.reduce((a, s) => a + Number(s.qty), 0);
   return (
     <>
-      <div className="top"><h1>{it.name}</h1><Link className="btn" href="/items" style={{ display: "inline-grid", placeItems: "center" }}>→ الأصناف</Link></div>
+      <div className="top"><h1>{it.name}</h1>{(can(me, "acc.view") || can(me, "acc.pnl")) && <Link className="btn" href={`/statistics/items?item=${iid}`} style={{ display: "inline-grid", placeItems: "center" }}>📈 منحنى السنة ونصيبه</Link>}<Link className="btn" href="/items" style={{ display: "inline-grid", placeItems: "center" }}>→ الأصناف</Link></div>
       {sp.ok && <div className="okmsg">اتحفظ</div>}
       {sp.err && <div className="badmsg">{sp.err}</div>}
       <div className="card row" style={{ gap: 18, alignItems: "center" }}>
@@ -62,7 +63,7 @@ export default async function Item({ params, searchParams }: { params: Promise<{
         <input type="hidden" name="item" value={iid} />
         <h2 style={{ marginTop: 0 }}>المخزون في كل مكان</h2>
         <table>
-          <thead><tr><th>المكان</th><th>أطباق</th><th>الرصيد</th><th>الحد الأدنى</th><th>كمية الإنتاج لما يوصل للحد</th><th></th></tr></thead>
+          <thead><tr><th>المكان</th><th>أطباق</th><th>الرصيد</th><th>الحد الأدنى</th><th>{buy ? "كمية الطلب من المورد لما يوصل للحد" : "كمية الإنتاج لما يوصل للحد"}</th><th></th></tr></thead>
           <tbody>{L.map((l) => {
             const s = S.find((x) => x.location_id === l.id); const q = Number(s?.qty ?? 0); const mn = M.get(l.id as string) ?? 0; const mk = MK.get(l.id as string) ?? 0;
             const nm = noMin(l.type as string);
@@ -79,7 +80,7 @@ export default async function Item({ params, searchParams }: { params: Promise<{
           })}</tbody>
         </table>
         {can(me, "stock.min") && <button className="btn pri" style={{ marginTop: 8 }}>احفظ الحد الأدنى</button>}
-        <div className="muted" style={{ fontSize: 12.5, marginTop: 6 }}>لو الرصيد وصل للحد الأدنى في أي مكان وليه «كمية إنتاج»، السيستم بيعمل أمر إنتاج أوتوماتيك بالكمية دي (لو مفيش أمر شغال للصنف). الهالك والمصنع والتبرعات مالهمش حد أدنى.</div>
+        <div className="muted" style={{ fontSize: 12.5, marginTop: 6 }}>{buy ? "لو الرصيد وصل للحد الأدنى في أي مكان، السيستم بيعمل أمر شراء أوتوماتيك للمورد الأول بالكمية دي، توصيل للمكان ده (لو مفيش أمر مفتوح للصنف هناك)." : "لو الرصيد وصل للحد الأدنى في أي مكان وليه «كمية إنتاج»، السيستم بيعمل أمر إنتاج أوتوماتيك بالكمية دي (لو مفيش أمر شغال للصنف)."} الهالك والمصنع والتبرعات مالهمش حد أدنى.</div>
       </form>
       <div className="card" style={{ overflowX: "auto" }}>
         <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>

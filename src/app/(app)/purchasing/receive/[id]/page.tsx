@@ -8,9 +8,9 @@ type Snap = { checks?: string[]; certs?: string[]; temp_max?: number | null; min
 export default async function ReceivePage({ params }: { params: Promise<{ id: string }> }) {
   const id = Number((await params).id);
   const sb = await supabaseServer();
-  const { data: po } = await sb.from("purchase_orders").select("id,no,status,suppliers(name),po_lines(line,item_id,qty,price,received,items(name,unit))").eq("id", id).single();
+  const { data: po } = await sb.from("purchase_orders").select("id,no,status,location_id,locations(name),suppliers(name),po_lines(line,item_id,qty,price,received,items(name,unit))").eq("id", id).single();
   if (!po) notFound();
-  const P = po as unknown as { id: number; no: number; status: string; suppliers: { name: string } | null; po_lines: { line: number; item_id: number; qty: number; price: number; received: number; items: { name: string; unit: string } | null }[] };
+  const P = po as unknown as { id: number; no: number; status: string; locations: { name: string } | null; suppliers: { name: string } | null; po_lines: { line: number; item_id: number; qty: number; price: number; received: number; items: { name: string; unit: string } | null }[] };
   const ids = P.po_lines.map((l) => l.item_id);
   const me = await getMe();
   const [{ data: specs }, { data: ovs }, { data: bc }] = await Promise.all([
@@ -26,8 +26,8 @@ export default async function ReceivePage({ params }: { params: Promise<{ id: st
   });
   return (
     <>
-      <div className="top"><h1>استلام PO-{P.no} — {P.suppliers?.name}</h1></div>
-      {!["open", "partial"].includes(P.status) ? <div className="badmsg">أمر التوريد ده مش مفتوح</div>
+      <div className="top"><h1>استلام PO-{P.no} — {P.suppliers?.name} ← {P.locations?.name}</h1></div>
+      {P.status === "draft" ? <div className="badmsg">الأمر ده أوتوماتيك ولسه مستني اعتماد المشتريات</div> : !["open", "partial"].includes(P.status) ? <div className="badmsg">أمر التوريد ده مش مفتوح</div>
         : <Receive po={P.id} poNo={P.no} lines={lines} codes={(bc ?? []).map((b) => [String(b.code), Number(b.item_id)] as [string, number])} canLink={can(me, "barcode.link") || can(me, "items.edit")} approved={(ovs ?? []).map((o) => ({ id: Number(o.id), reason: o.reason as string }))} />}
     </>
   );

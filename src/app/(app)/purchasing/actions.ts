@@ -21,13 +21,14 @@ export async function updateSupplier(fd: FormData) {
 
 export type PoLine = { item_id: number; qty: number; price: number };
 
-export async function createPo(supplier: number, expected: string, note: string, lines: PoLine[]): Promise<Result<{ id: number }>> {
+export async function createPo(supplier: number, expected: string, note: string, lines: PoLine[], loc = "main"): Promise<Result<{ id: number }>> {
   { const g = await deny("purchase.edit"); if (g) return g; }
   const sb = await supabaseServer();
   const L = lines.filter((l) => l.item_id && l.qty > 0);
   if (!supplier) return { ok: false, error: "اختار المورد" };
   if (!L.length) return { ok: false, error: "ضيف صنف واحد على الأقل" };
-  const { data: po, error } = await sb.from("purchase_orders").insert({ supplier_id: supplier, expected: expected || null, note: note || null }).select("id").single();
+  if (L.some((l) => !(l.price > 0))) return { ok: false, error: "اكتب سعر كل صنف" };
+  const { data: po, error } = await sb.from("purchase_orders").insert({ supplier_id: supplier, expected: expected || null, note: note || null, location_id: loc || "main" }).select("id").single();
   if (error || !po) return { ok: false, error: dbMsg(error?.message) };
   const { error: e2 } = await sb.from("po_lines").insert(L.map((l, i) => ({ po_id: po.id, line: i + 1, item_id: l.item_id, qty: l.qty, price: l.price })));
   if (e2) return { ok: false, error: dbMsg(e2.message) };
@@ -38,7 +39,7 @@ export async function createPo(supplier: number, expected: string, note: string,
 export async function cancelPo(fd: FormData) {
   await need("purchase.edit");
   const sb = await supabaseServer();
-  await sb.from("purchase_orders").update({ status: "cancelled" }).eq("id", Number(fd.get("id"))).eq("status", "open");
+  await sb.from("purchase_orders").update({ status: "cancelled" }).eq("id", Number(fd.get("id"))).in("status", ["open", "draft"]);
   revalidatePath("/purchasing");
 }
 
@@ -142,4 +143,22 @@ export async function newSpecItem(fd: FormData) {
   const { redirect } = await import("next/navigation");
   if (error || !data) redirect(`/purchasing/specs?err=${encodeURIComponent(error?.message.includes("duplicate") ? "فيه صنف بالاسم ده" : "الصنف ماتعملش")}`);
   redirect(`/purchasing/specs/${data!.id}`);
+}
+
+/* ---------- أوامر الشراء الأوتوماتيك ---------- */
+export async function approvePo(fd: FormData) {
+  await need("purchase.edit");
+  const sb = await supabaseServer();
+  const { error } = await sb.rpc("approve_po", { p_po: Number(fd.get("id")) });
+  revalidatePath("/purchasing");
+  if (error) redirect(`/purchasing?err=${encodeURIComponent(dbMsg(error.message))}`);
+}
+
+export async function setPoQty(po: number, line: number, qty: number): Promise<Result<{ qty: number }>> {
+  { const g = await deny("purchase.edit"); if (g) return g; }
+  const sb = await supabaseServer();
+  const { error } = await sb.rpc("po_line_qty", { p_po: po, p_line: line, p_qty: qty });
+  if (error) return { ok: false, error: dbMsg(error.message) };
+  revalidatePath("/purchasing");
+  return { ok: true, qty };
 }

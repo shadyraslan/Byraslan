@@ -24,6 +24,9 @@ async function save(fd: FormData) {
     { key: "receipt", value: {
       thanks: String(fd.get("rc_thanks") || "").trim(), policy: String(fd.get("rc_policy") || "").trim(), cs_phone: String(fd.get("rc_cs") || "").trim(),
       tax_no: String(fd.get("rc_tax") || "").trim(), cr_no: String(fd.get("rc_cr") || "").trim() } },
+    { key: "purchase.auto", value: { on: fd.get("pa_on") === "on", approve: fd.get("pa_appr") === "on", up_to: Math.max(Number(fd.get("pa_up") || 2), 1) } },
+    { key: "pricing.follow_cost", value: { on: fd.get("fc_on") === "on", auto: fd.get("fc_auto") === "on", margin_pct: Math.max(Number(fd.get("fc_m") || 0), 0),
+      round: Math.max(Number(fd.get("fc_r") || 0), 0), min_change_pct: Math.max(Number(fd.get("fc_min") || 0), 0) } },
     { key: "app.support", value: {
       whatsapp: String(fd.get("wa") || "").trim(), phone: String(fd.get("phone") || "").trim(), hours: String(fd.get("hours") || "").trim(),
       faq: String(fd.get("faq") || "").split(/\n/).map((l) => l.split("|").map((x) => x.trim())).filter((x) => x[0] && x[1]).map((x) => [x[0], x.slice(1).join(" | ")]) } },
@@ -103,6 +106,28 @@ export default async function Settings() {
           <label className="row" style={{ gap: 6 }}><input type="checkbox" name="cblind" defaultChecked={(g("stock.count") as { blind?: boolean } | undefined)?.blind !== false} /> جرد أعمى (اللي بيعدّ مايشوفش رصيد السيستم)</label>
           <label className="fld">الفرق اللي يستاهل سبب (ج، 0 = مش لازم)<input name="creason" type="number" min={0} defaultValue={Number((g("stock.count") as { reason_over?: number } | undefined)?.reason_over ?? 0)} /></label>
         </div>
+        <h2 style={{ marginTop: 14 }}>المشتريات: أوامر الشراء الأوتوماتيك</h2>
+        {(() => { const pa = (g("purchase.auto") ?? {}) as { on?: boolean; approve?: boolean; up_to?: number }; return (
+          <div className="row">
+            <label className="row" style={{ gap: 6 }}><input type="checkbox" name="pa_on" defaultChecked={pa.on !== false} /> اعمل أمر شراء لوحده لما صنف يوصل للحد الأدنى</label>
+            <label className="row" style={{ gap: 6 }}><input type="checkbox" name="pa_appr" defaultChecked={pa.approve !== false} /> الأمر الأوتوماتيك يستنى اعتماد قبل ما يتبعت</label>
+            <label className="fld">لو الصنف مالوش «كمية طلب»: اطلب لحد كام ضعف الحد الأدنى<input name="pa_up" type="number" min={1} step="0.5" defaultValue={Number(pa.up_to ?? 2)} /></label>
+          </div>
+        ); })()}
+        <h2 style={{ marginTop: 14 }}>سعر الرف بيتبع سعر الاستلام (السوبر ماركت)</h2>
+        {(() => { const fc = (g("pricing.follow_cost") ?? {}) as { on?: boolean; auto?: boolean; margin_pct?: number; round?: number; min_change_pct?: number }; return (
+          <>
+            <div className="row">
+              <label className="row" style={{ gap: 6 }}><input type="checkbox" name="fc_on" defaultChecked={fc.on !== false} /> لما التكلفة تتغير في الاستلام، سعر الرف يتحرك بنفس النسبة</label>
+              <label className="row" style={{ gap: 6 }}><input type="checkbox" name="fc_auto" defaultChecked={fc.auto !== false} /> يتطبّق لوحده (لو مقفول: بيستنى موافقة في «أسعار اتغيّرت»)</label>
+            </div>
+            <div className="row">
+              <label className="fld">هامش الربح لصنف مالوش سعر (%)<input name="fc_m" type="number" min={0} step="0.5" defaultValue={Number(fc.margin_pct ?? 25)} /></label>
+              <label className="fld">قرّب السعر لأقرب (ج)<input name="fc_r" type="number" min={0} step="0.25" defaultValue={Number(fc.round ?? 0.5)} /></label>
+              <label className="fld">تجاهل تغيير التكلفة الأقل من (%)<input name="fc_min" type="number" min={0} step="0.5" defaultValue={Number(fc.min_change_pct ?? 1)} /></label>
+            </div>
+          </>
+        ); })()}
         <h2 style={{ marginTop: 14 }}>الأمان</h2>
         <div className="row">
           <label className="fld">أقصى عدد طلبات من نفس الرقم في الساعة (0 = من غير حد)<input name="oph" type="number" min={0} defaultValue={Number(g("limits.orders_per_hour") ?? 10)} /></label>

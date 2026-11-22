@@ -6,7 +6,7 @@ import { downloadXlsx } from "@/lib/xlsxTemplate";
 import { setPhoto } from "../[id]/actions";
 
 type Loc = { id: string; name: string };
-type Item = { id?: number; photo?: string | null; code: string | null; name: string; arm: string; unit: string | null; sold_by: string | null; kind: string | null; scale_plu: string | null; cost: number | null; shelf_days: number | null; active: boolean; family: string | null; group: string | null; barcodes: string; prices: Record<string, Record<string, number>>; maker?: string | null; size?: string | null; reorder_min?: number | null };
+type Item = { id?: number; photo?: string | null; code: string | null; name: string; arm: string; unit: string | null; sold_by: string | null; kind: string | null; scale_plu: string | null; cost: number | null; shelf_days: number | null; active: boolean; family: string | null; group: string | null; barcodes: string; prices: Record<string, Record<string, number>>; maker?: string | null; size?: string | null; reorder_min?: number | null; reorder_qty?: number | null };
 type Res = { rows: number; added: number; updated: number; prices: number; hidden_demo: number; errors: { row: number; name: string; error: string }[]; prices_skipped: boolean; internal?: number; stock?: number };
 
 const ARM: Record<string, string> = { rostos: "روستوز", market: "ماركت", oricci: "تودزي" };
@@ -14,7 +14,7 @@ const SOLD: Record<string, string> = { weight: "وزن", piece: "قطعة", pack
 // عناوين الأعمدة الثابتة ← المفتاح
 const COLS: [string, string][] = [
   ["الكود", "code"], ["الاسم", "name"], ["البراند", "arm"], ["المجموعة", "group"], ["العائلة", "family"], ["الوحدة", "unit"], ["بيتباع بـ", "sold_by"],
-  ["الباركود", "barcodes"], ["الماركة (المُصنّع)", "maker"], ["الحجم / العبوة", "size"], ["المورد", "supplier"], ["حد إعادة الطلب", "reorder_min"],
+  ["الباركود", "barcodes"], ["الماركة (المُصنّع)", "maker"], ["الحجم / العبوة", "size"], ["المورد", "supplier"], ["حد إعادة الطلب", "reorder_min"], ["كمية الطلب", "reorder_qty"],
   ["كود الميزان", "plu"], ["التكلفة", "cost"], ["الصلاحية (يوم)", "shelf_days"], ["شغال", "active"],
   ["سعر البيع المباشر (كل الفروع)", "price_direct"], ["سعر التطبيق (كل الفروع)", "price_app"],
 ];
@@ -58,9 +58,9 @@ export default function Importer({ items, locs, lists }: { items: Item[]; locs: 
   const headers = [...COLS.map((c) => c[0]), ...locs.flatMap((l) => [`مباشر: ${l.name}`, `تطبيق: ${l.name}`, `رصيد: ${l.name}`])];
   // قالب السوبرماركت: الأعمدة اللي محتاجها بس، والباركود نص عشان الإكسل مايبوّظش الأرقام الطويلة
   const market = () => {
-    const H = ["الكود", "الباركود", "الاسم", "الماركة (المُصنّع)", "الحجم / العبوة", "المجموعة", "العائلة", "بيتباع بـ", "المورد", "التكلفة", "سعر البيع المباشر (كل الفروع)", "سعر التطبيق (كل الفروع)", "حد إعادة الطلب", ...locs.map((l) => `رصيد: ${l.name}`)];
+    const H = ["الكود", "الباركود", "الاسم", "الماركة (المُصنّع)", "الحجم / العبوة", "المجموعة", "العائلة", "بيتباع بـ", "المورد", "التكلفة", "سعر البيع المباشر (كل الفروع)", "سعر التطبيق (كل الفروع)", "حد إعادة الطلب", "كمية الطلب", ...locs.map((l) => `رصيد: ${l.name}`)];
     const ex = [
-      { "الكود": "1001", "الباركود": "6221234567890", "الاسم": "زيت عباد الشمس 1 لتر", "الماركة (المُصنّع)": "عافية", "الحجم / العبوة": "1 لتر", "المجموعة": "البقالة", "العائلة": "زيوت", "بيتباع بـ": "قطعة", "المورد": "اسم المورد", "التكلفة": 82, "سعر البيع المباشر (كل الفروع)": 95, "سعر التطبيق (كل الفروع)": 99, "حد إعادة الطلب": 12 },
+      { "الكود": "1001", "الباركود": "6221234567890", "الاسم": "زيت عباد الشمس 1 لتر", "الماركة (المُصنّع)": "عافية", "الحجم / العبوة": "1 لتر", "المجموعة": "البقالة", "العائلة": "زيوت", "بيتباع بـ": "قطعة", "المورد": "اسم المورد", "التكلفة": 82, "سعر البيع المباشر (كل الفروع)": 95, "سعر التطبيق (كل الفروع)": 99, "حد إعادة الطلب": 12, "كمية الطلب": 24 },
       { "الكود": "1002", "الباركود": "", "الاسم": "طماطم (سايب)", "المجموعة": "خضار وفاكهة", "العائلة": "خضار", "بيتباع بـ": "وزن", "التكلفة": 12, "سعر البيع المباشر (كل الفروع)": 18 },
     ];
     downloadXlsx({ file: "قالب-السوبرماركت.xlsx", sheet: "الأصناف", headers: H, rows: ex, textCols: ["الكود", "الباركود"], lists: dd });
@@ -69,7 +69,7 @@ export default function Importer({ items, locs, lists }: { items: Item[]; locs: 
     const data = withData && items.length ? items.map((i) => {
       const o: Record<string, unknown> = { "الكود": i.code ?? "", "الاسم": i.name, "البراند": ARM[i.arm] ?? i.arm, "المجموعة": i.group ?? "", "العائلة": i.family ?? "", "الوحدة": i.unit ?? "",
         "بيتباع بـ": SOLD[i.sold_by ?? ""] ?? "", "الباركود": i.barcodes, "كود الميزان": i.scale_plu ?? "", "التكلفة": i.cost ?? "", "الصلاحية (يوم)": i.shelf_days ?? "", "شغال": i.active ? "أيوه" : "لا",
-        "الماركة (المُصنّع)": i.maker ?? "", "الحجم / العبوة": i.size ?? "", "حد إعادة الطلب": i.reorder_min ?? "",
+        "الماركة (المُصنّع)": i.maker ?? "", "الحجم / العبوة": i.size ?? "", "حد إعادة الطلب": i.reorder_min ?? "", "كمية الطلب": i.reorder_qty ?? "",
         "سعر البيع المباشر (كل الفروع)": "", "سعر التطبيق (كل الفروع)": "" };
       for (const l of locs) { o[`مباشر: ${l.name}`] = i.prices[l.id]?.direct ?? ""; o[`تطبيق: ${l.name}`] = i.prices[l.id]?.app ?? ""; }
       return o;
@@ -122,6 +122,10 @@ export default function Importer({ items, locs, lists }: { items: Item[]; locs: 
         if (!c) { if (isMarket) noCode++; continue; }
         if (codes.has(c)) bl.push(`الكود ${c} متكرر في الملف: "${codes.get(c)}" و"${o.name}"`); else codes.set(c, String(o.name));
       }
+      // سطور المثال اللي في النموذج: لازم تتمسح قبل الرفع (اترفعت قبل كده بالغلط وعملت أوامر شراء لـ «اسم المورد»)
+      for (const o of out) if (["زيت عباد الشمس 1 لتر", "طماطم (سايب)", "صدور فراخ متبلة"].includes(String(o.name).trim()) && ["1001", "1002", "M-001", "R-010"].includes(String(o.code ?? "").trim()))
+        bl.push(`"${o.name}" ده سطر المثال اللي في النموذج — امسحه من الملف`);
+      for (const o of out) if (String(o.supplier ?? "").trim() === "اسم المورد") bl.push(`"${o.name}": اكتب اسم المورد الحقيقي بدل «اسم المورد»`);
       if (noCode) bl.unshift(`فيه ${noCode} صنف سوبر ماركت من غير كود — الكود إجباري (أي رقم مش متكرر)`);
       setBlock(bl);
       setRows(out); setFname(f.name);

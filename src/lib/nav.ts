@@ -65,6 +65,7 @@ export const NAV: NavGroup[] = [
     { href: "/accounts/pnl", label: "الأرباح والخسائر وتقارير الفروع", icon: "reports", color: "#16a34a", perms: ["acc.view", "acc.pnl"] },
     { href: "/accounts/promo-costs", label: "مصروفات العروض والهدايا والتعويضات", icon: "tag", color: "#db2777", perms: ["acc.view", "acc.pnl"] },
     { href: "/statistics", label: "تقارير وإحصائيات النظام (رسوم + تصدير)", icon: "reports", color: "#0ea5e9", perms: ["acc.view", "pos.shift", "orders.handle", "stock.view", "prod.orders", "prod.pack", "trips.load", "purchase.edit", "stock.edit"] },
+    { href: "/statistics/items", label: "نصيب كل صنف ومنحناه على السنة", icon: "reports", color: "#0284c7", perms: ["acc.view", "acc.pnl"] },
   ] },
   { id: "items", title: "الأصناف", icon: "items", color: "#ca8a04", links: [
     { href: "/items", label: "الأصناف والعائلات", icon: "items", color: "#ca8a04", perms: ["items.edit"] },

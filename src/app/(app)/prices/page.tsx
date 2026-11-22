@@ -24,7 +24,7 @@ export default async function Prices({ searchParams }: { searchParams: Promise<{
   const noPrice = (items ?? []).filter((i) => !(all ?? []).some((x) => x.item_id === i.id)).length;
   return (
     <>
-      <div className="top"><h1>أسعار البيع في الفروع</h1></div>
+      <div className="top"><h1>أسعار البيع في الفروع</h1><Link className="btn" href="/prices/changes" style={{ display: "inline-grid", placeItems: "center" }}>أسعار اتغيّرت من الاستلام</Link></div>
       <div className="row" style={{ marginBottom: 12 }}>{[["direct", "سعر الفرع (الكاشير)"], ["app", "سعر الأونلاين"]].map(([k, l]) => <Link key={k} href={`/prices?ch=${k}`} className={ch === k ? "btn pri" : "btn"} style={{ display: "inline-grid", placeItems: "center" }}>{l}</Link>)}</div>
       {(missing.size > 0 || noPrice > 0) && (
         <div className="card" style={{ borderColor: "var(--y)", marginBottom: 12, display: "grid", gap: 8 }}>

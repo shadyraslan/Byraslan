@@ -28,3 +28,13 @@ export async function copyDirectToApp(): Promise<void> {
   const { revalidatePath } = await import("next/cache");
   revalidatePath("/prices");
 }
+
+/** اقتراح سعر جديد من الاستلام (لما «طبّق لوحده» مقفول في الإعدادات) */
+export async function decidePriceChange(fd: FormData): Promise<void> {
+  { const g = await deny("prices.edit"); if (g) return; }
+  const sb = await supabaseServer();
+  const price = String(fd.get("price") || "").trim();
+  await sb.rpc("decide_price_change", { p_id: Number(fd.get("id")), p_ok: fd.get("ok") === "1", p_price: price ? Number(price) : null });
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath("/prices/changes");
+}

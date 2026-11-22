@@ -48,6 +48,7 @@ export default function Receive({ po, poNo, lines, approved, codes, canLink }: {
     for (const [i, l] of L.entries()) {
       if (!l.weighed) continue;
       const d = lines[i];
+      if (!(l.price > 0)) return `${d.item}: اكتب سعر الفاتورة — إجباري`;
       if (l.checks.some((c) => c.ok === undefined)) return `${d.item}: جاوب على كل بنود الفحص`;
       if (l.docs.some((x) => !x.photo && !x.missing)) return `${d.item}: صوّر كل مستند أو علّم إنه مش موجود`;
       if (d.temp_max != null && l.temp == null) return `${d.item}: اكتب الحرارة`;
@@ -66,7 +67,10 @@ export default function Receive({ po, poNo, lines, approved, codes, canLink }: {
   if (done) return (
     <div className="card">
       <div className="okmsg">اتسجل إذن الاستلام GRN-{done.no} — {done.lots.length} لوت دخلوا المخزن الرئيسي</div>
-      <a className="btn pri" href={`/purchasing/receipts/${done.no}?by=no`} style={{ display: "inline-grid", placeItems: "center", marginTop: 8 }}>اطبع ملصقات اللوت</a>
+      <div className="row" style={{ marginTop: 8 }}>
+        <a className="btn pri" href={`/purchasing/receipts/${done.no}?by=no`} style={{ display: "inline-grid", placeItems: "center" }}>اطبع ملصقات اللوت</a>
+        <a className="btn" href={`/prices/changes?ref=GRN-${done.no}`} style={{ display: "inline-grid", placeItems: "center" }}>الأسعار اللي اتغيّرت بسبب الاستلام ده</a>
+      </div>
     </div>
   );
 
@@ -89,7 +93,7 @@ export default function Receive({ po, poNo, lines, approved, codes, canLink }: {
             <div className="row">
               <label className="fld">الوزن على الميزان<input value={l.weighed || ""} onChange={(e) => set(i, { weighed: Number(e.target.value) || 0 })} inputMode="decimal" dir="ltr" /></label>
               <label className="fld">المرفوض<input value={l.rejected || ""} onChange={(e) => set(i, { rejected: Number(e.target.value) || 0 })} inputMode="decimal" dir="ltr" /></label>
-              <label className="fld">سعر الفاتورة<input value={l.price || ""} onChange={(e) => set(i, { price: Number(e.target.value) || 0 })} inputMode="decimal" dir="ltr" /></label>
+              <label className="fld">سعر الفاتورة (إجباري)<input value={l.price || ""} onChange={(e) => set(i, { price: Number(e.target.value) || 0 })} inputMode="decimal" dir="ltr" /></label>
               {d.temp_max != null && <label className="fld">الحرارة ° (الحد {d.temp_max})<input value={l.temp ?? ""} onChange={(e) => set(i, { temp: e.target.value === "" ? null : Number(e.target.value) })} inputMode="decimal" dir="ltr" /></label>}
               <label className="fld">تاريخ الصلاحية{d.min_days ? ` (≥ ${d.min_days} يوم)` : ""}<input type="date" value={l.expires ?? ""} onChange={(e) => set(i, { expires: e.target.value || null })} /></label>
             </div>
