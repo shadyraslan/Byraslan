@@ -1,19 +1,23 @@
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import { grant, revoke } from "./actions";
-import { resetStaffPassword, setStaffActive } from "./staff";
-import NewStaff from "./NewStaff";
+import { resetStaffPassword, setStaffActive, updateStaff, viewAs } from "./staff";
+import NewStaff, { WorkPlace } from "./NewStaff";
 
 export default async function Users({ searchParams }: { searchParams: Promise<{ err?: string; ok?: string }> }) {
   const sp = await searchParams;
   const me = await getMe();
   const sb = await supabaseServer();
-  const [{ data: users }, { data: perms }, { data: grants }, { data: locs }] = await Promise.all([
-    sb.from("profiles").select("id,name,is_owner,phone,job,home_loc,active,login").order("name"),
+  const [{ data: users }, { data: perms }, { data: grants }, { data: locs }, { data: sups }] = await Promise.all([
+    sb.from("profiles").select("id,name,is_owner,phone,job,home_loc,active,login,work_place,supplier_id").order("name"),
     sb.from("permissions").select("id,grp,label").order("grp"),
     sb.from("grants").select("user_id,perm,until,max_amount,granted_by"),
     sb.from("locations").select("id,name").eq("active", true).neq("type", "section").order("sort"),
+    sb.from("suppliers").select("id,name").order("name"),
   ]);
+  const sn = (id: number | null) => (sups ?? []).find((x) => x.id === id)?.name ?? "";
+  const where = (u: { work_place?: string | null; home_loc: string | null; supplier_id?: number | null }) =>
+    u.work_place === "outside" ? "خارج الفروع" : u.work_place === "supplier" ? `مورد: ${sn(u.supplier_id ?? null)}` : ln(u.home_loc);
   const ln = (id: string | null) => (locs ?? []).find((l) => l.id === id)?.name ?? "";
   const edit = can(me, "users.manage");
   const grps = [...new Set((perms ?? []).map((p) => p.grp))];
@@ -21,16 +25,28 @@ export default async function Users({ searchParams }: { searchParams: Promise<{ 
     <>
       <div className="top"><h1>المستخدمين والصلاحيات</h1></div>
       {sp.err && <div className="badmsg">{sp.err}</div>}{sp.ok && <div className="okmsg">{sp.ok}</div>}
-      {edit && <NewStaff locs={locs ?? []} />}
-      <div className="note" style={{ marginBottom: 14 }}>الموظف بيدخل بالموبايل والرقم السري. أي صلاحية من صلاحيات المالك تقدر تديها لأي حد، لمدة أو بحد مبلغ.</div>
+      {edit && <NewStaff locs={locs ?? []} sups={sups ?? []} />}
+      <div className="note" style={{ marginBottom: 14 }}>الموظف بيدخل باسم المستخدم (أو الموبايل لو متسجّل) والرقم السري. «جرّب كأنه هو» بيدخّلك بحسابه عشان تشوف السيستم بصلاحياته، وزرار «ارجع لحسابي» فوق بيرجّعك. أي صلاحية من صلاحيات المالك تقدر تديها لأي حد، لمدة أو بحد مبلغ.</div>
       {(users ?? []).map((u) => {
         const mine = (grants ?? []).filter((g) => g.user_id === u.id);
         return (
           <div key={u.id} className="card">
             <h2>{u.name} {u.is_owner && <span className="pill">المالك — كل الصلاحيات</span>}{u.active === false && <span className="pill" style={{ color: "var(--bad)" }}>موقوف</span>}</h2>
-            <div className="muted" style={{ fontSize: 12.5 }}>{[u.job, ln(u.home_loc), u.login ? `دخول: ${u.login}` : ""].filter(Boolean).join(" · ")}</div>
-            {edit && !u.is_owner && u.login && (
+            <div className="muted" style={{ fontSize: 12.5 }}>{[u.job, where(u), u.login ? `اسم الدخول: ${u.login}` : "لسه مالوش اسم دخول"].filter(Boolean).join(" · ")}</div>
+            {edit && !u.is_owner && (
+              <details style={{ margin: "6px 0" }}>
+                <summary className="muted" style={{ cursor: "pointer" }}>اسم الدخول ومكان الشغل</summary>
+                <form action={updateStaff} className="row" style={{ marginTop: 6 }}>
+                  <input type="hidden" name="id" value={u.id} />
+                  <label className="fld">اسم المستخدم<input name="login" defaultValue={u.login && !/^[+\d\s-]+$/.test(u.login) ? u.login : u.name} required /></label>
+                  <WorkPlace locs={locs ?? []} sups={sups ?? []} w0={u.work_place ?? "branch"} loc0={u.home_loc ?? ""} sup0={u.supplier_id ? String(u.supplier_id) : ""} />
+                  <button className="btn pri">احفظ</button>
+                </form>
+              </details>
+            )}
+            {edit && !u.is_owner && (
               <div className="row" style={{ gap: 6 }}>
+                {me?.isOwner && u.active !== false && <form action={viewAs}><input type="hidden" name="id" value={u.id} /><button className="btn" style={{ height: 34 }}>👁 جرّب كأنه هو</button></form>}
                 <form action={resetStaffPassword} className="row" style={{ gap: 6 }}><input type="hidden" name="id" value={u.id} /><input name="password" placeholder="رقم سري جديد" inputMode="numeric" dir="ltr" style={{ width: 130, height: 34 }} /><button className="btn" style={{ height: 34 }}>غيّر</button></form>
                 <form action={setStaffActive}><input type="hidden" name="id" value={u.id} /><input type="hidden" name="active" value={u.active === false ? "1" : "0"} /><button className="btn" style={{ height: 34 }}>{u.active === false ? "رجّعه" : "وقّف الحساب"}</button></form>
               </div>

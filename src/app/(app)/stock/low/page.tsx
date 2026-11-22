@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 
-type R = { item_id: number; name: string; unit: string; kind: string; arm: string; loc: string; loc_name: string; loc_type: string; min: number; qty: number; short: number };
+type R = { item_id: number; name: string; unit: string; kind: string; arm: string; loc: string; loc_name: string; loc_type: string; min: number; make: number | null; qty: number; short: number; auto_order: number | null };
 
 /** النواقص: كل صنف نزل عن الحد الأدنى في مكان — مع الاقتراح: أمر إنتاج (المصنع) أو تحويل (الفروع) أو أمر توريد (خامات وسوبر ماركت) */
 export default async function Low() {
@@ -14,6 +14,8 @@ export default async function Low() {
   const L = (data ?? []) as R[];
   const r3 = (n: number) => Math.round(Number(n) * 1000) / 1000;
   const act = (r: R) => {
+    if (r.auto_order) return <Link className="btn" href="/production">أمر إنتاج #{r.auto_order} شغال</Link>;
+    if (r.make && r.kind === "product" && r.arm !== "market") return can(me, "prod.orders") ? <Link className="btn pri" href={`/production?item=${r.item_id}&qty=${r.make}`}>اعمل أمر إنتاج {r.make}</Link> : <span className="muted">أمر إنتاج {r.make}</span>;
     if (r.kind === "product" && r.arm !== "market" && r.loc_type === "factory") return can(me, "prod.orders") ? <Link className="btn pri" href={`/production?item=${r.item_id}&qty=${Math.ceil(r.short)}`}>اعمل أمر إنتاج {Math.ceil(r.short)}</Link> : <span className="muted">أمر إنتاج</span>;
     if (["dark", "shop"].includes(r.loc_type) && r.kind === "product") return <span className="row" style={{ gap: 6 }}><Link className="btn pri" href="/stock/replenish">طلب أوتوماتيك على العربية الجاية</Link>{can(me, "stock.edit") && <Link className="btn" href="/transfers/new">تحويل مستعجل</Link>}</span>;
     if (["dark", "shop"].includes(r.loc_type)) return can(me, "stock.edit") ? <Link className="btn pri" href="/transfers/new">حوّل من المصنع / المخزن</Link> : <span className="muted">تحويل للفرع</span>;
@@ -22,20 +24,21 @@ export default async function Low() {
   return (
     <>
       <div className="top"><h1>النواقص {L.length ? `· ${L.length}` : ""}</h1></div>
-      <div className="muted" style={{ marginBottom: 10 }}>الحد الأدنى بيتحدد لكل صنف في كل مكان من صفحة الصنف. منتجات الفروع بتتطلب أوتوماتيك من المصنع («طلبات الفروع الأوتوماتيك») وتدخل خطة الإنتاج وقايمة التحميل. أمر الإنتاج نفسه بيتعمل بإيد المصنع.</div>
+      <div className="muted" style={{ marginBottom: 10 }}>الحد الأدنى بيتحدد لكل صنف في كل مكان من صفحة الصنف. منتجات الفروع بتتطلب أوتوماتيك من المصنع («طلبات الفروع الأوتوماتيك») وتدخل خطة الإنتاج وقايمة التحميل. ولو للصنف «كمية إنتاج» في صفحته، أمر الإنتاج بيتعمل أوتوماتيك بالكمية دي أول ما يوصل للحد.</div>
       <div className="card" style={{ overflowX: "auto" }}>
         <table>
-          <thead><tr><th>الصنف</th><th>المكان</th><th>الرصيد</th><th>الحد الأدنى</th><th>الناقص</th><th>الاقتراح</th></tr></thead>
+          <thead><tr><th>الصنف</th><th>المكان</th><th>الرصيد</th><th>الحد الأدنى</th><th>كمية الإنتاج</th><th>الناقص</th><th>الاقتراح</th></tr></thead>
           <tbody>{L.map((r) => (
             <tr key={`${r.item_id}-${r.loc}`}>
               <td><Link href={`/items/${r.item_id}`}><b>{r.name}</b></Link></td>
               <td>{r.loc_name}</td>
               <td className="num">{r3(r.qty)} {r.unit}</td>
               <td className="num">{r3(r.min)}</td>
+              <td className="num">{r.make ? r3(r.make) : "—"}</td>
               <td className="num" style={{ color: "var(--bad)", fontWeight: 800 }}>{r3(r.short)}</td>
               <td>{act(r)}</td>
             </tr>))}
-            {!L.length && <tr><td colSpan={6} className="muted">مفيش نواقص — أو لسه محدش حط حد أدنى للأصناف.</td></tr>}
+            {!L.length && <tr><td colSpan={7} className="muted">مفيش نواقص — أو لسه محدش حط حد أدنى للأصناف.</td></tr>}
           </tbody>
         </table>
       </div>

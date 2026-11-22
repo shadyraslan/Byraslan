@@ -30,6 +30,7 @@ export default function Importer({ items, locs, lists }: { items: Item[]; locs: 
   const [res, setRes] = useState<Res | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [warn, setWarn] = useState<string[]>([]);
+  const [block, setBlock] = useState<string[]>([]);
 
   // القوايم المنسدلة: أي خانة ليها اختيارات محددة بتتختار من القايمة بدل الكتابة باليد
   const dd: Record<string, string[]> = {
@@ -57,12 +58,12 @@ export default function Importer({ items, locs, lists }: { items: Item[]; locs: 
   const headers = [...COLS.map((c) => c[0]), ...locs.flatMap((l) => [`مباشر: ${l.name}`, `تطبيق: ${l.name}`, `رصيد: ${l.name}`])];
   // قالب السوبرماركت: الأعمدة اللي محتاجها بس، والباركود نص عشان الإكسل مايبوّظش الأرقام الطويلة
   const market = () => {
-    const H = ["الباركود", "الاسم", "الماركة (المُصنّع)", "الحجم / العبوة", "المجموعة", "العائلة", "بيتباع بـ", "المورد", "التكلفة", "سعر البيع المباشر (كل الفروع)", "سعر التطبيق (كل الفروع)", "حد إعادة الطلب", ...locs.map((l) => `رصيد: ${l.name}`)];
+    const H = ["الكود", "الباركود", "الاسم", "الماركة (المُصنّع)", "الحجم / العبوة", "المجموعة", "العائلة", "بيتباع بـ", "المورد", "التكلفة", "سعر البيع المباشر (كل الفروع)", "سعر التطبيق (كل الفروع)", "حد إعادة الطلب", ...locs.map((l) => `رصيد: ${l.name}`)];
     const ex = [
-      { "الباركود": "6221234567890", "الاسم": "زيت عباد الشمس 1 لتر", "الماركة (المُصنّع)": "عافية", "الحجم / العبوة": "1 لتر", "المجموعة": "البقالة", "العائلة": "زيوت", "بيتباع بـ": "قطعة", "المورد": "اسم المورد", "التكلفة": 82, "سعر البيع المباشر (كل الفروع)": 95, "سعر التطبيق (كل الفروع)": 99, "حد إعادة الطلب": 12 },
-      { "الباركود": "", "الاسم": "طماطم (سايب)", "المجموعة": "خضار وفاكهة", "العائلة": "خضار", "بيتباع بـ": "وزن", "التكلفة": 12, "سعر البيع المباشر (كل الفروع)": 18 },
+      { "الكود": "1001", "الباركود": "6221234567890", "الاسم": "زيت عباد الشمس 1 لتر", "الماركة (المُصنّع)": "عافية", "الحجم / العبوة": "1 لتر", "المجموعة": "البقالة", "العائلة": "زيوت", "بيتباع بـ": "قطعة", "المورد": "اسم المورد", "التكلفة": 82, "سعر البيع المباشر (كل الفروع)": 95, "سعر التطبيق (كل الفروع)": 99, "حد إعادة الطلب": 12 },
+      { "الكود": "1002", "الباركود": "", "الاسم": "طماطم (سايب)", "المجموعة": "خضار وفاكهة", "العائلة": "خضار", "بيتباع بـ": "وزن", "التكلفة": 12, "سعر البيع المباشر (كل الفروع)": 18 },
     ];
-    downloadXlsx({ file: "قالب-السوبرماركت.xlsx", sheet: "الأصناف", headers: H, rows: ex, textCols: ["الباركود"], lists: dd });
+    downloadXlsx({ file: "قالب-السوبرماركت.xlsx", sheet: "الأصناف", headers: H, rows: ex, textCols: ["الكود", "الباركود"], lists: dd });
   };
   const download = (withData: boolean) => {
     const data = withData && items.length ? items.map((i) => {
@@ -113,6 +114,16 @@ export default function Importer({ items, locs, lists }: { items: Item[]; locs: 
         else if (/^\d+$/.test(b) && ![8, 12, 13, 14].includes(b.length)) w.push(`الباركود ${b} ("${o.name}") طوله ${b.length} رقم — غالبًا الإكسل شال أصفار من أوله`);
       }
       setWarn(w);
+      // الكود: إجباري لأصناف الماركت، ومينفعش يتكرر في الملف — عليه بتترتبط صورة الصنف
+      const bl: string[] = []; const codes = new Map<string, string>(); let noCode = 0;
+      for (const o of out) {
+        const c = String(o.code ?? "").trim(); const arm = String(o.arm ?? "").trim();
+        const isMarket = !arm || /ماركت|market/i.test(arm);
+        if (!c) { if (isMarket) noCode++; continue; }
+        if (codes.has(c)) bl.push(`الكود ${c} متكرر في الملف: "${codes.get(c)}" و"${o.name}"`); else codes.set(c, String(o.name));
+      }
+      if (noCode) bl.unshift(`فيه ${noCode} صنف سوبر ماركت من غير كود — الكود إجباري (أي رقم مش متكرر)`);
+      setBlock(bl);
       setRows(out); setFname(f.name);
     } catch (e) { setErr((e as Error).message); }
   };
@@ -137,7 +148,7 @@ export default function Importer({ items, locs, lists }: { items: Item[]; locs: 
         </div>
         <div className="muted" style={{ marginTop: 6 }}>المجموعة والعائلة والمورد والبراند والوحدة و«بيتباع بـ» و«شغال» بقت قوايم بتختار منها في الإكسل — مش بتتكتب باليد، عشان السيستم يقرا كل صنف ويحطه في مكانه. لو محتاج مجموعة أو مورد جديد ضيفه في السيستم الأول ونزّل الملف تاني.</div>
         <div className="muted" style={{ marginTop: 6 }}>
-          السوبرماركت: امسح باركود كل منتج في عمود الباركود (الإسكانر بيكتب في الخانة على طول). الصنف اللي بالقطعة ومالوش باركود السيستم بيعمله باركود داخلي (بيبدأ بـ 20) تطبعه من الملصقات، والسايب بالوزن بيتباع بكود الميزان.
+          السوبرماركت: عمود «الكود» إجباري — أي رقم بشرط مايتكررش، وعليه بتترتبط صورة الصنف (اسم الصورة = الكود). الباركود اختياري: امسح باركود كل منتج في عمود الباركود (الإسكانر بيكتب في الخانة على طول). الصنف اللي بالقطعة ومالوش باركود السيستم بيعمله باركود داخلي (بيبدأ بـ 20) تطبعه من الملصقات، والسايب بالوزن بيتباع بكود الميزان.
           لو رفعت نفس الباركود تاني الصنف بيتعدّل مش بيتكرر، والباركود المتسجّل على صنف تاني بيطلع غلط ومش بيتنقل. "رصيد: الفرع" بيظبط رصيد أول المدة (محتاج صلاحية التسويات).
           كل صنف في سطر. الكود اختياري بس بيخلّي التعديل أدق. البراند: روستوز / ماركت / تودزي. بيتباع بـ: وزن / قطعة / علبة. أكتر من باركود: افصل بينهم بفاصلة.
           السعر في عمود "كل الفروع" بيتحط لكل الفروع، وأعمدة "مباشر: الفرع" و"تطبيق: الفرع" لو فرع سعره مختلف. العائلات والمجموعات اللي مش موجودة بتتعمل لوحدها.
@@ -158,7 +169,8 @@ export default function Importer({ items, locs, lists }: { items: Item[]; locs: 
             <div className="muted" style={{ maxHeight: 160, overflow: "auto" }}>{rows.slice(0, 30).map((r, i) => <div key={i}>{String(r.name)} {r.price_direct ? `· ${r.price_direct} ج` : ""}</div>)}{rows.length > 30 ? "…" : ""}</div>
             {!!warn.length && <div className="badmsg" style={{ marginTop: 8, maxHeight: 160, overflow: "auto" }}><b>راجع قبل الرفع:</b>{warn.map((x, i) => <div key={i}>{x}</div>)}</div>}
             <label className="row" style={{ gap: 6, margin: "8px 0" }}><input type="checkbox" checked={hideDemo} onChange={(e) => setHideDemo(e.target.checked)} style={{ width: 20, height: 20 }} /> وقّف الأصناف التجريبية (بتختفي من التطبيق والكاشير، مش بتتمسح)</label>
-            <button className="btn pri" onClick={upload} disabled={busy}>{busy ? "بيترفع…" : `ارفع ${rows.length} صنف`}</button>
+            {!!block.length && <div className="badmsg" style={{ marginTop: 8, maxHeight: 160, overflow: "auto" }}><b>لازم يتصلّح قبل الرفع:</b>{block.map((x, i) => <div key={i}>{x}</div>)}</div>}
+            <button className="btn pri" onClick={upload} disabled={busy || !!block.length}>{busy ? "بيترفع…" : `ارفع ${rows.length} صنف`}</button>
           </div>
         )}
         {err && <div className="badmsg" style={{ marginTop: 8 }}>{err}</div>}

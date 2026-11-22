@@ -17,6 +17,8 @@ export default async function Stock({ searchParams }: { searchParams: Promise<{ 
   const R = ((rows ?? []) as unknown as Row[]).filter((r) => Math.abs(Number(r.qty)) > 0.0005 || Number(r.boxes) > 0);
   const L = (locs ?? []).filter((l) => !loc || l.id === loc);
   const items = [...new Map(R.map((r) => [r.item_id, r])).values()].sort((a, b) => a.item_name.localeCompare(b.item_name, "ar"));
+  // الصنف اللي بيتعبّى في أطباق (ليه علب في أي مكان) بيتعرض بعدد الأطباق، والكيلو تحته
+  const boxed = new Set(R.filter((r) => Number(r.boxes) > 0).map((r) => r.item_id));
   const cell = (item: number, l: string) => R.find((r) => r.item_id === item && r.location_id === l);
   return (
     <>
@@ -39,10 +41,14 @@ export default async function Stock({ searchParams }: { searchParams: Promise<{ 
           <tbody>
             {items.map((it) => (
               <tr key={it.item_id}>
-                <td><b>{it.item_name}</b> <span className="muted" style={{ fontSize: 12 }}>{it.unit}</span></td>
+                <td><Link href={`/items/${it.item_id}`}><b>{it.item_name}</b></Link> <span className="muted" style={{ fontSize: 12 }}>{boxed.has(it.item_id) ? "بالطبق" : it.unit}</span></td>
                 {L.map((l) => {
                   const c = cell(it.item_id, l.id);
-                  return <td key={l.id} style={{ textAlign: "center" }}>{c ? <><b className="num">{Number(c.qty).toFixed(it.unit === "قطعة" ? 0 : 2)}</b>{Number(c.boxes) > 0 && <div className="muted" style={{ fontSize: 11.5 }}>{c.boxes} علبة</div>}</> : <span className="muted">—</span>}</td>;
+                  if (!c) return <td key={l.id} style={{ textAlign: "center" }}><span className="muted">—</span></td>;
+                  const q = Number(c.qty).toFixed(it.unit === "قطعة" ? 0 : 2);
+                  return <td key={l.id} style={{ textAlign: "center" }}>{boxed.has(it.item_id)
+                    ? <Link href={`/items/${it.item_id}?loc=${l.id}`} style={{ color: "inherit" }}><b className="num" style={{ fontSize: 17 }}>{Number(c.boxes)}</b> <span style={{ fontSize: 12 }}>طبق</span><div className="muted num" style={{ fontSize: 11.5 }}>{q} {it.unit}</div></Link>
+                    : <b className="num">{q}</b>}</td>;
                 })}
               </tr>
             ))}
@@ -50,7 +56,7 @@ export default async function Stock({ searchParams }: { searchParams: Promise<{ 
           </tbody>
         </table>
       </div>
-      <div className="note">الرصيد محسوب من دفتر الحركات: كل تغليف وتحويل وبيع وهالك سطر، ومفيش رقم بيتكتب باليد. علب روستو بتتعدّ برقمها المميز.</div>
+      <div className="note">الرصيد محسوب من دفتر الحركات: كل تغليف وتحويل وبيع وهالك سطر، ومفيش رقم بيتكتب باليد. علب روستو بتتعدّ بالطبق برقمها المميز — دوس على الرقم تشوف كل طبق وحالته وآخر تغيير حصله.</div>
     </>
   );
 }

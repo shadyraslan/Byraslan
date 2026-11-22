@@ -11,9 +11,31 @@ export async function createTrip(fd: FormData) {
   const did = String(fd.get("driver_id") || "") || null;
   let dname = String(fd.get("driver") || "").trim() || null;
   if (did && !dname) { const { data: p } = await sb.from("profiles").select("name").eq("id", did).single(); dname = (p?.name as string) ?? null; }
-  const { data } = await sb.from("trips").insert({ truck: String(fd.get("truck") || "").trim() || "عربية", driver: dname, driver_id: did }).select("id").single();
+  const stops = fd.getAll("stop").map(String).filter(Boolean);
+  if (!stops.length) redirect("/trips?err=" + encodeURIComponent("اختار فرع واحد على الأقل للرحلة"));
+  const { data } = await sb.from("trips").insert({ truck: String(fd.get("truck") || "").trim() || "عربية", driver: dname, driver_id: did, stops }).select("id").single();
   revalidatePath("/trips");
   if (data) redirect(`/trips/${data.id}`);
+}
+
+export async function addStop(trip: number, loc: string): Promise<Result<{ stops: string[] }>> {
+  { const g = await deny("trips.load"); if (g) return g; }
+  const sb = await supabaseServer();
+  const { data, error } = await sb.rpc("trip_add_stop", { p_trip: trip, p_loc: loc });
+  if (error) return { ok: false, error: dbMsg(error.message) };
+  revalidatePath(`/trips/${trip}`);
+  return { ok: true, stops: (data ?? []) as string[] };
+}
+
+export async function arriveTrip(trip: number, loc: string): Promise<Result<{ n: number }>> {
+  { const g = await deny("stock.view", "stock.edit", "trips.load"); if (g) return g; }
+  const sb = await supabaseServer();
+  const { data, error } = await sb.rpc("trip_arrive", { p_trip: trip, p_loc: loc });
+  if (error) return { ok: false, error: dbMsg(error.message) };
+  revalidatePath("/transfers");
+  revalidatePath("/stock");
+  revalidatePath(`/trips/${trip}`);
+  return { ok: true, n: Number(data) };
 }
 
 export type CrateState = { crate: string; to_loc: string; boxes: { sn: number; item: string }[] };

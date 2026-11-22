@@ -8,12 +8,12 @@ export async function saveMins(fd: FormData) {
   await need("stock.min");
   const sb = await supabaseServer();
   const item = Number(fd.get("item"));
-  const rows = [...fd.entries()].filter(([k]) => k.startsWith("min:")).map(([k, v]) => ({ item_id: item, location_id: k.slice(4), v: String(v).trim() }));
-  const up = rows.filter((r) => r.v !== "" && Number(r.v) >= 0).map((r) => ({ item_id: r.item_id, location_id: r.location_id, min_qty: Number(r.v), updated_at: new Date().toISOString() }));
-  if (up.length) await sb.from("stock_min").upsert(up);
-  // الخانة الفاضية = مفيش حد أدنى (صفر)
-  const off = rows.filter((r) => r.v === "").map((r) => ({ item_id: r.item_id, location_id: r.location_id, min_qty: 0, updated_at: new Date().toISOString() }));
-  if (off.length) await sb.from("stock_min").upsert(off);
+  const num = (v: FormDataEntryValue | null) => { const t = String(v ?? "").trim(); return t === "" ? null : Number(t); };
+  const locs = [...new Set([...fd.keys()].filter((k) => k.startsWith("min:")).map((k) => k.slice(4)))];
+  // الخانة الفاضية = مفيش حد أدنى (صفر) / مفيش إنتاج أوتوماتيك
+  const up = locs.map((loc) => { const mn = num(fd.get(`min:${loc}`)); const mk = num(fd.get(`make:${loc}`));
+    return { item_id: item, location_id: loc, min_qty: mn != null && mn >= 0 ? mn : 0, make_qty: mk != null && mk > 0 ? mk : null, updated_at: new Date().toISOString() }; });
+  if (up.length) { const { error } = await sb.from("stock_min").upsert(up); if (error) redirect(`/items/${item}?err=${encodeURIComponent(error.message)}`); }
   revalidatePath(`/items/${item}`);
   redirect(`/items/${item}?ok=1`);
 }
