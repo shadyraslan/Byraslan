@@ -36,7 +36,7 @@ export default async function Trips({ searchParams }: { searchParams: Promise<{ 
             {(trips ?? []).map((t) => (
               <tr key={t.id}>
                 <td className="num">#{t.no}</td><td>{t.truck}{t.driver ? ` · ${t.driver}` : ""}{t.stops?.length ? <div className="muted" style={{ fontSize: 12 }}>{(t.stops as string[]).map(ln).join(" ← ")}</div> : null}</td>
-                <td><span className="pill">{t.status === "loading" ? "بتتحمّل" : "خرجت"}</span></td>
+                <td><span className="pill" style={t.status === "cancelled" ? { color: "var(--bad)" } : undefined}>{t.status === "loading" ? "بتتحمّل" : t.status === "cancelled" ? "اتلغت" : "خرجت"}</span></td>
                 <td className="num" style={{ fontSize: 12 }}>{new Date(t.left_at ?? t.created_at).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" })}</td>
                 <td><Link className="btn" href={`/trips/${t.id}`} style={{ display: "inline-grid", placeItems: "center", height: 32 }}>{t.status === "loading" ? "كمّل التحميل" : "اعرض"}</Link></td>
               </tr>

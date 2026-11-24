@@ -11,7 +11,7 @@ import { C, day, money } from "@/lib/theme";
 
 type Move = { id: number; no: number; kind: string; amount: number; received: number | null; status: string; cat: string | null; loc: string | null; note: string | null; reply: string | null; at: string; payroll_month: string | null };
 type Data = { balance: number; limit: number; moves: Move[] };
-const K: Record<string, string> = { give: "استلمت عهدة", spend: "صرفت", return: "سلّمت الباقي", shortage: "عجز" };
+const K: Record<string, string> = { give: "استلمت عهدة", shift: "كاش ورديتك", spend: "صرفت", return: "سلّمت الباقي", shortage: "عجز" };
 const ST: Record<string, ["ok" | "wait" | "bad", string]> = { ok: ["ok", "تمام"], pending: ["wait", "مستني"], rejected: ["bad", "مرفوض"] };
 // أنواع المصروفات اللي مينفعش تتصرف من العهدة
 const NOT = /مرتبات|إيجار|إهلاك/;

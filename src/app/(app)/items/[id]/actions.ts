@@ -23,3 +23,15 @@ export async function setPhoto(item: number, url: string) {
   await sb.from("items").update({ photo: url }).eq("id", item);
   revalidatePath(`/items/${item}`);
 }
+
+/** رصيد صنف السوبر ماركت يتعدل من السيستم (من غير الشيت) — الأصناف اللي بالأطباق رصيدها بالأطباق بس */
+export async function setStock(fd: FormData) {
+  await need("stock.adjust");
+  const sb = await supabaseServer();
+  const item = Number(fd.get("item"));
+  const { data, error } = await sb.rpc("stock_set", { p_item: item, p_loc: String(fd.get("loc")), p_qty: Number(fd.get("qty")), p_reason: String(fd.get("reason") || "") });
+  if (error) redirect(`/items/${item}?err=${encodeURIComponent(error.message.replace(/^.*?ERROR:\s*/, ""))}`);
+  revalidatePath(`/items/${item}`);
+  revalidatePath("/stock");
+  redirect(`/items/${item}?ok=${encodeURIComponent(`اتعدل الرصيد (${Number(data) >= 0 ? "+" : ""}${Number(data)})`)}`);
+}

@@ -7,7 +7,7 @@ import Selfie from "../Selfie";
 import { custodyConfirm, custodyDecide, custodyGive } from "../pay-actions";
 
 type M = { id: number; no: number; user_id: string; kind: string; amount: number; received: number | null; status: string; category_id: number | null; location_id: string | null; note: string | null; photo: string | null; at: string; decision_note: string | null; payroll_month: string | null };
-const K: Record<string, string> = { give: "استلم عهدة", spend: "صرف", return: "سلّم الباقي", shortage: "عجز" };
+const K: Record<string, string> = { give: "استلم عهدة", shift: "كاش وردية", spend: "صرف", return: "سلّم الباقي", shortage: "عجز" };
 const ST: Record<string, string> = { ok: "", pending: "مستني", rejected: "مرفوض" };
 const f = (n: number) => Math.round(Number(n)).toLocaleString("en");
 const d = (s: string) => new Date(s).toLocaleString("ar-EG", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Africa/Cairo" });
@@ -31,7 +31,7 @@ export default async function Custody({ searchParams }: { searchParams: Promise<
   for (const m of M) {
     if (!(m.status === "ok" || (m.kind === "spend" && m.status === "pending"))) continue;
     const b = bal.get(m.user_id) ?? { give: 0, spend: 0, ret: 0, short: 0 };
-    if (m.kind === "give") b.give += +m.amount; else if (m.kind === "spend") b.spend += +m.amount; else if (m.kind === "return") b.ret += +(m.received ?? m.amount); else b.short += +m.amount;
+    if (m.kind === "give" || m.kind === "shift") b.give += +m.amount; else if (m.kind === "spend") b.spend += +m.amount; else if (m.kind === "return") b.ret += +(m.received ?? m.amount); else b.short += +m.amount;
     bal.set(m.user_id, b);
   }
   const spends = M.filter((m) => m.kind === "spend" && m.status === "pending");

@@ -2,7 +2,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import ScanInput from "@/components/ScanInput";
-import { setStatus, scanToOrder, unscan } from "../actions";
+import { setStatus, scanToOrder, unscan, marketReceive } from "../actions";
 import OrderClose from "@/components/OrderClose";
 import OrderFix from "@/components/OrderFix";
 
@@ -10,7 +10,7 @@ type O = {
   id: number; no: number; status: string; address: string | null; note: string | null; pay_method: string; est_total: number; total: number | null; delivery_fee: number; discount: number; promo_code: string | null; driver: string | null; cancel_reason: string | null; created_at: string; channel: string;
   location_id: string; customer_id: number; fee_orig: number | null; branch_discount: number; branch_discount_note: string | null; rider_note: string | null; rider_id: number | null; tudzi_state?: string | null; tudzi_courier?: { courier?: { name?: string; phone?: string; plate?: string; vehicle?: string } } | null; tudzi_track?: string | null; tudzi_error?: string | null; floor: string | null; apt: string | null; landmark: string | null;
   customers: { name: string; phone: string; area: string | null } | null; locations: { name: string } | null;
-  online_order_lines: { line: number; item_id: number; gift?: boolean; qty: number; unit_price: number; prepared: number; note?: string | null; items: { name: string; unit: string } | null }[];
+  online_order_lines: { line: number; item_id: number; gift?: boolean; qty: number; unit_price: number; prepared: number; note?: string | null; picked?: number | null; recv_at?: string | null; items: { name: string; unit: string; arm?: string } | null }[];
   online_order_boxes: { box_sn: number; line: number; qty: number }[];
 };
 const ST: Record<string, string> = { new: "جديد", accepted: "اتقبل", preparing: "بيتحضّر", ready: "جاهز", out: "مع الطيار", delivered: "اتسلّم", cancelled: "اتلغى" };
@@ -20,6 +20,9 @@ export default function OrderDesk({ o, canCancel }: { o: O; canCancel: boolean }
   const router = useRouter();
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [reason, setReason] = useState("");
+  const [warn, setWarn] = useState(false);
+  const off = o.online_order_lines.filter((l) => !l.gift && Number(l.qty) > 0 && Math.abs(Number(l.prepared || 0) - Number(l.qty)) / Number(l.qty) > 0.1);
+  const isMk = (l: O["online_order_lines"][number]) => l.items?.arm === "market";
   const [pending, start] = useTransition();
   const run = (p: Promise<{ ok: true } | { ok: false; error: string }>, ok: string) => start(async () => { const r = await p; setMsg(r.ok ? { ok: true, t: ok } : { ok: false, t: (r as { error: string }).error }); router.refresh(); });
   const sub = o.online_order_lines.reduce((a, l) => a + l.prepared * l.unit_price, 0);
@@ -51,7 +54,9 @@ export default function OrderDesk({ o, canCancel }: { o: O; canCancel: boolean }
             return (
               <tr key={l.line}><td><b>{l.items?.name}</b>{l.note && <div style={{ color: "var(--bad)", fontWeight: 700, fontSize: 13 }}>✂️ {l.note}</div>}
                 <div className="row noprint" style={{ gap: 4 }}>{boxes.map((b) => <button key={b.box_sn} className="btn" style={{ height: 26, fontSize: 12 }} disabled={!prep && o.status !== "ready"} onClick={() => run(unscan(o.id, b.box_sn), `شلت العلبة #${b.box_sn}`)} title="شيل العلبة">#{b.box_sn} · {b.qty} ✕</button>)}</div></td>
-                <td className="num">{l.qty} {l.items?.unit}</td><td className="num" style={{ color: st, fontWeight: 700 }}>{l.prepared}</td><td className="num">{l.unit_price}</td><td className="num">{Math.round(l.prepared * l.unit_price)}</td></tr>
+                <td className="num">{l.qty} {l.items?.unit}</td><td className="num" style={{ color: st, fontWeight: 700 }}>{isMk(l) && !l.recv_at ? (Number(l.picked ?? 0) > 0
+                  ? <span className="row" style={{ gap: 4, flexWrap: "nowrap" }}><span style={{ color: "var(--good)" }}>✓ اتجهّزت {l.picked}</span>{prep && <button className="btn pri noprint" style={{ height: 26, fontSize: 12 }} disabled={pending} onClick={() => run(marketReceive(o.id, l.line), `استلمت ${l.items?.name}`)}>استلمها</button>}</span>
+                  : <span className="muted" style={{ fontWeight: 400 }}>عند الديسباتشر</span>) : l.prepared}</td><td className="num">{l.unit_price}</td><td className="num">{Math.round(l.prepared * l.unit_price)}</td></tr>
             );
           })}</tbody>
         </table>
@@ -62,13 +67,14 @@ export default function OrderDesk({ o, canCancel }: { o: O; canCancel: boolean }
 
       <div className="card row noprint">
         {o.status === "new" && <button className="btn pri" disabled={pending} onClick={() => run(setStatus(o.id, "accepted"), "اتقبل — ابدأ امسح العلب")}>اقبل الطلب</button>}
-        {prep && <button className="btn pri" disabled={pending} onClick={() => run(setStatus(o.id, "ready"), "جاهز")}>جاهز للتوصيل</button>}
+        {prep && <button className="btn pri" disabled={pending} onClick={() => { if (off.length && !warn) return setWarn(true); setWarn(false); run(setStatus(o.id, "ready"), "جاهز"); }}>{warn ? "جاهز برضه" : "جاهز للتوصيل"}</button>}
         {["ready", "out", "delivered"].includes(o.status) && <a className="btn" href={`/print/order/${o.id}`} target="_blank" rel="noreferrer" style={{ display: "inline-grid", placeItems: "center" }}>🖨️ اطبع الفاتورة</a>}
         {canCancel && !["delivered", "cancelled"].includes(o.status) && <span className="row" style={{ marginInlineStart: "auto" }}><input placeholder="سبب الإلغاء" value={reason} onChange={(e) => setReason(e.target.value)} /><button className="btn" disabled={pending} onClick={() => run(setStatus(o.id, "cancelled", undefined, reason), "اتلغى")}>إلغاء الطلب</button></span>}
       </div>
       <div className="noprint"><OrderClose o={{ id: o.id, status: o.status, pay_method: o.pay_method, loc: o.location_id, sub, fee: Number(o.delivery_fee), fee_orig: o.fee_orig, discount: Number(o.discount || 0), branch_discount: Number(o.branch_discount || 0), branch_discount_note: o.branch_discount_note, rider_note: o.rider_note, rider_id: o.rider_id, tudzi_state: o.tudzi_state ?? null, tudzi_courier: o.tudzi_courier ?? null, tudzi_track: o.tudzi_track ?? null, tudzi_error: o.tudzi_error ?? null }} onDone={(t) => { setMsg({ ok: true, t }); router.refresh(); }} /></div>
       {o.status !== "cancelled" && <div className="noprint"><OrderFix order={o.id} status={o.status} customerId={o.customer_id} lines={o.online_order_lines.map((l) => ({ line: l.line, item_id: l.item_id, name: l.items?.name ?? "", unit: l.items?.unit ?? "", qty: Number(l.qty), prepared: Number(l.prepared), price: Number(l.unit_price), note: l.note, gift: l.gift }))} onDone={(t) => { setMsg({ ok: true, t }); router.refresh(); }} /></div>}
-      {msg && <div className={msg.ok ? "okmsg" : "badmsg"}>{msg.t}</div>}
+      {warn && off.length > 0 && <div className="badmsg">⚠️ الكمية مش زي المطلوب: {off.map((l) => `${l.items?.name} ${l.prepared || 0} من ${l.qty}`).join(" · ")} — اتأكد، أو دوس «جاهز برضه»</div>}
+      {msg && <div className={msg.ok && !msg.t.includes("⚠️") ? "okmsg" : "badmsg"}>{msg.t}</div>}
     </>
   );
 }

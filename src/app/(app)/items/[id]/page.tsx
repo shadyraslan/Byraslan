@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
-import { saveMins } from "./actions";
+import { saveMins, setStock } from "./actions";
 import Photo from "./Photo";
 
 type S = { location_id: string; qty: number; boxes: number };
@@ -44,7 +44,7 @@ export default async function Item({ params, searchParams }: { params: Promise<{
   return (
     <>
       <div className="top"><h1>{it.name}</h1>{(can(me, "acc.view") || can(me, "acc.pnl")) && <Link className="btn" href={`/statistics/items?item=${iid}`} style={{ display: "inline-grid", placeItems: "center" }}>📈 منحنى السنة ونصيبه</Link>}<Link className="btn" href="/items" style={{ display: "inline-grid", placeItems: "center" }}>→ الأصناف</Link></div>
-      {sp.ok && <div className="okmsg">اتحفظ</div>}
+      {sp.ok && <div className="okmsg">{sp.ok === "1" ? "اتحفظ" : sp.ok}</div>}
       {sp.err && <div className="badmsg">{sp.err}</div>}
       <div className="card row" style={{ gap: 18, alignItems: "center" }}>
         {can(me, "items.edit") ? <Photo item={iid} photo={it.photo as string | null} code={String((bcs ?? [])[0]?.code ?? it.code ?? it.id)} /> : it.photo ? <img src={it.photo as string} alt="" style={{ width: 90, height: 90, objectFit: "cover", borderRadius: 12 }} /> : null}
@@ -82,6 +82,17 @@ export default async function Item({ params, searchParams }: { params: Promise<{
         {can(me, "stock.min") && <button className="btn pri" style={{ marginTop: 8 }}>احفظ الحد الأدنى</button>}
         <div className="muted" style={{ fontSize: 12.5, marginTop: 6 }}>{buy ? "لو الرصيد وصل للحد الأدنى في أي مكان، السيستم بيعمل أمر شراء أوتوماتيك للمورد الأول بالكمية دي، توصيل للمكان ده (لو مفيش أمر مفتوح للصنف هناك)." : "لو الرصيد وصل للحد الأدنى في أي مكان وليه «كمية إنتاج»، السيستم بيعمل أمر إنتاج أوتوماتيك بالكمية دي (لو مفيش أمر شغال للصنف)."} الهالك والمصنع والتبرعات مالهمش حد أدنى.</div>
       </form>
+      {can(me, "stock.adjust") && (it.arm === "market" || (it.sold_by !== "weight" && !S.some((x) => Number(x.boxes) > 0))) && (
+        <form action={setStock} className="card row" style={{ alignItems: "end" }}>
+          <input type="hidden" name="item" value={iid} />
+          <b style={{ flexBasis: "100%" }}>عدّل الرصيد (من غير الشيت)</b>
+          <label className="fld">المكان<select name="loc" required>{L.filter((l) => !["factory", "donation", "waste"].includes(l.type as string)).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
+          <label className="fld">الرصيد الصح ({it.unit})<input name="qty" required inputMode="decimal" dir="ltr" style={{ width: 110 }} /></label>
+          <label className="fld" style={{ flex: "1 1 180px" }}>السبب<input name="reason" required placeholder="جرد، بضاعة اتكسرت، تصحيح…" /></label>
+          <button className="btn pri">احفظ الرصيد</button>
+          <div className="muted" style={{ flexBasis: "100%", fontSize: 12.5 }}>بيتسجّل كتسوية باسمك وبالسبب. الأصناف اللي بتتباع بالوزن (روستوز) رصيدها بعدد الأطباق بس — من التغليف والجرد.</div>
+        </form>
+      )}
       <div className="card" style={{ overflowX: "auto" }}>
         <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
           <h2 style={{ margin: 0 }}>الأطباق {sp.loc ? `— ${LN.get(sp.loc) ?? sp.loc}` : ""} ({Bx.length})</h2>

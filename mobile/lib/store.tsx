@@ -75,6 +75,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setMenu(((data ?? []) as MenuItem[]).map((m) => ({ ...m, price: Number(m.price), old_price: m.old_price == null ? null : Number(m.old_price), pct: Number(m.pct), available: Number(m.available) })));
   }, [branch]);
   useEffect(() => { setMenu(null); loadMenu(); }, [loadMenu]);
+  // صنف اتشال من القايمة (خلص أو اتقفل) بيتشال من السلة كمان — عشان سعره مايفضلش محسوب
+  useEffect(() => {
+    if (!menu) return;
+    const ids = new Set(menu.map((m) => m.item_id));
+    setCart((c) => { const gone = Object.keys(c).filter((id) => !ids.has(Number(id))); if (!gone.length) return c; const n = { ...c }; gone.forEach((id) => delete n[Number(id)]); return saveCart(n); });
+  }, [menu]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveCart = (c: Cart) => { put("cart", c); return c; };
   const add = (m: MenuItem, dir: 1 | -1) => setCart((c) => {

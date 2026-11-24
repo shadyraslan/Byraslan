@@ -13,7 +13,8 @@ export default async function Specs({ searchParams }: { searchParams: Promise<{ 
   { const me_ = await getMe(); if (!(can(me_, "purchase.edit") || can(me_, "qa.approve"))) redirect("/dashboard"); }
   const sb = await supabaseServer();
   const [{ data: items }, { data: specs }, { data: cur }, { data: isup }] = await Promise.all([
-    sb.from("items").select("id,name,unit,kind,arm").eq("active", true).order("kind").order("name"),
+    // كروت الأصناف لأصناف الوزن بس — السوبر ماركت منتجات جاهزة مالهاش كارت
+    sb.from("items").select("id,name,unit,kind,arm").eq("active", true).neq("arm", "market").order("kind").order("name"),
     sb.from("item_specs").select("item_id,brand,dirty"),
     sb.from("spec_current").select("item_id,version,approved_at"),
     sb.from("item_suppliers").select("item_id,rank,suppliers(name)"),
@@ -23,13 +24,14 @@ export default async function Specs({ searchParams }: { searchParams: Promise<{ 
   return (
     <>
       <div className="top"><h1>كارت الصنف</h1></div>
+      <div className="note" style={{ marginBottom: 10 }}>كروت الأصناف للخامات والأصناف اللي بتتباع بالوزن بس. أصناف السوبر ماركت منتجات جاهزة مالهاش كارت: بتتستلم بالسعر وتدخل المخزون على طول.</div>
       <Tabs cur="/purchasing/specs" />
       {sp.err && <div className="badmsg">{sp.err}</div>}
       <form action={newSpecItem} className="card row" style={{ alignItems: "end" }}>
         <b style={{ alignSelf: "center" }}>+ كارت لصنف جديد</b>
         <label className="fld" style={{ flex: 1, minWidth: 180 }}>اسم الصنف<input name="name" required /></label>
         <label className="fld">النوع<select name="kind" defaultValue="raw">{Object.entries(KIND).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
-        <label className="fld">تبع<select name="arm"><option value="rostos">روستوز</option><option value="market">السوبر ماركت</option></select></label>
+        <input type="hidden" name="arm" value="rostos" />
         <label className="fld">الوحدة<select name="unit"><option>كيلو</option><option>قطعة</option><option>لتر</option></select></label>
         <button className="btn pri">اعمله وافتح كارته</button>
       </form>

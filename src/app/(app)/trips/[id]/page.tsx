@@ -5,13 +5,14 @@ import { getMe, can } from "@/lib/perms";
 import { tripState } from "../actions";
 import Loading from "./Loading";
 import { ArriveButton, AddStop } from "./Arrive";
+import CancelBox from "@/components/CancelBox";
 
 export default async function TripPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const me = await getMe();
   if (!can(me, "trips.load")) redirect("/dashboard");
   const sb = await supabaseServer();
-  const { data: t } = await sb.from("trips").select("id,no,truck,driver,status,left_at,stops").eq("id", Number(id)).maybeSingle();
+  const { data: t } = await sb.from("trips").select("id,no,truck,driver,status,left_at,stops,cancel_reason").eq("id", Number(id)).maybeSingle();
   if (!t) notFound();
   const [{ data: br }, st, { data: trs }] = await Promise.all([
     sb.from("locations").select("id,name").eq("active", true).in("type", ["dark", "shop", "warehouse", "sub", "partner"]).order("sort"),
@@ -29,12 +30,13 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
   return (
     <>
       <div className="crumbs"><Link href="/trips">العربيات</Link> ‹ <span>رحلة #{t.no}</span></div>
-      <div className="top"><h1>رحلة #{t.no} — {t.truck}{t.driver ? ` · ${t.driver}` : ""}</h1><span className="pill">{t.status === "loading" ? "بتتحمّل" : "خرجت"}</span></div>
+      <div className="top"><h1>رحلة #{t.no} — {t.truck}{t.driver ? ` · ${t.driver}` : ""}</h1><span className="row" style={{ gap: 6 }}><span className="pill">{t.status === "loading" ? "بتتحمّل" : t.status === "cancelled" ? "اتلغت" : "خرجت"}</span>{t.status === "loading" && <CancelBox kind="trip" id={t.id} label="إلغاء الرحلة" after="/trips" />}</span></div>
+      {t.status === "cancelled" && <div className="badmsg">الرحلة اتلغت: {t.cancel_reason}</div>}
       <div className="card row" style={{ gap: 8, alignItems: "center" }}>
         <b>الفروع:</b> {mine.map((b) => <span key={b.id} className="pill">{b.name}</span>)}
         {t.status === "loading" && <AddStop trip={t.id} options={all.filter((b) => !mine.some((m) => m.id === b.id))} />}
       </div>
-      {t.status === "loading" ? (
+      {t.status === "cancelled" ? null : t.status === "loading" ? (
         <Loading trip={t.id} branches={mine} initial={st} />
       ) : (
         <div className="card">

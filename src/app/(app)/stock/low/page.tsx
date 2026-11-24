@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 
-type R = { item_id: number; name: string; unit: string; kind: string; arm: string; loc: string; loc_name: string; loc_type: string; min: number; make: number | null; qty: number; short: number; auto_order: number | null };
+type R = { item_id: number; name: string; unit: string; kind: string; arm: string; loc: string; loc_name: string; loc_type: string; min: number; make: number | null; qty: number; short: number; auto_order: number | null; cover?: { spare: number; need: number; factory_short: boolean } | null };
 
 /** النواقص: كل صنف نزل عن الحد الأدنى في مكان — مع الاقتراح: أمر إنتاج (المصنع) أو تحويل (الفروع) أو أمر توريد (خامات وسوبر ماركت) */
 export default async function Low() {
@@ -14,6 +14,7 @@ export default async function Low() {
   const L = (data ?? []) as R[];
   const r3 = (n: number) => Math.round(Number(n) * 1000) / 1000;
   const act = (r: R) => {
+    if (r.cover && !r.cover.factory_short && r.cover.spare > 0 && r.cover.spare >= r.cover.need) return <span style={{ color: "var(--good)", fontWeight: 700 }}>✓ المصنع مغطّي ({r3(r.cover.spare)} {r.unit}) — هيتحمّل على العربية الجاية</span>;
     if (r.auto_order) return <Link className="btn" href="/production">أمر إنتاج #{r.auto_order} شغال</Link>;
     if (r.make && r.kind === "product" && r.arm !== "market") return can(me, "prod.orders") ? <Link className="btn pri" href={`/production?item=${r.item_id}&qty=${r.make}`}>اعمل أمر إنتاج {r.make}</Link> : <span className="muted">أمر إنتاج {r.make}</span>;
     if (r.kind === "product" && r.arm !== "market" && r.loc_type === "factory") return can(me, "prod.orders") ? <Link className="btn pri" href={`/production?item=${r.item_id}&qty=${Math.ceil(r.short)}`}>اعمل أمر إنتاج {Math.ceil(r.short)}</Link> : <span className="muted">أمر إنتاج</span>;

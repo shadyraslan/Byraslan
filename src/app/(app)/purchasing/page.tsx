@@ -4,10 +4,11 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import Tabs from "./Tabs";
 import NewPo from "./NewPo";
-import { cancelPo, approvePo } from "./actions";
+import { approvePo } from "./actions";
+import CancelBox from "@/components/CancelBox";
 import PoQty from "./PoQty";
 
-type Po = { id: number; no: number; status: string; expected: string | null; created_at: string; location_id: string; auto: boolean; note: string | null; suppliers: { name: string } | { name: string }[] | null; po_lines: { line: number; qty: number; price: number; received: number; items: { name: string } | { name: string }[] | null }[] };
+type Po = { id: number; no: number; status: string; expected: string | null; created_at: string; location_id: string; auto: boolean; note: string | null; cancel_reason?: string | null; suppliers: { name: string } | { name: string }[] | null; po_lines: { line: number; qty: number; price: number; received: number; items: { name: string } | { name: string }[] | null }[] };
 type Need = { item_id: number; name: string; unit: string; loc: string; loc_name: string; min: number; stock: number; incoming: number; qty: number; po_no: number | null; supplier: { id: number; name: string; price: number | null } | null; needs: boolean };
 type Rc = { id: number; no: number; result: string; at: string; flags: string[]; suppliers: { name: string } | { name: string }[] | null };
 const one = <X,>(v: X | X[] | null | undefined): X | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
@@ -20,7 +21,7 @@ export default async function Purchasing({ searchParams }: { searchParams: Promi
   if (!canR) redirect("/dashboard");
   const sb = await supabaseServer();
   const [{ data: pos }, { data: rcs }, { data: sups }, { data: items }, { data: isup }, { data: locs }, { data: needs }] = await Promise.all([
-    sb.from("purchase_orders").select("id,no,status,expected,created_at,location_id,auto,note,suppliers(name),po_lines(line,qty,price,received,items(name))").order("id", { ascending: false }).limit(60),
+    sb.from("purchase_orders").select("id,no,status,expected,created_at,location_id,auto,note,cancel_reason,suppliers(name),po_lines(line,qty,price,received,items(name))").order("id", { ascending: false }).limit(60),
     sb.from("receipts").select("id,no,result,at,flags,suppliers(name)").order("id", { ascending: false }).limit(30),
     sb.from("suppliers").select("id,name").eq("active", true).order("name"),
     // الخامات والتغليف + كل أصناف السوبر ماركت
@@ -66,11 +67,11 @@ export default async function Purchasing({ searchParams }: { searchParams: Promi
                 <td className="num">PO-{p.no}{p.auto && <div><span className="pill" style={{ fontSize: 11 }}>أوتوماتيك</span></div>}</td><td>{one(p.suppliers)?.name}<div className="muted" style={{ fontSize: 12 }}>← {LN.get(p.location_id) ?? p.location_id}</div></td>
                 <td style={{ whiteSpace: "normal" }}>{p.po_lines.map((l, i) => <div key={i} style={{ fontSize: 12.5 }}>{one(l.items)?.name} {["draft", "open"].includes(p.status) && canP && !l.received ? <PoQty po={p.id} line={l.line} qty={Number(l.qty)} /> : <span className="num">{l.received > 0 ? `${l.received}/` : ""}{l.qty}</span>}</div>)}</td>
                 <td className="num">{p.po_lines.reduce((a, l) => a + Number(l.qty) * Number(l.price), 0).toLocaleString("en-US")}</td>
-                <td>{ST[p.status] ?? p.status}{p.expected ? <div className="muted num" style={{ fontSize: 12 }}>{p.expected}</div> : null}</td>
+                <td>{ST[p.status] ?? p.status}{p.cancel_reason && <div className="muted" style={{ fontSize: 12 }}>{p.cancel_reason}</div>}{p.expected ? <div className="muted num" style={{ fontSize: 12 }}>{p.expected}</div> : null}</td>
                 <td className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
                   {["open", "partial"].includes(p.status) && <Link className="btn pri" href={`/purchasing/receive/${p.id}`} style={{ display: "inline-grid", placeItems: "center", height: 34 }}>استلم</Link>}
                   {p.status === "draft" && canP && <form action={approvePo}><input type="hidden" name="id" value={p.id} /><button className="btn pri" style={{ height: 34 }}>اعتمد</button></form>}
-                  {["open", "draft"].includes(p.status) && canP && <form action={cancelPo}><input type="hidden" name="id" value={p.id} /><button className="btn" style={{ height: 34 }}>إلغاء</button></form>}
+                  {["open", "draft", "partial"].includes(p.status) && canP && <CancelBox kind="po" id={p.id} label="إلغاء الأمر" />}
                 </td>
               </tr>
             ))}

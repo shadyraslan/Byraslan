@@ -34,3 +34,11 @@ export async function deliver(id: number): Promise<Result<{ total: number }>> {
   if (error) return { ok: false, error: dbMsg(error.message) };
   done(id); revalidatePath("/accounts"); return { ok: true, total: Number(data) };
 }
+
+export async function marketReceive(id: number, line: number | null): Promise<Result<{ n: number }>> {
+  { const g = await deny("orders.handle"); if (g) return g; }
+  const sb = await supabaseServer();
+  const { data, error } = await sb.rpc("market_receive", { p_order: id, p_line: line });
+  if (error) return { ok: false, error: dbMsg(error.message) };
+  done(id); return { ok: true, n: Number(data) };
+}

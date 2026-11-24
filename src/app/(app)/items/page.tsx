@@ -13,13 +13,13 @@ export default async function Items({ searchParams }: { searchParams: Promise<{ 
   const { q = "", arm = "", t = "" } = await searchParams;
   const me = await getMe();
   const sb = await supabaseServer();
-  let iq = sb.from("items").select("id,name,arm,unit,family_id,tags,active,kind,scale_plu,shelf_days,icon").order("name").limit(300);
+  let iq = sb.from("items").select("id,name,arm,unit,family_id,tags,active,kind,scale_plu,shelf_days,icon,code,photo,item_barcodes(code)").order("name").limit(300);
   if (arm) iq = iq.eq("arm", arm);
   // التقسيم: منتجات (روستوز) / خامات (خامة، نص مصنع، خلطة، تغليف) / سوبر ماركت
   if (t === "products") iq = iq.eq("kind", "product").neq("arm", "market");
   else if (t === "raw") iq = iq.in("kind", ["raw", "semi", "mix", "pack"]);
   else if (t === "market") iq = iq.eq("arm", "market");
-  if (q) iq = iq.or(`name.ilike.%${q}%,tags.cs.{${q.replace(/[{},#]/g, "")}}`);
+  if (q) iq = iq.or(`name.ilike.%${q}%,code.eq.${q.replace(/[,()]/g, "")},tags.cs.{${q.replace(/[{},#]/g, "")}}`);
   const [{ data: fams }, { data: items }, { data: stk }] = await Promise.all([sb.from("families").select("id,name,parent_id,arm,tag,icon,color,sort").order("sort").order("name"), iq, sb.from("stock_by_location").select("item_id,qty,boxes")]);
   const ST = new Map<number, { q: number; b: number }>();
   for (const r of stk ?? []) { const x = ST.get(r.item_id as number) ?? { q: 0, b: 0 }; x.q += Number(r.qty); x.b += Number(r.boxes); ST.set(r.item_id as number, x); }
@@ -68,10 +68,12 @@ export default async function Items({ searchParams }: { searchParams: Promise<{ 
       </div>
       <div className="card">
         <table>
-          <thead><tr><th>الصنف</th><th>الرصيد · أطباق</th><th>الذراع</th><th>النوع</th><th>العائلة</th><th>هاشتاجز</th><th>أيقونة · كود الميزان · الصلاحية</th></tr></thead>
+          <thead><tr><th>الصنف</th><th>الكود · الباركود</th><th>الرصيد · أطباق</th><th>الذراع</th><th>النوع</th><th>العائلة</th><th>هاشتاجز</th><th>أيقونة · كود الميزان · الصلاحية</th></tr></thead>
           <tbody>
             {(items ?? []).map((i) => (
-              <tr key={i.id}><td>{i.icon} <Link href={`/items/${i.id}`}><b>{i.name}</b></Link>{(i.tags ?? []).includes("demo") && <span className="muted" style={{ fontSize: 11 }}> · تجربة</span>} <span className="muted" style={{ fontSize: 12 }}>{i.unit}</span></td><td className="num"><Link href={`/items/${i.id}`}>{Math.round((ST.get(i.id)?.q ?? 0) * 100) / 100}{ST.get(i.id)?.b ? ` · ${ST.get(i.id)?.b} طبق` : ""}</Link></td><td>{ARM[i.arm] ?? i.arm}</td><td>{KIND[i.kind] ?? i.kind}</td><td>{fName(i.family_id)}</td><td className="muted">{(i.tags ?? []).map((t: string) => "#" + t).join(" ")}</td>
+              <tr key={i.id}><td>{i.icon} <Link href={`/items/${i.id}`}><b>{i.name}</b></Link>{(i.tags ?? []).includes("demo") && <span className="muted" style={{ fontSize: 11 }}> · تجربة</span>} <span className="muted" style={{ fontSize: 12 }}>{i.unit}</span>{!i.photo && <span className="muted" style={{ fontSize: 11 }}> · مالوش صورة</span>}</td>
+                <td className="num" dir="ltr" style={{ fontSize: 12.5, textAlign: "start" }}>{i.code ? <b>{i.code}</b> : <span className="muted">—</span>}{((i.item_barcodes ?? []) as { code: string }[]).length ? <div className="muted">{((i.item_barcodes ?? []) as { code: string }[]).map((b) => b.code).join(" · ")}</div> : null}</td>
+                <td className="num"><Link href={`/items/${i.id}`}>{Math.round((ST.get(i.id)?.q ?? 0) * 100) / 100}{ST.get(i.id)?.b ? ` · ${ST.get(i.id)?.b} طبق` : ""}</Link></td><td>{ARM[i.arm] ?? i.arm}</td><td>{KIND[i.kind] ?? i.kind}</td><td>{fName(i.family_id)}</td><td className="muted">{(i.tags ?? []).map((t: string) => "#" + t).join(" ")}</td>
                 <td>{edit ? (
                   <form action={updateItem} className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
                     <input type="hidden" name="id" value={i.id} />
@@ -81,7 +83,7 @@ export default async function Items({ searchParams }: { searchParams: Promise<{ 
                     <button className="btn" style={{ height: 34 }}>حفظ</button>
                   </form>) : <span className="num">{i.scale_plu ?? "—"} · {i.shelf_days ?? "—"} يوم</span>}</td></tr>
             ))}
-            {!items?.length && <tr><td colSpan={7} className="muted">مفيش أصناف لسه</td></tr>}
+            {!items?.length && <tr><td colSpan={8} className="muted">مفيش أصناف لسه</td></tr>}
           </tbody>
         </table>
       </div>

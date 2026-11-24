@@ -36,12 +36,6 @@ export async function createPo(supplier: number, expected: string, note: string,
   return { ok: true, id: Number(po.id) };
 }
 
-export async function cancelPo(fd: FormData) {
-  await need("purchase.edit");
-  const sb = await supabaseServer();
-  await sb.from("purchase_orders").update({ status: "cancelled" }).eq("id", Number(fd.get("id"))).in("status", ["open", "draft"]);
-  revalidatePath("/purchasing");
-}
 
 /* ---------- كارت الصنف ---------- */
 export type SpecIn = { brand: string; description: string; size: string; temp_max: string; min_shelf_days: string; waste_pct: string; checks: string; certs: string; img_ok: string | null; img_bad: string | null };

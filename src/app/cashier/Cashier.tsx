@@ -7,6 +7,7 @@ import ReturnBox, { type Ret } from "@/components/ReturnBox";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import * as kv from "@/lib/idb";
 import OrdersPanel, { useOrders } from "./Orders";
+import { ShiftReportView, useShiftReport } from "@/components/ShiftReport";
 
 /* ===== الكاشير (تطبيق بيتثبّت على كمبيوتر الفرع) =====
    قرار شادي: من غير نت البيع بيقف خالص. كل فاتورة بتتسجّل في السيستم الأول، وبعدها بس بتتطبع.
@@ -121,6 +122,10 @@ export default function Cashier() {
   };
   const [rec, setRec] = useState<Done | null>(null);
   const [view, setView] = useState<"sell" | "orders" | "list" | "return" | "close" | "expiry">("sell");
+  // تقرير الوردية من السيستم: بيتحدّث كل ما تفتح «تقرير الوردية» أو «اقفل الوردية»
+  const [repTick, setRepTick] = useState(0);
+  useEffect(() => { if (view === "close" || view === "list") setRepTick((x) => x + 1); }, [view, done.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  const rep = useShiftReport(sb, shift?.server_id, shift?.client_id, repTick);
   const [rets, setRets] = useState<Ret[]>([]);
   // إلغاء فاتورة (Void) في نفس الوردية
   const [voidOf, setVoidOf] = useState<string | null>(null);
@@ -443,7 +448,8 @@ export default function Cashier() {
   const closeShift = async () => {
     if (!shift) return;
     if (!navigator.onLine) return setCloseErr(OFF);
-    const sh = { ...shift, closing: { counted: Number(counted) || 0, closed_at: new Date().toISOString() } };
+    // من غير عدّ الدرج: اللي اتحصّل كاش في الوردية بيتسجّل عهدة على الكاشير
+    const sh = { ...shift, closing: { counted: expected, closed_at: new Date().toISOString() } };
     setWorking(true);
     const { error } = await sb.rpc("pos_sync", { p_loc: sh.loc, p_shifts: [{ client_id: sh.client_id, opening_cash: sh.opening_cash, opened_at: sh.opened_at, counted: sh.closing.counted, closed_at: sh.closing.closed_at }], p_sales: [] });
     setWorking(false);
@@ -451,7 +457,8 @@ export default function Cashier() {
     const diff = r2(sh.closing.counted - expected);
     setCloseErr(null); setCounted("");
     await kv.del("shift"); await kv.set("done", []); setShift(null); setDone([]); setView("sell");
-    setMsg({ ok: diff === 0, t: diff === 0 ? "الوردية اتقفلت — الدرج مظبوط" : `الوردية اتقفلت — ${diff > 0 ? "زيادة" : "عجز"} ${f2(Math.abs(diff))} ج` });
+    void diff;
+    setMsg({ ok: true, t: `الوردية اتقفلت — معاك ${f2(r2(expected - sh.opening_cash))} ج كاش اتضافوا لعهدتك` });
   };
 
   // ---------- الشاشات ----------
@@ -485,7 +492,7 @@ export default function Cashier() {
         )}
         <div className="card" style={{ display: "grid", gap: 12 }}>
           <label className="fld">الفرع<select value={openLoc} onChange={(e) => setOpenLoc(e.target.value)}>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
-          <label className="fld">الكاش في الدرج أول الوردية<input value={openCash} onChange={(e) => setOpenCash(e.target.value)} inputMode="decimal" dir="ltr" /></label>
+          <div className="muted" style={{ fontSize: 13 }}>الوردية بتبدأ من دلوقتي ({new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}) — من غير عدّ الدرج. وفي الآخر هيطلعلك تقرير بكل أوردر والكاش اللي معاك.</div>
           <button className="btn pri" style={{ height: 52, fontSize: 17 }} onClick={openShift} disabled={!locs.length || !online || working}>{working ? "…" : "افتح الوردية"}</button>
           {!online && <div className="badmsg">{OFF}</div>}
           {openErr && <div className="badmsg">{openErr}</div>}
@@ -511,7 +518,7 @@ export default function Cashier() {
     <>
       {bar}
       <div className="noprint" style={{ display: "flex", gap: 8, padding: "10px 16px", flexWrap: "wrap" }}>
-        {([["sell", "البيع"], ...(snap?.can_orders ? [["orders", `طلبات الأونلاين (${ord.orders.length})`]] : []), ["list", `فواتير الوردية (${done.length})`], ...(snap?.can_return ? [["return", `مرتجع${rets.length ? ` (${rets.length})` : ""}`]] : []), ["expiry", `الصلاحية${expN ? ` (${expN})` : ""}`], ["close", "اقفل الوردية"]] as [typeof view, string][]).map(([k, l]) => <button key={k} className={view === k ? "btn pri" : "btn"} style={(k === "orders" && ord.fresh.length) || (k === "expiry" && expGone) ? { background: "var(--bad)", color: "#fff", borderColor: "var(--bad)" } : undefined} onClick={() => setView(k)}>{l}</button>)}
+        {([["sell", "البيع"], ...(snap?.can_orders ? [["orders", `طلبات الأونلاين (${ord.orders.length})`]] : []), ["list", `تقرير الوردية (${done.length})`], ...(snap?.can_return ? [["return", `مرتجع${rets.length ? ` (${rets.length})` : ""}`]] : []), ["expiry", `الصلاحية${expN ? ` (${expN})` : ""}`], ["close", "اقفل الوردية"]] as [typeof view, string][]).map(([k, l]) => <button key={k} className={view === k ? "btn pri" : "btn"} style={(k === "orders" && ord.fresh.length) || (k === "expiry" && expGone) ? { background: "var(--bad)", color: "#fff", borderColor: "var(--bad)" } : undefined} onClick={() => setView(k)}>{l}</button>)}
         <button className="btn" onClick={() => shift && refreshSnap(shift.loc)} disabled={!online}>حدّث الأسعار والعلب</button>
         {syncErr && <span className="badmsg" style={{ margin: 0 }}>الرفع وقف: {syncErr}</span>}
       </div>
@@ -682,6 +689,8 @@ export default function Cashier() {
 
       {view === "list" && (
         <div className="card noprint" style={{ margin: "0 16px", overflowX: "auto" }}>
+          {rep.r ? <ShiftReportView r={rep.r} /> : <div className="muted">{rep.err ?? "بيحمّل التقرير…"}</div>}
+          <h2 style={{ marginTop: 14 }}>فواتير الكاشير (للإلغاء والطباعة)</h2>
           <table>
             <thead><tr><th>الفاتورة</th><th>الوقت</th><th>الإجمالي</th><th>كاش / فيزا</th><th>الحالة</th><th></th></tr></thead>
             <tbody>
@@ -715,7 +724,8 @@ export default function Cashier() {
 
       {view === "close" && (
         <div className="card noprint" style={{ margin: "0 16px", display: "grid", gap: 10, maxWidth: 560 }}>
-          <div>فتحت بـ <b className="num">{f2(shift.opening_cash)}</b> · كاش الفواتير <b className="num">{f2(expected - shift.opening_cash)}</b> · {done.length} فاتورة</div>
+          <h2 style={{ margin: 0 }}>تقرير الوردية</h2>
+          {rep.r ? <ShiftReportView r={rep.r} /> : <div className="muted">{rep.err ?? "بيحمّل التقرير…"}</div>}
           {(() => {
             const ov = done.filter((x) => x.bal_over && !x.voided), du = done.filter((x) => x.bal_due && !x.voided);
             const st = custCash.rows.filter((x) => !["over", "under", "use"].includes(x.kind));
@@ -731,10 +741,9 @@ export default function Cashier() {
               </div>
             );
           })()}
-          <label className="fld">الكاش اللي في الدرج كام؟<input value={counted} onChange={(e) => setCounted(e.target.value)} inputMode="decimal" dir="ltr" autoFocus /></label>
-          <button className="btn pri" style={{ height: 50 }} disabled={counted === "" || !online || working} onClick={closeShift}>اقفل الوردية</button>
+          <button className="btn pri" style={{ height: 50 }} disabled={!online || working} onClick={closeShift}>اقفل الوردية — الكاش ده يتضاف لعهدتي</button>
           {(closeErr || !online) && <div className="badmsg">{closeErr ?? OFF}</div>}
-          <div className="muted" style={{ fontSize: 13 }}>لو فيه مصروف اتصرف من الدرج في السيستم، هيتخصم من المتوقع وقت القفل.</div>
+          <div className="muted" style={{ fontSize: 13 }}>القفل مش محتاج عدّ الدرج: الكاش اللي اتحصّل في الوردية بيتسجّل عهدة عليك لحد ما تسلّمه.</div>
         </div>
       )}
 

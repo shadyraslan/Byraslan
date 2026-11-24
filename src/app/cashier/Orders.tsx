@@ -9,7 +9,7 @@ import OrderFix from "@/components/OrderFix";
 
 export type OOrder = {
   id: number; no: number; status: string; created_at: string; pay: string; address: string | null; note: string | null; fee: number; discount: number; est: number; driver: string | null; tudzi_state?: string | null; tudzi_courier?: { courier?: { name?: string; phone?: string; plate?: string; vehicle?: string } } | null; tudzi_track?: string | null; tudzi_error?: string | null; rider_id?: number | null; rider_note?: string | null; fee_orig?: number | null; branch_discount?: number; branch_discount_note?: string | null; floor?: string | null; apt?: string | null; landmark?: string | null; booking?: boolean; scheduled_for?: string | null; slot?: string | null; deposit?: number; deposit_paid?: boolean; lat?: number | null; lng?: number | null; pin_far?: boolean; pin_km?: number | null;
-  customer: string; customer_id: number; phone: string; lines: { line: number; item_id: number; gift?: boolean; name: string; unit: string; qty: number; prepared: number; price: number; note?: string | null }[]; boxes: number[];
+  customer: string; customer_id: number; phone: string; lines: { line: number; item_id: number; gift?: boolean; name: string; unit: string; qty: number; prepared: number; price: number; note?: string | null; market?: boolean; picked?: number | null; recv?: boolean }[]; boxes: number[];
 };
 const ST: Record<string, string> = { new: "جديد", accepted: "اتقبل", preparing: "بيتحضّر", ready: "جاهز", out: "مع الطيار" };
 const PAY: Record<string, string> = { cash: "كاش", card: "فيزا", instapay: "إنستاباي", wallet: "محفظة", credit: "آجل" };
@@ -32,7 +32,7 @@ export function useOrders(sb: SupabaseClient, loc: string | undefined, enabled: 
   const load = async () => {
     if (!loc || !enabled || !navigator.onLine) return;
     const { data } = await sb.rpc("pos_orders", { p_loc: loc });
-    const L = ((data ?? []) as OOrder[]).map((o) => ({ ...o, fee: Number(o.fee), discount: Number(o.discount), est: Number(o.est), lines: (o.lines ?? []).map((l) => ({ ...l, qty: Number(l.qty), prepared: Number(l.prepared), price: Number(l.price) })) }));
+    const L = ((data ?? []) as OOrder[]).map((o) => ({ ...o, fee: Number(o.fee), discount: Number(o.discount), est: Number(o.est), lines: (o.lines ?? []).map((l) => ({ ...l, qty: Number(l.qty), prepared: Number(l.prepared), price: Number(l.price), picked: l.picked == null ? null : Number(l.picked) })) }));
     setOrders(L);
     const news = L.filter((o) => o.status === "new").map((o) => o.id);
     if (seen.current) {
@@ -79,7 +79,11 @@ function RiderCash({ sb, loc, shiftClient }: { sb: SupabaseClient; loc: string; 
 export default function OrdersPanel({ sb, orders, ack, reload, online, loc, shiftClient }: { sb: SupabaseClient; orders: OOrder[]; ack: (id: number) => void; reload: () => void; online: boolean; loc: string; shiftClient: string | null }) {
   const [cur, setCur] = useState<number | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
+  const [warn, setWarn] = useState<number | null>(null);
   const o = orders.find((x) => x.id === cur) ?? null;
+  // سطور الكمية فيها أقل أو أكتر من المطلوب بأكتر من 10%
+  const off = o ? o.lines.filter((l) => !l.gift && l.qty > 0 && Math.abs((l.prepared || 0) - l.qty) / l.qty > 0.1) : [];
+  const waiting = o ? o.lines.filter((l) => l.market && !l.recv && (l.picked ?? 0) > 0) : [];
   const run = async (p: PromiseLike<{ error: { message?: string } | null }>, ok: string) => { const { error } = await p; setMsg(error ? { ok: false, t: msgOf(error) } : { ok: true, t: ok }); reload(); };
   const mins = (s: string) => Math.round((Date.now() - new Date(s).getTime()) / 60000);
 
@@ -105,23 +109,27 @@ export default function OrdersPanel({ sb, orders, ack, reload, online, loc, shif
             <div><b>{o.customer}</b> — {o.address}{o.floor ? ` · الدور ${o.floor}` : ""}{o.apt ? ` · شقة ${o.apt}` : ""}{o.landmark ? ` · ${o.landmark}` : ""}{o.lat != null && <> · <a href={`https://maps.google.com/?q=${o.lat},${o.lng}`} target="_blank" rel="noreferrer">📍 الخريطة</a></>}{o.pin_far && <b style={{ color: "var(--bad)" }}> · ⚠️ بعيد {o.pin_km} كم</b>}</div>
             {o.note && <div style={{ color: "var(--bad)", fontWeight: 700 }}>ملاحظة: {o.note}</div>}
             {["accepted", "preparing"].includes(o.status) && (
-              <ScanInput placeholder="امسح العلب أو الأصناف للطلب ده" onScan={(c) => run(sb.rpc("order_scan", { p_id: o.id, p_code: c, p_qty: null }), "✓ اتضاف للطلب")} />
+              <ScanInput placeholder="امسح العلب أو الأصناف للطلب ده" onScan={async (c) => { const { data, error } = await sb.rpc("order_scan", { p_id: o.id, p_code: c, p_qty: null }); setMsg(error ? { ok: false, t: msgOf(error) } : { ok: true, t: `✓ ${data}` }); reload(); }} />
             )}
             <table>
               <thead><tr><th>الصنف</th><th>المطلوب</th><th>المتحضّر</th><th>القيمة</th></tr></thead>
-              <tbody>{o.lines.map((l) => <tr key={l.line}><td><b>{l.name}</b>{l.note && <div style={{ color: "var(--bad)", fontWeight: 700, fontSize: 13 }}>✂️ {l.note}</div>}</td><td className="num">{l.qty} {l.unit}</td><td className="num" style={{ color: l.prepared <= 0 ? "var(--bad)" : "var(--good)", fontWeight: 700 }}>{l.prepared}</td><td className="num">{Math.round((l.prepared || l.qty) * l.price)}</td></tr>)}</tbody>
+              <tbody>{o.lines.map((l) => <tr key={l.line}><td><b>{l.name}</b>{l.note && <div style={{ color: "var(--bad)", fontWeight: 700, fontSize: 13 }}>✂️ {l.note}</div>}</td><td className="num">{l.qty} {l.unit}</td><td className="num" style={{ color: l.prepared <= 0 ? "var(--bad)" : Math.abs(l.prepared - l.qty) / (l.qty || 1) > 0.1 ? "#b7791f" : "var(--good)", fontWeight: 700 }}>{l.market && !l.recv ? ((l.picked ?? 0) > 0
+                ? <span className="row" style={{ gap: 4, flexWrap: "nowrap" }}><span style={{ color: "var(--good)" }}>✓ اتجهّزت {l.picked}</span>{["accepted", "preparing"].includes(o.status) && <button className="btn pri" style={{ height: 26, fontSize: 12 }} onClick={() => run(sb.rpc("market_receive", { p_order: o.id, p_line: l.line }), `استلمت ${l.name}`)}>استلمها</button>}</span>
+                : <span className="muted" style={{ fontWeight: 400 }}>عند الديسباتشر</span>) : l.prepared}</td><td className="num">{Math.round((l.prepared || l.qty) * l.price)}</td></tr>)}</tbody>
             </table>
             {!!o.boxes.length && <div className="row" style={{ gap: 6 }}>{o.boxes.map((sn) => <button key={sn} className="btn" style={{ height: 28, fontSize: 12 }} onClick={() => run(sb.rpc("order_unscan", { p_id: o.id, p_sn: sn }), `شلت العلبة #${sn}`)}>#{sn} ✕</button>)}</div>}
             <div className="muted">التوصيل {o.fee} {o.discount > 0 ? `· خصم ${o.discount}` : ""} · الدفع {PAY[o.pay]}{o.booking ? ` · حجز الساعة ${o.slot}${o.deposit ? ` · عربون ${o.deposit} ج ${o.deposit_paid ? "✓ مدفوع" : "(مش مدفوع)"}` : ""}` : ""}</div>
             <div className="row">
               {o.status === "new" && <button className="btn pri" onClick={() => run(sb.rpc("order_status", { p_id: o.id, p_status: "accepted" }), "اتقبل — امسح العلب")}>اقبل الطلب</button>}
-              {["accepted", "preparing"].includes(o.status) && <button className="btn pri" onClick={() => run(sb.rpc("order_status", { p_id: o.id, p_status: "ready" }), "جاهز")}>جاهز للتوصيل</button>}
+              {["accepted", "preparing"].includes(o.status) && waiting.length > 1 && <button className="btn" onClick={() => run(sb.rpc("market_receive", { p_order: o.id, p_line: null }), `استلمت ${waiting.length} صنف من الديسباتشر`)}>استلم كل أصناف الماركت ({waiting.length})</button>}
+              {["accepted", "preparing"].includes(o.status) && <button className="btn pri" onClick={() => { if (off.length && warn !== o.id) return setWarn(o.id); setWarn(null); run(sb.rpc("order_status", { p_id: o.id, p_status: "ready" }), "جاهز"); }}>{warn === o.id ? "جاهز برضه" : "جاهز للتوصيل"}</button>}
               {["ready", "out"].includes(o.status) && <a className="btn" href={`/print/order/${o.id}`} target="_blank" rel="noreferrer" style={{ display: "inline-grid", placeItems: "center" }}>🖨️ اطبع الفاتورة</a>}
               {o.driver && o.status === "out" && <span className="muted">مع الطيار: <b>{o.driver}</b></span>}
             </div>
             <OrderClose key={o.id + o.status} o={{ id: o.id, status: o.status, pay_method: o.pay, loc, sub: o.lines.reduce((a, l) => a + (l.prepared || 0) * l.price, 0), fee: o.fee, fee_orig: o.fee_orig ?? null, discount: o.discount, branch_discount: Number(o.branch_discount ?? 0), branch_discount_note: o.branch_discount_note ?? null, rider_note: o.rider_note ?? null, rider_id: o.rider_id ?? null, tudzi_state: o.tudzi_state ?? null, tudzi_courier: o.tudzi_courier ?? null, tudzi_track: o.tudzi_track ?? null, tudzi_error: o.tudzi_error ?? null }} onDone={(t) => { setMsg({ ok: true, t }); reload(); }} />
             <OrderFix key={"f" + o.id + o.status} order={o.id} status={o.status} customerId={o.customer_id} shiftClient={shiftClient} lines={o.lines} onDone={(t) => { setMsg({ ok: true, t }); reload(); }} />
-            {msg && <div className={msg.ok ? "okmsg" : "badmsg"}>{msg.t}</div>}
+            {warn === o.id && off.length > 0 && <div className="badmsg">⚠️ الكمية مش زي المطلوب: {off.map((l) => `${l.name} ${l.prepared || 0} من ${l.qty}`).join(" · ")} — اتأكد، أو دوس «جاهز برضه»</div>}
+            {msg && <div className={msg.ok && !msg.t.includes("⚠️") ? "okmsg" : "badmsg"}>{msg.t}</div>}
           </div>
         )}
       </div>
