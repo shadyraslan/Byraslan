@@ -59,6 +59,7 @@ export const NAV: NavGroup[] = [
   ] },
   { id: "accounts", title: "الحسابات", icon: "accounts", color: "#2563eb", links: [
     { href: "/accounts", label: "الملخص اليومي", icon: "reports", color: "#2563eb", perms: ["acc.view"] },
+    { href: "/accounts/money", label: "الخزن والحسابات (خزن، بنوك، محافظ، ماكينات)", icon: "wallet", color: "#0f766e", perms: ["money.view", "money.move", "money.manage"] },
     { href: "/accounts/expenses", label: "المصروفات", icon: "wallet", color: "#1d4ed8", perms: ["acc.view", "acc.post", "acc.approve"] },
     { href: "/accounts/suppliers", label: "حسابات الموردين", icon: "partner", color: "#0f766e", perms: ["acc.view", "acc.pay"] },
     { href: "/accounts/ledger", label: "كارت الحساب (مورد/موظف/شريك/عميل)", icon: "scroll", color: "#7c3aed", perms: ["acc.view", "hr.pay", "partner.settle", "purchase.edit", "acc.pay", "cs.agent", "credit.view", "credit.collect"] },
