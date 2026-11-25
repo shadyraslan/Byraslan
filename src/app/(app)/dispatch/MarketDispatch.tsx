@@ -44,7 +44,7 @@ export default function MarketDispatch({ locs, home }: { locs: { id: string; nam
   };
   return (
     <>
-      <div className="top"><h1>ديسباتشر ماركت رسلان</h1>
+      <div className="top"><h1>ديسباتشر السوبر ماركت بتاعنا</h1>
         {locs.length > 1 && <select value={loc} onChange={(e) => { setLoc(e.target.value); setCur(null); }} style={{ height: 40 }}>{locs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select>}
       </div>
       <div className="note" style={{ marginBottom: 12 }}>هنا أصناف السوبر ماركت بس في طلبات الفرع. جهّز كل طلب (امسح باركود الصنف أو اكتب الكمية)، والكاشير هيلاقيها عنده «اتجهّزت» ويدوس «استلمها». منتجات روستوز بتتجهّز بالعلب عند الكاشير زي ما هي.</div>

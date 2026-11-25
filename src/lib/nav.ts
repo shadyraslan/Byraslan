@@ -14,6 +14,7 @@ export const NAV: NavGroup[] = [
     { href: "/complaints", label: "الشكاوى والتعويضات", icon: "warning", color: "#e11d48", perms: ["orders.handle", "cs.agent", "complaints.add", "complaints.resolve", "complaints.close"] },
   ] },
   { id: "orders", title: "الطلبات والتوصيل", icon: "app", color: "#0ea5e9", links: [
+    { href: "/dispatch", label: "ديسباتشر السوبر ماركت بتاعنا", icon: "box", color: "#f97316", perms: ["orders.dispatch", "orders.handle"] },
     { href: "/orders", label: "طلبات الأونلاين", icon: "orders", color: "#0ea5e9", perms: ["orders.handle"] },
     { href: "/riders", label: "الطيارين وكاشهم", icon: "orders", color: "#7c3aed", perms: ["riders.manage", "riders.settle", "orders.handle", "acc.view", "tudzi.manage"] },
     { href: "/bookings", label: "تقارير الحجوزات", icon: "calendar", color: "#7c3aed", perms: ["orders.handle", "orders.booking", "cs.agent"] },
@@ -53,7 +54,7 @@ export const NAV: NavGroup[] = [
   { id: "partner", title: "الماركت الشريك", icon: "partner", color: "#0d9488", links: [
     { href: "/partner", label: "الشركاء والفروع والخصومات", icon: "partner", color: "#0d9488", perms: ["partner.manage", "partner.upload", "partner.settle", "partner.dispatch"] },
     { href: "/partner/upload", label: "رفع ملف الصبح", icon: "upload", color: "#65a30d", perms: ["partner.upload"] },
-    { href: "/partner/dispatch", label: "الديسباتشر (تجهيز طلبات الماركت)", icon: "box", color: "#ea580c", perms: ["partner.dispatch", "partner.manage", "orders.dispatch"] },
+    { href: "/partner/dispatch", label: "ديسباتشر الماركت الشريك", icon: "box", color: "#ea580c", perms: ["partner.dispatch", "partner.manage"] },
     { href: "/partner/account", label: "الحساب الجاري والمطابقة", icon: "wallet", color: "#2563eb", perms: ["partner.settle", "acc.view"] },
   ] },
   { id: "accounts", title: "الحسابات", icon: "accounts", color: "#2563eb", links: [
