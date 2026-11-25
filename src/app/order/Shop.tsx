@@ -66,6 +66,12 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
   const lines = () => Object.entries(cart).map(([id, q]) => ({ item_id: Number(id), qty: q, ...(notes[Number(id)]?.trim() ? { note: notes[Number(id)].trim() } : {}) }));
 
   const fams = useMemo(() => [...new Set((menu ?? []).map((m) => m.family ?? "أصناف"))], [menu]);
+  // بحث وفلاتر في القايمة (طلب جديد / حجز جديد)
+  const [qs, setQs] = useState("");
+  const [fam, setFam] = useState<string | null>(null);
+  const [onlyIn, setOnlyIn] = useState(false);
+  const norm = (t: string) => t.toLowerCase().replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي").replace(/\s+/g, " ").trim();
+  const shown = (m: Menu) => (!fam || (m.family ?? "أصناف") === fam) && (!onlyIn || m.available > 0) && (!qs.trim() || norm(m.name).includes(norm(qs)));
   const step1 = (m: Menu) => (m.sold_by === "piece" || m.unit === "قطعة" ? 1 : 0.5);
   const add = (m: Menu, d: number) => setCart((c) => { const q = Math.max(0, Math.round(((c[m.item_id] ?? 0) + d * step1(m)) * 10) / 10); const n = { ...c }; if (q) n[m.item_id] = q; else delete n[m.item_id]; return n; });
   const sub = (menu ?? []).reduce((a, m) => a + (cart[m.item_id] ?? 0) * m.price, 0);
@@ -195,10 +201,21 @@ export default function Shop({ districts, open, minOrder, channel, note, init, s
       <div className="row" style={{ justifyContent: "space-between" }}><b>التوصيل لـ {dd?.name} <span className="muted" style={{ fontWeight: 400 }}>· فرع {br.name}</span></b>{!edit && !staff && <button className="btn" onClick={() => setDist(null)}>غيّر المنطقة</button>}</div>
       {!menu && <div className="muted">بيحمّل…</div>}
       {menu && !menu.length && <div className="muted">مفيش أصناف متاحة دلوقتي</div>}
-      {fams.map((fm) => (
+      {menu && menu.length > 0 && (
+        <div style={{ position: "sticky", top: 0, zIndex: 5, background: "var(--bg, #fff)", padding: "8px 0", display: "grid", gap: 6 }}>
+          <input value={qs} onChange={(e) => setQs(e.target.value)} placeholder="🔎 ابحث عن صنف…" style={{ height: 42 }} />
+          <div className="row" style={{ gap: 6, overflowX: "auto", flexWrap: "nowrap" }}>
+            <button className={`btn${!fam ? " pri" : ""}`} style={{ height: 32, whiteSpace: "nowrap" }} onClick={() => setFam(null)}>الكل</button>
+            {fams.map((fm) => <button key={fm} className={`btn${fam === fm ? " pri" : ""}`} style={{ height: 32, whiteSpace: "nowrap" }} onClick={() => setFam(fam === fm ? null : fm)}>{fm}</button>)}
+            <label className="row" style={{ gap: 4, whiteSpace: "nowrap", fontSize: 13 }}><input type="checkbox" checked={onlyIn} onChange={(e) => setOnlyIn(e.target.checked)} /> المتاح بس</label>
+          </div>
+        </div>
+      )}
+      {menu && menu.length > 0 && !(menu ?? []).some(shown) && <div className="muted">مفيش صنف بالاسم ده</div>}
+      {fams.filter((fm) => (menu ?? []).some((m) => (m.family ?? "أصناف") === fm && shown(m))).map((fm) => (
         <div key={fm}>
           <h3>{fm}</h3>
-          {(menu ?? []).filter((m) => (m.family ?? "أصناف") === fm).map((m) => {
+          {(menu ?? []).filter((m) => (m.family ?? "أصناف") === fm && shown(m)).map((m) => {
             const q = cart[m.item_id] ?? 0, out = m.available <= 0;
             return (
               <div key={m.item_id} className="shopitem" style={out ? { opacity: 0.45 } : undefined}>

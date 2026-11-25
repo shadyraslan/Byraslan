@@ -5,7 +5,8 @@ import ScanInput from "@/components/ScanInput";
 import { useRouter } from "next/navigation";
 import { packBox, packFinish, type Packed } from "./actions";
 
-export type Ready = { id: number; no: number; item_name: string; qty: number; boxes: number };
+export type Ready = { id: number; no: number; item_name: string; qty: number; boxes: number; from_room: number | null; room_name: string | null; packed_weight: number; avg_box: number | null; unit?: string };
+const r1 = (n: number) => Math.round(n * 100) / 100;
 
 const fmtDate = (s: string | null) => (s ? new Date(s).toLocaleDateString("en-GB") : "—");
 
@@ -38,6 +39,27 @@ export default function PackStation({ ready }: { ready: Ready[] }) {
 
   return (
     <>
+      {ready.length > 0 && (
+        <div className="card noprint" style={{ overflowX: "auto" }}>
+          <h2>جاهز للتغليف من الغرف</h2>
+          <table>
+            <thead><tr><th>الأمر</th><th>الصنف</th><th>طالع من آخر غرفة</th><th>المتوقع</th><th>اتغلّف</th><th>فاضل</th></tr></thead>
+            <tbody>{ready.map((o) => {
+              const exp = o.from_room && o.avg_box ? Math.round(o.from_room / o.avg_box) : null;
+              const left = o.from_room != null ? r1(o.from_room - o.packed_weight) : null;
+              return (
+                <tr key={o.id} onClick={() => setOrder(o.id)} style={{ cursor: "pointer", background: order === o.id ? "var(--sunk)" : undefined }}>
+                  <td className="num">#{o.no}</td><td><b>{o.item_name}</b></td>
+                  <td className="num">{o.from_room != null ? <>{r1(o.from_room)} {o.unit ?? "كجم"}{o.room_name ? <div className="muted" style={{ fontSize: 12 }}>من {o.room_name}</div> : null}</> : <span className="muted">الغرفة لسه ماقفلتش</span>}</td>
+                  <td className="num">{exp != null ? <b>~{exp} طبق</b> : <span className="muted">—</span>}{o.avg_box ? <div className="muted" style={{ fontSize: 12 }}>متوسط الطبق {o.avg_box}</div> : null}</td>
+                  <td className="num">{o.boxes} طبق · {r1(o.packed_weight)}</td>
+                  <td className="num" style={{ fontWeight: 700, color: left != null && left < -0.05 ? "var(--bad)" : undefined }}>{left != null ? <>{left}{exp != null ? ` (~${Math.max(exp - o.boxes, 0)} طبق)` : ""}</> : "—"}</td>
+                </tr>);
+            })}</tbody>
+          </table>
+          <div className="muted" style={{ fontSize: 12.5 }}>الوزن اللي طالع من آخر غرفة (من تابلت الغرف) والمتوقع يطلع كام طبق على متوسط وزن الطبق في آخر تغليفات. دوس على أمر عشان تغلّف عليه.</div>
+        </div>
+      )}
       <div className="card noprint" style={{ border: "2px solid var(--y)" }}>
         <h2>امسح ملصق الميزان</h2>
         <div className="row">

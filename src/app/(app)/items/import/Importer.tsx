@@ -41,19 +41,20 @@ export default function Importer({ items, locs, lists }: { items: Item[]; locs: 
   const [imgMsg, setImgMsg] = useState<string | null>(null);
   const bulkImages = async (files: FileList | null) => {
     if (!files?.length) return;
-    const sb = supabaseBrowser(); let ok = 0; const miss: string[] = [];
+    const sb = supabaseBrowser(); let ok = 0; const miss: string[] = []; const fail: string[] = [];
     for (const f of Array.from(files)) {
       if (!f.type.startsWith("image/")) { miss.push(f.name); continue; }
       const key = f.name.replace(/\.[^.]+$/, "").trim();
-      const it = items.find((i) => i.barcodes.split(/[,\s]+/).includes(key) || (i.code ?? "") === key);
+      // الاسم = باركود الصنف، أو كوده، أو كود الميزان (PLU) بتاعه
+      const it = items.find((i) => i.barcodes.split(/[,\s]+/).includes(key) || (i.code ?? "") === key || (i.scale_plu ?? "") === key);
       if (!it?.id) { miss.push(f.name); continue; }
       setImgMsg(`بيرفع ${ok + miss.length + 1} من ${files.length}…`);
-      const path = `${key}-${Date.now()}.${(f.name.split(".").pop() || "jpg").toLowerCase()}`;
+      const path = `item-${it.id}-${Date.now()}.${(f.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg"}`;
       const { error } = await sb.storage.from("items").upload(path, f, { contentType: f.type, upsert: true });
-      if (error) { miss.push(f.name); continue; }
+      if (error) { fail.push(`${f.name} (${error.message})`); continue; }
       await setPhoto(it.id, sb.storage.from("items").getPublicUrl(path).data.publicUrl); ok++;
     }
-    setImgMsg(`اترفع ${ok} صورة${miss.length ? ` — ماتربطش ${miss.length}: ${miss.slice(0, 8).join("، ")}${miss.length > 8 ? "…" : ""} (اسم الصورة لازم يبقى الباركود أو كود الصنف)` : ""}`);
+    setImgMsg(`اترفع ${ok} صورة${miss.length ? ` — ماتربطش ${miss.length}: ${miss.slice(0, 8).join("، ")}${miss.length > 8 ? "…" : ""} (اسم الصورة لازم يبقى الباركود أو كود الصنف أو كود الميزان)` : ""}${fail.length ? ` — ماترفعتش ${fail.length}: ${fail.slice(0, 4).join("، ")}` : ""}`);
   };
   const headers = [...COLS.map((c) => c[0]), ...locs.flatMap((l) => [`مباشر: ${l.name}`, `تطبيق: ${l.name}`, `رصيد: ${l.name}`])];
   // قالب السوبرماركت: الأعمدة اللي محتاجها بس، والباركود نص عشان الإكسل مايبوّظش الأرقام الطويلة
@@ -160,7 +161,7 @@ export default function Importer({ items, locs, lists }: { items: Item[]; locs: 
       </div>
       <div className="card">
         <h2>📷 صور المنتجات بالجملة</h2>
-        <div className="muted">اختار كل الصور مرة واحدة — اسم كل صورة لازم يبقى <b>الباركود</b> بتاع الصنف (أو كود الصنف)، مثلاً <span dir="ltr">6221234567890.jpg</span>. الصورة بتظهر في التطبيق على طول.</div>
+        <div className="muted">اختار كل الصور مرة واحدة — اسم كل صورة لازم يبقى <b>الباركود</b> بتاع الصنف، أو كود الصنف، أو كود الميزان (PLU)، مثلاً <span dir="ltr">6221234567890.jpg</span>. الصورة بتظهر في التطبيق على طول.</div>
         <label className="btn pri" style={{ marginTop: 8, display: "inline-grid", placeItems: "center", cursor: "pointer" }}>اختار الصور<input type="file" accept="image/*" multiple hidden onChange={(e) => bulkImages(e.target.files)} /></label>
         {imgMsg && <div className="okmsg" style={{ marginTop: 8 }}>{imgMsg}</div>}
       </div>

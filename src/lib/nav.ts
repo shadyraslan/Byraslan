@@ -22,8 +22,8 @@ export const NAV: NavGroup[] = [
   ] },
   { id: "branches", title: "الفروع والكاشير", icon: "store", color: "#16a34a", links: [
     { href: "/cashier", label: "الكاشير", icon: "pos", color: "#16a34a", perms: ["pos.sell"] },
-    { href: "/sales", label: "المبيعات والورديات", icon: "reports", color: "#4f46e5", perms: ["pos.shift", "acc.view"] },
-    { href: "/returns", label: "مرتجعات الكاشير", icon: "reports", color: "#e11d48", perms: ["pos.return", "pos.shift", "acc.view"] },
+    { href: "/sales", label: "المبيعات بالتفصيل (يوم بيوم، كل أوردر)", icon: "reports", color: "#4f46e5", perms: ["pos.shift", "acc.view"] },
+    { href: "/returns", label: "تقرير المرتجعات (ومرتجع من الداشبورد)", icon: "reports", color: "#e11d48", perms: ["pos.return", "pos.shift", "acc.view"] },
     { href: "/prices", label: "الأسعار", icon: "tag", color: "#059669", perms: ["prices.edit"] },
     { href: "/offers", label: "العروض والبروموكود", icon: "star", color: "#e11d48", perms: ["promo.edit", "prices.edit"] },
     { href: "/offers/campaigns", label: "مهرجانات التخفيضات", icon: "tag", color: "#ea580c", perms: ["promo.edit", "promo.approve", "promo.colors", "labels.hang", "pos.shift", "prices.edit"] },
@@ -53,8 +53,7 @@ export const NAV: NavGroup[] = [
   { id: "partner", title: "الماركت الشريك", icon: "partner", color: "#0d9488", links: [
     { href: "/partner", label: "الشركاء والفروع والخصومات", icon: "partner", color: "#0d9488", perms: ["partner.manage", "partner.upload", "partner.settle", "partner.dispatch"] },
     { href: "/partner/upload", label: "رفع ملف الصبح", icon: "upload", color: "#65a30d", perms: ["partner.upload"] },
-    { href: "/dispatch", label: "ديسباتشر ماركت رسلان (تجهيز السوبر ماركت)", icon: "box", color: "#f97316", perms: ["orders.dispatch", "orders.handle"] },
-    { href: "/partner/dispatch", label: "ديسباتشر الماركت الشريك", icon: "box", color: "#ea580c", perms: ["partner.dispatch", "partner.manage"] },
+    { href: "/partner/dispatch", label: "الديسباتشر (تجهيز طلبات الماركت)", icon: "box", color: "#ea580c", perms: ["partner.dispatch", "partner.manage", "orders.dispatch"] },
     { href: "/partner/account", label: "الحساب الجاري والمطابقة", icon: "wallet", color: "#2563eb", perms: ["partner.settle", "acc.view"] },
   ] },
   { id: "accounts", title: "الحسابات", icon: "accounts", color: "#2563eb", links: [

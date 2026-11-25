@@ -35,3 +35,15 @@ export async function setStock(fd: FormData) {
   revalidatePath("/stock");
   redirect(`/items/${item}?ok=${encodeURIComponent(`اتعدل الرصيد (${Number(data) >= 0 ? "+" : ""}${Number(data)})`)}`);
 }
+
+/** حد إعادة الطلب من المورد لصنف السوبر ماركت (على مستوى الصنف — نفس عمود الشيت) */
+export async function saveReorder(fd: FormData) {
+  await need("purchase.edit");
+  const sb = await supabaseServer();
+  const item = Number(fd.get("item"));
+  const n = (k: string) => { const v = String(fd.get(k) ?? "").trim(); return v === "" ? null : Math.max(Number(v) || 0, 0); };
+  const { error } = await sb.from("items").update({ reorder_min: n("reorder_min"), reorder_qty: n("reorder_qty") }).eq("id", item);
+  if (error) redirect(`/items/${item}?err=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/items/${item}`);
+  redirect(`/items/${item}?ok=1`);
+}

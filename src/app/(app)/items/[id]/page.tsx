@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
-import { saveMins, setStock } from "./actions";
+import { saveMins, setStock, saveReorder } from "./actions";
 import Photo from "./Photo";
 
 type S = { location_id: string; qty: number; boxes: number };
@@ -20,8 +20,10 @@ export default async function Item({ params, searchParams }: { params: Promise<{
   if (!["stock.view", "items.edit", "prod.orders"].some((p) => can(me, p))) redirect("/dashboard");
   const sb = await supabaseServer();
   const iid = Number(id);
-  const { data: it } = await sb.from("items").select("id,name,unit,kind,arm,photo,code,shelf_days,scale_plu,sold_by").eq("id", iid).maybeSingle();
+  const { data: it } = await sb.from("items").select("id,name,unit,kind,arm,photo,code,shelf_days,scale_plu,sold_by,reorder_min,reorder_qty").eq("id", iid).maybeSingle();
   const buy = !!it && (["raw", "mix", "pack", "semi"].includes(it.kind as string) || it.arm === "market");
+  // السوبر ماركت ومنتج من غير باركود وزن مالهمش حد أدنى (الحد الأدنى لمنتجات المصنع بس)
+  const itemNoMin = !!it && it.kind === "product" && (it.arm === "market" || !it.scale_plu);
   if (!it) notFound();
   const [{ data: st }, { data: bx }, { data: locs }, { data: mins }, { data: bcs }] = await Promise.all([
     sb.from("stock_by_location").select("location_id,qty,boxes").eq("item_id", iid),
@@ -63,25 +65,36 @@ export default async function Item({ params, searchParams }: { params: Promise<{
         <input type="hidden" name="item" value={iid} />
         <h2 style={{ marginTop: 0 }}>المخزون في كل مكان</h2>
         <table>
-          <thead><tr><th>المكان</th><th>أطباق</th><th>الرصيد</th><th>الحد الأدنى</th><th>{buy ? "كمية الطلب من المورد لما يوصل للحد" : "كمية الإنتاج لما يوصل للحد"}</th><th></th></tr></thead>
+          <thead><tr><th>المكان</th><th>أطباق</th><th>الرصيد</th>{!itemNoMin && <><th>الحد الأدنى</th><th>{buy ? "كمية الطلب من المورد لما يوصل للحد" : "كمية الإنتاج لما يوصل للحد"}</th></>}<th></th></tr></thead>
           <tbody>{L.map((l) => {
             const s = S.find((x) => x.location_id === l.id); const q = Number(s?.qty ?? 0); const mn = M.get(l.id as string) ?? 0; const mk = MK.get(l.id as string) ?? 0;
-            const nm = noMin(l.type as string);
+            const nm = noMin(l.type as string) || itemNoMin;
             if (!s && !mn && (!can(me, "stock.min") || nm)) return null;
             return (
               <tr key={l.id} style={{ color: mn > 0 && q < mn ? "var(--bad)" : undefined }}>
                 <td><b>{l.name}</b></td>
                 <td className="num" style={{ fontSize: 17 }}>{s?.boxes ? <Link href={`/items/${iid}?loc=${l.id}`}><b>{s.boxes}</b> طبق</Link> : "—"}</td>
                 <td className="num">{r3(q)} {it.unit}</td>
-                <td>{nm ? <span className="muted">—</span> : can(me, "stock.min") ? <input name={`min:${l.id}`} defaultValue={mn || ""} inputMode="decimal" dir="ltr" style={{ width: 90, height: 32 }} /> : <span className="num">{mn || "—"}</span>}</td>
-                <td>{nm ? <span className="muted">—</span> : can(me, "stock.min") ? <input name={`make:${l.id}`} defaultValue={mk || ""} inputMode="decimal" dir="ltr" placeholder="مثلاً 10" style={{ width: 100, height: 32 }} /> : <span className="num">{mk || "—"}</span>}</td>
+                {!itemNoMin && <td>{nm ? <span className="muted">—</span> : can(me, "stock.min") ? <input name={`min:${l.id}`} defaultValue={mn || ""} inputMode="decimal" dir="ltr" style={{ width: 90, height: 32 }} /> : <span className="num">{mn || "—"}</span>}</td>}
+                {!itemNoMin && <td>{nm ? <span className="muted">—</span> : can(me, "stock.min") ? <input name={`make:${l.id}`} defaultValue={mk || ""} inputMode="decimal" dir="ltr" placeholder="مثلاً 10" style={{ width: 100, height: 32 }} /> : <span className="num">{mk || "—"}</span>}</td>}
                 <td>{mn > 0 && q < mn ? `ناقص ${r3(mn - q)}` : ""}</td>
               </tr>);
           })}</tbody>
         </table>
-        {can(me, "stock.min") && <button className="btn pri" style={{ marginTop: 8 }}>احفظ الحد الأدنى</button>}
-        <div className="muted" style={{ fontSize: 12.5, marginTop: 6 }}>{buy ? "لو الرصيد وصل للحد الأدنى في أي مكان، السيستم بيعمل أمر شراء أوتوماتيك للمورد الأول بالكمية دي، توصيل للمكان ده (لو مفيش أمر مفتوح للصنف هناك)." : "لو الرصيد وصل للحد الأدنى في أي مكان وليه «كمية إنتاج»، السيستم بيعمل أمر إنتاج أوتوماتيك بالكمية دي (لو مفيش أمر شغال للصنف)."} الهالك والمصنع والتبرعات مالهمش حد أدنى.</div>
+        {can(me, "stock.min") && !itemNoMin && <button className="btn pri" style={{ marginTop: 8 }}>احفظ الحد الأدنى</button>}
+        {itemNoMin && it.arm !== "market" && <div className="badmsg" style={{ marginTop: 8 }}>المنتج ده من المصنع ومالوش باركود وزن (كود الميزان) — حطّه من «الأصناف» عشان يبقى ليه حد أدنى وأوامر إنتاج أوتوماتيك.</div>}
+        {!itemNoMin && <div className="muted" style={{ fontSize: 12.5, marginTop: 6 }}>{buy ? "لو الرصيد وصل للحد الأدنى في أي مكان، السيستم بيعمل أمر شراء أوتوماتيك للمورد الأول بالكمية دي، توصيل للمكان ده (لو مفيش أمر مفتوح للصنف هناك)." : "لو الرصيد وصل للحد الأدنى في أي مكان وليه «كمية إنتاج»، السيستم بيعمل أمر إنتاج أوتوماتيك بالكمية دي (لو مفيش أمر شغال للصنف)."} الهالك والمصنع والتبرعات مالهمش حد أدنى.</div>}
       </form>
+      {it.arm === "market" && (
+        <form action={saveReorder} className="card row" style={{ alignItems: "end" }}>
+          <input type="hidden" name="item" value={iid} />
+          <b style={{ flexBasis: "100%" }}>الطلب من المورد</b>
+          <label className="fld">اطلب لما الرصيد في الفرع يوصل لـ<input name="reorder_min" defaultValue={it.reorder_min ?? ""} inputMode="decimal" dir="ltr" style={{ width: 100 }} disabled={!can(me, "purchase.edit")} /></label>
+          <label className="fld">كمية الطلب<input name="reorder_qty" defaultValue={it.reorder_qty ?? ""} inputMode="decimal" dir="ltr" style={{ width: 100 }} disabled={!can(me, "purchase.edit")} /></label>
+          {can(me, "purchase.edit") && <button className="btn pri">احفظ</button>}
+          <div className="muted" style={{ flexBasis: "100%", fontSize: 12.5 }}>صنف السوبر ماركت مالوش حد أدنى زي منتجات المصنع ومابيتعملوش أمر إنتاج. ده بس «حد إعادة الطلب» (نفس عمود الشيت): لو الرصيد في أي فرع بيبيعه وصل له، السيستم بيعمل أمر شراء للمورد بالكمية دي. سيبه فاضي لو مش عايز طلب أوتوماتيك.</div>
+        </form>
+      )}
       {can(me, "stock.adjust") && (it.arm === "market" || (it.sold_by !== "weight" && !S.some((x) => Number(x.boxes) > 0))) && (
         <form action={setStock} className="card row" style={{ alignItems: "end" }}>
           <input type="hidden" name="item" value={iid} />

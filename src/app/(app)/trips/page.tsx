@@ -4,8 +4,9 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { getMe, can } from "@/lib/perms";
 import { createTrip } from "./actions";
 
-export default async function Trips({ searchParams }: { searchParams: Promise<{ err?: string }> }) {
-  const { err } = await searchParams;
+export default async function Trips({ searchParams }: { searchParams: Promise<{ err?: string; stop?: string | string[] }> }) {
+  const { err, stop } = await searchParams;
+  const pre = new Set(Array.isArray(stop) ? stop : stop ? [stop] : []);
   const me = await getMe();
   if (!can(me, "trips.load")) redirect("/dashboard");
   const sb = await supabaseServer();
@@ -23,7 +24,7 @@ export default async function Trips({ searchParams }: { searchParams: Promise<{ 
         <label className="fld">السواق (بيشوف الرحلة في تطبيق الموظفين)<select name="driver_id"><option value="">—</option>{(staff ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}{p.job ? ` · ${p.job}` : ""}</option>)}</select></label>
         <div className="fld" style={{ flexBasis: "100%" }}>الرحلة رايحة لأنهي فروع؟ (تقدر تزوّد فرع بعدين)
           <div className="row" style={{ gap: 6, marginTop: 4 }}>{(br ?? []).map((b) => (
-            <label key={b.id} className="pill" style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", padding: "6px 12px" }}><input type="checkbox" name="stop" value={b.id} style={{ width: 18, height: 18 }} />{b.name}</label>))}
+            <label key={b.id} className="pill" style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", padding: "6px 12px" }}><input type="checkbox" name="stop" value={b.id} defaultChecked={pre.has(b.id)} style={{ width: 18, height: 18 }} />{b.name}</label>))}
           </div>
         </div>
         <button className="btn pri">+ رحلة جديدة وابدأ التحميل</button>

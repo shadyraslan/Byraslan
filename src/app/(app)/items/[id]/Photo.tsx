@@ -12,7 +12,7 @@ export default function Photo({ item, photo, code }: { item: number; photo: stri
     if (!f) return;
     if (!f.type.startsWith("image/")) return setErr("الملف ده مش صورة");
     setBusy(true); setErr(null);
-    const path = `${code}-${Date.now()}.${(f.name.split(".").pop() || "jpg").toLowerCase()}`;
+    const path = `item-${item}-${Date.now()}.${(f.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg"}`;
     const sb = supabaseBrowser();
     const { error } = await sb.storage.from("items").upload(path, f, { contentType: f.type, upsert: true });
     if (error) { setBusy(false); return setErr(error.message); }

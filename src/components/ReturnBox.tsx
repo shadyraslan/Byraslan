@@ -14,7 +14,7 @@ const REASONS = ["العميل غيّر رأيه", "الصنف بايظ / تال
 const FATE: [string, string][] = [["stock", "يرجع المخزن"], ["waste", "هالك"], ["donate", "مخزن التبرعات"]];
 const FL: Record<string, string> = { stock: "", waste: " (هالك)", donate: " (تبرعات)" };
 
-export default function ReturnBox({ shiftClient, onDone, onClose, onExchange }: { shiftClient?: string | null; onDone?: (r: Ret) => void; onClose?: () => void; onExchange?: (r: Ret) => void }) {
+export default function ReturnBox({ shiftClient, loc, onDone, onClose, onExchange }: { shiftClient?: string | null; loc?: string | null; onDone?: (r: Ret) => void; onClose?: () => void; onExchange?: (r: Ret) => void }) {
   const sb = supabaseBrowser();
   const [no, setNo] = useState("");
   const [s, setS] = useState<S | null>(null);
@@ -27,7 +27,7 @@ export default function ReturnBox({ shiftClient, onDone, onClose, onExchange }: 
   const E = (e: { message: string }) => setErr(e.message.replace(/^.*?ERROR:\s*/, ""));
   const find = async () => {
     setErr(null); setS(null); setQ({}); setRs({});
-    const { data, error } = await sb.rpc("pos_sale_lookup", { p_no: Number(no.replace(/\D/g, "")) });
+    const { data, error } = await sb.rpc("pos_sale_find", { p_code: no, p_loc: loc ?? null });
     if (error) return E(error);
     setS(data as S);
   };
@@ -74,7 +74,7 @@ export default function ReturnBox({ shiftClient, onDone, onClose, onExchange }: 
   return (
     <div className="card" style={{ display: "grid", gap: 8 }}>
       <div className="row" style={{ justifyContent: "space-between" }}><b>مرتجع فاتورة</b>{onClose && <button className="btn" onClick={onClose}>قفل</button>}</div>
-      <div className="row"><input value={no} onChange={(e) => setNo(e.target.value)} onKeyDown={(e) => e.key === "Enter" && find()} placeholder="رقم الفاتورة (من الإيصال)" inputMode="numeric" dir="ltr" style={{ flex: 1 }} autoFocus /><button className="btn" onClick={find}>هات</button></div>
+      <div className="row"><input value={no} onChange={(e) => setNo(e.target.value)} onKeyDown={(e) => e.key === "Enter" && find()} placeholder="رقم الفاتورة من الإيصال (زي 100604 أو L9)" inputMode="text" dir="ltr" style={{ flex: 1 }} autoFocus /><button className="btn" onClick={find}>هات</button></div>
       {s && (
         <>
           <div className="muted">S-{s.no} · {s.branch} · {new Date(s.at).toLocaleString("ar-EG")} · {f2(s.total)} ج{s.customer ? ` · ${s.customer}` : ""}{s.returned > 0 ? ` · اترجع منها قبل كده ${f2(s.returned)} ج` : ""}</div>

@@ -126,6 +126,10 @@ export default function Cashier() {
   const [repTick, setRepTick] = useState(0);
   useEffect(() => { if (view === "close" || view === "list") setRepTick((x) => x + 1); }, [view, done.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const rep = useShiftReport(sb, shift?.server_id, shift?.client_id, repTick);
+  // الوردية بتبدأ وتخلص في نفس اليوم: وردية اتفتحت يوم قبل كده لازم تتقفل قبل أي بيع
+  const cday = (t: string | number) => new Date(t).toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" });
+  const oldDay = !!shift && cday(shift.opened_at) !== cday(Date.now());
+  useEffect(() => { if (oldDay && (view === "sell" || view === "orders" || view === "return")) setView("close"); }, [oldDay, view]); // eslint-disable-line react-hooks/exhaustive-deps
   const [rets, setRets] = useState<Ret[]>([]);
   // إلغاء فاتورة (Void) في نفس الوردية
   const [voidOf, setVoidOf] = useState<string | null>(null);
@@ -530,7 +534,7 @@ export default function Cashier() {
       )}
       {view === "return" && (
         <div style={{ padding: "0 16px" }}>
-          {online ? <ReturnBox key={retKey} shiftClient={shift?.client_id} onDone={(r) => setRets((x) => [...x, r])} onClose={() => setRetKey((k) => k + 1)} onExchange={(r) => { setExch({ no: r.no, amount: Number(r.refund_cash) }); setCash(String(r.refund_cash)); setRetKey((k) => k + 1); setView("sell"); }} /> : <div className="badmsg">المرتجع محتاج نت</div>}
+          {online ? <ReturnBox key={retKey} shiftClient={shift?.client_id} loc={shift?.loc} onDone={(r) => setRets((x) => [...x, r])} onClose={() => setRetKey((k) => k + 1)} onExchange={(r) => { setExch({ no: r.no, amount: Number(r.refund_cash) }); setCash(String(r.refund_cash)); setRetKey((k) => k + 1); setView("sell"); }} /> : <div className="badmsg">المرتجع محتاج نت</div>}
           {riderIn > 0 && <div className="muted" style={{ marginTop: 8 }}>كاش استلمته من الطيارين في الوردية دي: {f2(riderIn)} ج — اتضاف للمتوقع في الدرج</div>}
           {rets.length > 0 && <div className="muted" style={{ marginTop: 8 }}>مرتجعات الوردية: {rets.map((r) => `R-${r.no} (${f2(r.total)} ج)`).join(" · ")} — الكاش اللي اترجع {f2(retCash)} ج اتخصم من المتوقع في الدرج</div>}
         </div>)}
@@ -724,6 +728,7 @@ export default function Cashier() {
 
       {view === "close" && (
         <div className="card noprint" style={{ margin: "0 16px", display: "grid", gap: 10, maxWidth: 560 }}>
+          {oldDay && <div className="badmsg">الوردية دي اتفتحت يوم {cday(shift.opened_at)} — كل وردية بتبدأ وتخلص في نفس اليوم. اقفلها وافتح وردية جديدة عشان تبيع.</div>}
           <h2 style={{ margin: 0 }}>تقرير الوردية</h2>
           {rep.r ? <ShiftReportView r={rep.r} /> : <div className="muted">{rep.err ?? "بيحمّل التقرير…"}</div>}
           {(() => {
