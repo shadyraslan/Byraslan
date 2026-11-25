@@ -20,7 +20,7 @@ export default async function Item({ params, searchParams }: { params: Promise<{
   if (!["stock.view", "items.edit", "prod.orders"].some((p) => can(me, p))) redirect("/dashboard");
   const sb = await supabaseServer();
   const iid = Number(id);
-  const { data: it } = await sb.from("items").select("id,name,unit,kind,arm,photo,code,shelf_days,scale_plu,sold_by,reorder_min,reorder_qty").eq("id", iid).maybeSingle();
+  const { data: it } = await sb.from("items").select("id,name,unit,kind,arm,photo,code,shelf_days,scale_plu,sold_by,reorder_min,reorder_qty,partner_only").eq("id", iid).maybeSingle();
   const buy = !!it && (["raw", "mix", "pack", "semi"].includes(it.kind as string) || it.arm === "market");
   // السوبر ماركت ومنتج من غير باركود وزن مالهمش حد أدنى (الحد الأدنى لمنتجات المصنع بس)
   const itemNoMin = !!it && it.kind === "product" && (it.arm === "market" || !it.scale_plu);
@@ -95,15 +95,15 @@ export default async function Item({ params, searchParams }: { params: Promise<{
           <div className="muted" style={{ flexBasis: "100%", fontSize: 12.5 }}>صنف السوبر ماركت مالوش حد أدنى زي منتجات المصنع ومابيتعملوش أمر إنتاج. ده بس «حد إعادة الطلب» (نفس عمود الشيت): لو الرصيد في أي فرع بيبيعه وصل له، السيستم بيعمل أمر شراء للمورد بالكمية دي. سيبه فاضي لو مش عايز طلب أوتوماتيك.</div>
         </form>
       )}
-      {can(me, "stock.adjust") && (it.arm === "market" || (it.sold_by !== "weight" && !S.some((x) => Number(x.boxes) > 0))) && (
+      {(can(me, "stock.adjust") || can(me, "partner.manage") || can(me, "partner.upload")) && it.partner_only && (
         <form action={setStock} className="card row" style={{ alignItems: "end" }}>
           <input type="hidden" name="item" value={iid} />
-          <b style={{ flexBasis: "100%" }}>عدّل الرصيد (من غير الشيت)</b>
-          <label className="fld">المكان<select name="loc" required>{L.filter((l) => !["factory", "donation", "waste"].includes(l.type as string)).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
+          <b style={{ flexBasis: "100%" }}>عدّل كمية الصنف عند الشريك</b>
+          <label className="fld">الماركت الشريك<select name="loc" required>{L.filter((l) => l.type === "partner").map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
           <label className="fld">الرصيد الصح ({it.unit})<input name="qty" required inputMode="decimal" dir="ltr" style={{ width: 110 }} /></label>
           <label className="fld" style={{ flex: "1 1 180px" }}>السبب<input name="reason" required placeholder="جرد، بضاعة اتكسرت، تصحيح…" /></label>
           <button className="btn pri">احفظ الرصيد</button>
-          <div className="muted" style={{ flexBasis: "100%", fontSize: 12.5 }}>بيتسجّل كتسوية باسمك وبالسبب. الأصناف اللي بتتباع بالوزن (روستوز) رصيدها بعدد الأطباق بس — من التغليف والجرد.</div>
+          <div className="muted" style={{ flexBasis: "100%", fontSize: 12.5 }}>بيتسجّل باسمك وبالسبب. من أول تعديل التطبيق بيبيع على قد الكمية دي بس، وكل بيع بيخصم منها. (السوبر ماركت بتاعنا رصيده مابيتعدلش يدوي: بالاستلام من المورد والبيع والجرد. ومنتجات المصنع بالأطباق.)</div>
         </form>
       )}
       <div className="card" style={{ overflowX: "auto" }}>

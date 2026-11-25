@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { need } from "@/lib/perms";
+import { getMe, can, need } from "@/lib/perms";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export async function saveMins(fd: FormData) {
@@ -26,7 +26,8 @@ export async function setPhoto(item: number, url: string) {
 
 /** رصيد صنف السوبر ماركت يتعدل من السيستم (من غير الشيت) — الأصناف اللي بالأطباق رصيدها بالأطباق بس */
 export async function setStock(fd: FormData) {
-  await need("stock.adjust");
+  const me = await getMe();
+  if (!["stock.adjust", "partner.manage", "partner.upload"].some((p) => can(me, p))) redirect("/dashboard");
   const sb = await supabaseServer();
   const item = Number(fd.get("item"));
   const { data, error } = await sb.rpc("stock_set", { p_item: item, p_loc: String(fd.get("loc")), p_qty: Number(fd.get("qty")), p_reason: String(fd.get("reason") || "") });
