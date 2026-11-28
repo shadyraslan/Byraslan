@@ -9,7 +9,7 @@ import OrderFix from "@/components/OrderFix";
 
 export type OOrder = {
   id: number; no: number; status: string; created_at: string; pay: string; address: string | null; note: string | null; fee: number; discount: number; est: number; driver: string | null; tudzi_state?: string | null; tudzi_courier?: { courier?: { name?: string; phone?: string; plate?: string; vehicle?: string } } | null; tudzi_track?: string | null; tudzi_error?: string | null; rider_id?: number | null; rider_note?: string | null; fee_orig?: number | null; branch_discount?: number; branch_discount_note?: string | null; floor?: string | null; apt?: string | null; landmark?: string | null; booking?: boolean; scheduled_for?: string | null; slot?: string | null; deposit?: number; deposit_paid?: boolean; lat?: number | null; lng?: number | null; pin_far?: boolean; pin_km?: number | null;
-  customer: string; customer_id: number; phone: string; lines: { line: number; item_id: number; gift?: boolean; name: string; unit: string; qty: number; prepared: number; price: number; note?: string | null; market?: boolean; picked?: number | null; recv?: boolean }[]; boxes: number[];
+  customer: string; customer_id: number; phone: string; lines: { line: number; item_id: number; gift?: boolean; name: string; unit: string; qty: number; prepared: number; price: number; note?: string | null; market?: boolean; partner?: boolean; picked?: number | null; recv?: boolean }[]; boxes: number[];
 };
 const ST: Record<string, string> = { new: "جديد", accepted: "اتقبل", preparing: "بيتحضّر", ready: "جاهز", out: "مع الطيار" };
 const PAY: Record<string, string> = { cash: "كاش", card: "فيزا", instapay: "إنستاباي", wallet: "محفظة", credit: "آجل" };
@@ -32,7 +32,7 @@ export function useOrders(sb: SupabaseClient, loc: string | undefined, enabled: 
   const load = async () => {
     if (!loc || !enabled || !navigator.onLine) return;
     const { data } = await sb.rpc("pos_orders", { p_loc: loc });
-    const L = ((data ?? []) as OOrder[]).map((o) => ({ ...o, fee: Number(o.fee), discount: Number(o.discount), est: Number(o.est), lines: (o.lines ?? []).map((l) => ({ ...l, qty: Number(l.qty), prepared: Number(l.prepared), price: Number(l.price), picked: l.picked == null ? null : Number(l.picked) })) }));
+    const L = ((data ?? []) as OOrder[]).map((o) => ({ ...o, fee: Number(o.fee), discount: Number(o.discount), est: Number(o.est), lines: (o.lines ?? []).map((l) => ({ ...l, qty: Number(l.qty), prepared: l.prepared == null ? (null as unknown as number) : Number(l.prepared), price: Number(l.price), picked: l.picked == null ? null : Number(l.picked) })) }));
     setOrders(L);
     const news = L.filter((o) => o.status === "new").map((o) => o.id);
     if (seen.current) {
@@ -113,7 +113,7 @@ export default function OrdersPanel({ sb, orders, ack, reload, online, loc, shif
             )}
             <table>
               <thead><tr><th>الصنف</th><th>المطلوب</th><th>المتحضّر</th><th>القيمة</th></tr></thead>
-              <tbody>{o.lines.map((l) => <tr key={l.line}><td><b>{l.name}</b>{l.note && <div style={{ color: "var(--bad)", fontWeight: 700, fontSize: 13 }}>✂️ {l.note}</div>}</td><td className="num">{l.qty} {l.unit}</td><td className="num" style={{ color: l.prepared <= 0 ? "var(--bad)" : Math.abs(l.prepared - l.qty) / (l.qty || 1) > 0.1 ? "#b7791f" : "var(--good)", fontWeight: 700 }}>{l.market && !l.recv ? ((l.picked ?? 0) > 0
+              <tbody>{o.lines.map((l) => <tr key={l.line}><td><b>{l.name}</b>{l.note && <div style={{ color: "var(--bad)", fontWeight: 700, fontSize: 13 }}>✂️ {l.note}</div>}</td><td className="num">{l.qty} {l.unit}</td><td className="num" style={{ color: (l.prepared ?? 0) <= 0 ? "var(--bad)" : Math.abs(l.prepared - l.qty) / (l.qty || 1) > 0.1 ? "#b7791f" : "var(--good)", fontWeight: 700 }}>{l.partner ? (l.prepared == null ? <span className="muted" style={{ fontWeight: 400 }}>عند ديسباتشر الشريك</span> : <span style={{ color: "var(--good)" }}>✓ جهّزها الشريك {l.prepared}</span>) : l.market && !l.recv ? ((l.picked ?? 0) > 0
                 ? <span className="row" style={{ gap: 4, flexWrap: "nowrap" }}><span style={{ color: "var(--good)" }}>✓ اتجهّزت {l.picked}</span>{["accepted", "preparing"].includes(o.status) && <button className="btn pri" style={{ height: 26, fontSize: 12 }} onClick={() => run(sb.rpc("market_receive", { p_order: o.id, p_line: l.line }), `استلمت ${l.name}`)}>استلمها</button>}</span>
                 : <span className="muted" style={{ fontWeight: 400 }}>عند الديسباتشر</span>) : l.prepared}</td><td className="num">{Math.round((l.prepared || l.qty) * l.price)}</td></tr>)}</tbody>
             </table>

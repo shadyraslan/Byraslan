@@ -27,7 +27,7 @@ export default function Login() {
         <div style={{ background: "#000", borderRadius: 14, display: "grid", placeItems: "center", padding: "14px 0 10px" }}>
           <img src="/logo.png" alt="By Raslan" style={{ width: 170, height: "auto" }} />
         </div>
-        <label className="fld">اسم المستخدم أو الموبايل<input type="text" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required dir="auto" /></label>
+        <label className="fld">اسم المستخدم<input type="text" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required dir="auto" /></label>
         <label className="fld">الرقم السري<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required dir="ltr" /></label>
         {err && <div className="err">{err}</div>}
         <button className="btn pri" disabled={busy}>{busy ? "..." : "دخول"}</button>

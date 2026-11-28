@@ -176,9 +176,10 @@ export default function Cashier() {
           const { data: u } = await sb.auth.getUser();
           if (u.user) {
             const [{ data: p }, { data: L }] = await Promise.all([
-              sb.from("profiles").select("id,name,home_loc").eq("id", u.user.id).single(),
+              sb.from("profiles").select("id,name,home_loc,must_change").eq("id", u.user.id).single(),
               sb.from("locations").select("id,name").eq("active", true).in("type", ["dark", "shop"]).order("sort"),
             ]);
+            if (p?.must_change) { location.href = "/change-password"; return; }
             if (p) { const mm = { id: p.id as string, name: p.name as string, home: (p.home_loc as string) ?? null }; setMe(mm); kv.set("me", mm); }
             if (L) { setLocs(L as { id: string; name: string }[]); kv.set("locs", L); }
           }

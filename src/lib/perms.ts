@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { supabaseServer } from "@/lib/supabase/server";
 
-export type Me = { id: string; name: string; isOwner: boolean; perms: Set<string>; home: string | null };
+export type Me = { id: string; name: string; isOwner: boolean; perms: Set<string>; home: string | null; mustChange?: boolean };
 
 /** المستخدم الحالي وصلاحياته (المالك عنده كل حاجة).
  *  متخزّن مرة واحدة لكل طلب (cache) والبروفايل والصلاحيات بيتجابوا مع بعض — من مراجعة فرع emam (BUG-018).
@@ -13,13 +13,13 @@ export const getMe = cache(async (): Promise<Me | null> => {
   } = await sb.auth.getUser();
   if (!user) return null;
   const [{ data: prof }, { data: grants }] = await Promise.all([
-    sb.from("profiles").select("name,is_owner,active,home_loc").eq("id", user.id).maybeSingle(),
+    sb.from("profiles").select("name,is_owner,active,home_loc,must_change").eq("id", user.id).maybeSingle(),
     sb.from("grants").select("perm,until").eq("user_id", user.id),
   ]);
   if (prof && prof.active === false && !prof.is_owner) return null;
   const today = new Date().toISOString().slice(0, 10);
   const perms = new Set<string>((grants ?? []).filter((g) => !g.until || g.until >= today).map((g) => g.perm as string));
-  return { id: user.id, name: prof?.name ?? user.email ?? "", isOwner: !!prof?.is_owner, perms, home: (prof?.home_loc as string | null) ?? null };
+  return { id: user.id, name: prof?.name ?? user.email ?? "", isOwner: !!prof?.is_owner, perms, home: (prof?.home_loc as string | null) ?? null, mustChange: !!prof?.must_change };
 });
 
 export const can = (me: Me | null, perm: string) => !!me && (me.isOwner || me.perms.has(perm));

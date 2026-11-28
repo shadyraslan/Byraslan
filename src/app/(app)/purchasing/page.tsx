@@ -56,7 +56,7 @@ export default async function Purchasing({ searchParams }: { searchParams: Promi
           <div className="note">كل ربع ساعة السيستم بيعمل أمر شراء أوتوماتيك للمورد الأول لأي صنف وصل للحد ومفيش له أمر مفتوح. الكمية = «كمية الطلب» في الصنف (أو «كمية الإنتاج/الطلب» في الحد الأدنى للفرع)، ولو مش متحددة بيطلب لحد ضعف الحد الأدنى (من الإعدادات). الأوامر الأوتوماتيك بتستنى اعتمادك قبل ما تتبعت.</div>
         </div>
       )}
-      {canP && <NewPo suppliers={(sups ?? []).map((s) => ({ id: Number(s.id), name: s.name as string }))} items={its} locs={(locs ?? []).filter((l) => l.type !== "factory").map((l) => ({ id: l.id as string, name: l.name as string }))} />}
+      {canP && <NewPo suppliers={(sups ?? []).map((s) => ({ id: Number(s.id), name: s.name as string }))} items={its} locs={(locs ?? []).map((l) => ({ id: l.id as string, name: l.name as string }))} />}
       <div className="card" style={{ overflowX: "auto" }}>
         <h2>أوامر التوريد</h2>
         <table>

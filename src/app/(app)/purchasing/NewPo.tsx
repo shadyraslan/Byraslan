@@ -11,6 +11,8 @@ export default function NewPo({ suppliers, items, locs }: { suppliers: { id: num
   const [exp, setExp] = useState("");
   const [note, setNote] = useState("");
   const [loc, setLoc] = useState("main");
+  const [q, setQ] = useState<Record<number, string>>({});
+  const norm = (t: string) => t.toLowerCase().replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي").trim();
   const [lines, setLines] = useState<PoLine[]>([{ item_id: 0, qty: 0, price: 0 }]);
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [pending, start] = useTransition();
@@ -27,8 +29,9 @@ export default function NewPo({ suppliers, items, locs }: { suppliers: { id: num
       </div>
       {lines.map((l, i) => (
         <div key={i} className="row">
+          <input value={q[i] ?? ""} onChange={(e) => setQ((m) => ({ ...m, [i]: e.target.value }))} placeholder="🔎 ابحث عن الصنف" style={{ flex: "0 1 160px" }} />
           <select value={l.item_id} onChange={(e) => { const id = Number(e.target.value); set(i, { item_id: id, price: items.find((x) => x.id === id)?.prices[sup] ?? l.price }); }} style={{ flex: "1 1 220px" }}>
-            <option value={0}>— الصنف —</option>{items.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.unit})</option>)}
+            <option value={0}>— الصنف —</option>{items.filter((x) => x.id === l.item_id || !q[i] || norm(x.name).includes(norm(q[i]))).map((x) => <option key={x.id} value={x.id}>{x.name} ({x.unit})</option>)}
           </select>
           <input value={l.qty || ""} onChange={(e) => set(i, { qty: Number(e.target.value) || 0 })} placeholder="الكمية" inputMode="decimal" dir="ltr" style={{ width: 100 }} />
           <input value={l.price || ""} onChange={(e) => set(i, { price: Number(e.target.value) || 0 })} placeholder="السعر" inputMode="decimal" dir="ltr" style={{ width: 100 }} />

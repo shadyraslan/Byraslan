@@ -9,6 +9,8 @@ import { backToMe } from "./users/staff";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const me = await getMe();
   if (!me) redirect("/login");
+  // أول دخول بالرقم السري المبدئي: لازم يغيّره قبل أي حاجة
+  if (me.mustChange) redirect("/change-password");
   // كل واحد بيشوف الشاشات اللي معاه صلاحيتها بس
   const groups = NAV.map((g) => ({ ...g, links: g.links.filter((l) => !l.perms || l.perms.some((p) => can(me, p))) })).filter((g) => g.links.length);
   const as = (await cookies()).get("as_name")?.value;

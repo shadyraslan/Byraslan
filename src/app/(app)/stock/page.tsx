@@ -5,17 +5,22 @@ import { getMe, can } from "@/lib/perms";
 
 type Row = { item_id: number; item_name: string; unit: string; location_id: string; location_name: string; qty: number; boxes: number };
 
-export default async function Stock({ searchParams }: { searchParams: Promise<{ loc?: string }> }) {
-  const { loc = "" } = await searchParams;
+export default async function Stock({ searchParams }: { searchParams: Promise<{ loc?: string; m?: string }> }) {
+  const { loc = "", m = "" } = await searchParams;
   const me = await getMe();
   if (!can(me, "stock.view")) redirect("/dashboard");
   const sb = await supabaseServer();
-  const [{ data: rows }, { data: locs }] = await Promise.all([
+  const [{ data: rows }, { data: locs }, { data: itemsRaw }] = await Promise.all([
     sb.from("stock_by_location").select("*"),
     sb.from("locations").select("id,name,type").eq("active", true).neq("type", "section").order("sort"),
+    sb.from("items").select("id,arm,partner_only"),
   ]);
-  const R = ((rows ?? []) as unknown as Row[]).filter((r) => Math.abs(Number(r.qty)) > 0.0005 || Number(r.boxes) > 0);
-  const L = (locs ?? []).filter((l) => !loc || l.id === loc);
+  // فلتر السوبر ماركت: بتاعنا (أصناف السوبر ماركت في فروعنا) أو الشريك (اللي في مكان الشريك)
+  const IT = new Map(((itemsRaw ?? []) as { id: number; arm: string; partner_only: boolean }[]).map((i) => [Number(i.id), i]));
+  const LT = new Map((locs ?? []).map((l) => [l.id as string, l.type as string]));
+  const R = ((rows ?? []) as unknown as Row[]).filter((r) => Math.abs(Number(r.qty)) > 0.0005 || Number(r.boxes) > 0)
+    .filter((r) => !m || (IT.get(Number(r.item_id))?.arm === "market" && (m === "partner" ? LT.get(r.location_id) === "partner" : LT.get(r.location_id) !== "partner")));
+  const L = (locs ?? []).filter((l) => (!loc || l.id === loc) && (!m || (m === "partner" ? l.type === "partner" : ["dark", "shop", "warehouse"].includes(l.type as string))));
   const items = [...new Map(R.map((r) => [r.item_id, r])).values()].sort((a, b) => a.item_name.localeCompare(b.item_name, "ar"));
   // الصنف اللي بيتعبّى في أطباق (ليه علب في أي مكان) بيتعرض بعدد الأطباق، والكيلو تحته
   const boxed = new Set(R.filter((r) => Number(r.boxes) > 0).map((r) => r.item_id));
@@ -33,6 +38,7 @@ export default async function Stock({ searchParams }: { searchParams: Promise<{ 
       </div>
       <form className="card row">
         <label className="fld">الموقع<select name="loc" defaultValue={loc}><option value="">كل المواقع</option>{(locs ?? []).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
+        <label className="fld">السوبر ماركت<select name="m" defaultValue={m}><option value="">كل الأصناف</option><option value="own">سوبر ماركت بتاعنا</option><option value="partner">سوبر ماركت الشريك</option></select></label>
         <button className="btn">اعرض</button>
       </form>
       <div className="card" style={{ overflowX: "auto" }}>
